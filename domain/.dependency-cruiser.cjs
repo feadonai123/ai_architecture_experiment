@@ -11,11 +11,11 @@ module.exports = {
     {
       name: 'no-global-technical-layers',
       comment:
-        'Domain-oriented code cannot have global controllers/usecases/repositories/entities/presenters',
+        'Domain-oriented code cannot have global controllers/usecases/repositories/entities/presenters/base',
       severity: 'error',
       from: {},
       to: {
-        path: '^src/(controllers|usecases|repositories|entities|errors|routes|presenters)(/|$)',
+        path: '^src/(controllers|usecases|repositories|entities|errors|routes|presenters|base)(/|$)',
       },
     },
     {
@@ -29,7 +29,7 @@ module.exports = {
     },
     {
       name: 'no-shared-extras',
-      comment: 'shared/ may only contain database, entities, presenters, messaging and integrations',
+      comment: 'shared/ may only contain database, entities, presenters, base, messaging and integrations',
       severity: 'error',
       from: {},
       to: { path: '^src/shared/(http|errors|redis|services|env)(/|$)' },
@@ -75,6 +75,20 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/.*/usecases' },
       to: { path: 'typeorm' },
+    },
+    {
+      name: 'usecases-no-router-base',
+      comment: 'Use cases cannot import RouterBase; transactions live on the router',
+      severity: 'error',
+      from: { path: '^src/.*/usecases' },
+      to: { path: 'router\\.base' },
+    },
+    {
+      name: 'usecases-no-manager',
+      comment: 'Use cases cannot import DbManager; persistence transactions are started by the router',
+      severity: 'error',
+      from: { path: '^src/.*/usecases' },
+      to: { path: '^src/manager' },
     },
     {
       name: 'usecases-no-persistence-records',

@@ -1,3 +1,4 @@
+import { UseCase } from '../base/useCase.base';
 import { Cart } from '../entities/Cart';
 import { CartItem } from '../entities/CartItem';
 import { CartNotFoundError } from '../errors/CartNotFoundError';
@@ -7,6 +8,7 @@ import { ProductNotFoundError } from '../errors/ProductNotFoundError';
 import { CartItemRepository } from '../ports/CartItemRepository';
 import { CartRepository } from '../ports/CartRepository';
 import { ProductRepository } from '../ports/ProductRepository';
+import { parsePositiveInteger } from '../utils/parser';
 
 export type AddCartItemInput = {
   cartId: string;
@@ -14,20 +16,19 @@ export type AddCartItemInput = {
   quantity: unknown;
 };
 
-export class AddCartItem {
+export class AddCartItem extends UseCase<[AddCartItemInput], Cart> {
   constructor(
     private readonly products: ProductRepository,
     private readonly carts: CartRepository,
     private readonly cartItems: CartItemRepository,
     private readonly createId: () => string,
-  ) {}
+  ) {
+    super();
+  }
 
-  async execute(input: AddCartItemInput): Promise<Cart> {
-    if (
-      typeof input.quantity !== 'number' ||
-      !Number.isInteger(input.quantity) ||
-      input.quantity <= 0
-    ) {
+  protected async execute(input: AddCartItemInput): Promise<Cart> {
+    const quantity = parsePositiveInteger(input.quantity);
+    if (quantity === null) {
       throw new InvalidQuantityError(input.quantity);
     }
 
@@ -42,7 +43,7 @@ export class AddCartItem {
     }
 
     const existing = await this.cartItems.findByCartAndProduct(input.cartId, input.productId);
-    const nextQuantity = (existing?.quantity ?? 0) + input.quantity;
+    const nextQuantity = (existing?.quantity ?? 0) + quantity;
     if (nextQuantity > product.stock) {
       throw new InsufficientStockError();
     }
@@ -56,7 +57,7 @@ export class AddCartItem {
           id: this.createId(),
           cartId: input.cartId,
           productId: input.productId,
-          quantity: input.quantity,
+          quantity,
         }),
       );
     }

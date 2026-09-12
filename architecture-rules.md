@@ -405,6 +405,8 @@ src/
 ├── middleware/
 ├── errors/
 ├── utils/
+├── base/
+├── manager/
 └── infrastructure/
 ```
 
@@ -439,6 +441,8 @@ controllers/
 
 Não deve existir pasta `src/routes/`.
 
+Arquivos de rota são classes que estendem `RouterBase` (`asHandler()`). Toda rota abre uma transação TypeORM.
+
 ### `usecases/`
 
 Responsável pelas operações de negócio da aplicação.
@@ -453,6 +457,8 @@ ProcessPayment
 ```
 
 Os Use Cases representam a principal unidade de lógica de aplicação.
+
+Estendem `UseCase` em `base/useCase.base.ts`. A entrada pública é `run`; `execute` é protegido. A transação **não** vive no use case.
 
 ### `entities/`
 
@@ -490,7 +496,20 @@ Middlewares HTTP compartilhados: `errorHandler`, `authenticate` e `audit`.
 
 ### `utils/`
 
-Utilitários técnicos sem regra de negócio. Nesta fatia, `requireEnv`, `loadAppEnv` e `Logger`. Não devem viver em `infrastructure/`.
+Utilitários técnicos sem regra de negócio: `requireEnv`, `loadAppEnv`, `Logger`, `format`, `parser` e `time`. Não devem viver em `infrastructure/`.
+
+### `base/`
+
+Classes abstratas compartilhadas da aplicação:
+
+- `useCase.base.ts`: `UseCase.run` com logs
+- `router.base.ts`: `RouterBase.asHandler` envolve o handle numa transação via `DbManager` e loga início/commit/rollback
+
+Use cases não importam `router.base`.
+
+### `manager/`
+
+`DbManager` encapsula QueryRunner (connect, transação, commit/rollback, release). Repositórios obtêm o `EntityManager` corrente com `DbManager.getManager(dataSource)`.
 
 ### `errors/`
 
@@ -536,10 +555,12 @@ usecases
     dependem de ports
 
 controllers
-    podem depender de usecases e presenters
+    podem depender de usecases, presenters e base/router
+    usam TypeORM somente via RouterBase / DbManager (transação)
 
 repositories
     implementam ports
+    usam DbManager.getManager para o EntityManager da transação corrente
 ```
 
 ## 5.5 Estruturas proibidas
@@ -642,7 +663,7 @@ Agrupa tudo que pertence àquela operação HTTP/negócio.
 
 ### `usecases/`
 
-Regras de aplicação da operação.
+Regras de aplicação da operação. Estendem `UseCase` em `shared/base`; a entrada pública é `run`.
 
 ### `repositories/`
 
@@ -650,7 +671,7 @@ Somente a implementação de persistência da operação. Não contém entities 
 
 ### `controllers/`
 
-Interface HTTP da operação.
+Interface HTTP da operação. Classes que estendem `RouterBase` em `shared/base`; `asHandler()` envolve cada rota numa transação.
 
 ### `errors/`
 
@@ -667,7 +688,8 @@ Além de `shared/`, existem componentes técnicos globais que não pertencem a u
 ```text
 src/services/      # Redis: createRedis, getRedis, ping
 src/middleware/    # errorHandler, authenticate, audit
-src/utils/         # requireEnv, loadAppEnv, Logger
+src/utils/         # requireEnv, loadAppEnv, Logger, format, parser, time
+src/manager/       # DbManager (transação TypeORM)
 ```
 
 Pode existir também:
@@ -677,6 +699,7 @@ shared/
 ├── entities/      # entidades de domínio (Cart, CartItem, Product)
 ├── database/      # equivalente à infrastructure da Clean: records TypeORM, DataSource, schema
 ├── presenters/    # serialização HTTP compartilhada
+├── base/          # UseCase, RouterBase
 ├── messaging/
 └── integrations/
 ```
@@ -711,6 +734,7 @@ src/
 ├── usecases/
 ├── repositories/
 ├── entities/
+├── base/
 ```
 
 Isso seria uma organização transversal semelhante à Clean Architecture.
@@ -789,7 +813,7 @@ GenericRepository
 
 a menos que exista uma responsabilidade arquitetural concreta e necessária.
 
-Exceção normativa deste experimento: `helpers.ts` no monólito existe para `requireEnv` / `loadAppEnv` (e wrap/Swagger). `utils/` existe em todas as abordagens para `Logger` e, a partir do MVC, também para `env.ts`. Não criar `utils/` para regras de negócio.
+Exceção normativa deste experimento: `helpers.ts` no monólito existe para `requireEnv` / `loadAppEnv` (e wrap/Swagger). `utils/` existe em todas as abordagens para `Logger` e, a partir do MVC, também para `env.ts`. Clean e Domain também têm `format`, `parser` e `time`. Não criar `utils/` para regras de negócio.
 
 ---
 

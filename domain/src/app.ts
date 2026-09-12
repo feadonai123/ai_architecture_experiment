@@ -53,10 +53,10 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   mountSwagger(app);
   app.use(
     createCartController({
-      createCart: new CreateCartController(createCart),
-      getCart: new GetCartController(getCart),
-      addCartItem: new AddCartItemController(addCartItem),
-      removeCartItem: new RemoveCartItemController(removeCartItem),
+      createCart: new CreateCartController(dataSource, createCart),
+      getCart: new GetCartController(dataSource, getCart),
+      addCartItem: new AddCartItemController(dataSource, addCartItem),
+      removeCartItem: new RemoveCartItemController(dataSource, removeCartItem),
     }),
   );
   app.use(errorHandler);

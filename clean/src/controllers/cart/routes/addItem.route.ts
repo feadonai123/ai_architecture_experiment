@@ -1,18 +1,23 @@
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
+import { DataSource } from 'typeorm';
+import { RouterBase } from '../../../base/router.base';
 import { presentCart } from '../../../presenters/cart.presenter';
 import { AddCartItem } from '../../../usecases/AddCartItem';
 
-export function addItem(useCase: AddCartItem) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const cart = await useCase.execute({
-        cartId: req.body.cartId,
-        productId: req.body.productId,
-        quantity: req.body.quantity,
-      });
-      res.status(201).json(presentCart(cart));
-    } catch (error) {
-      next(error);
-    }
-  };
+export class AddItemRoute extends RouterBase {
+  constructor(
+    dataSource: DataSource,
+    private readonly addCartItem: AddCartItem,
+  ) {
+    super(dataSource);
+  }
+
+  async handle(request: Request, response: Response): Promise<void> {
+    const cart = await this.addCartItem.run({
+      cartId: request.body.cartId,
+      productId: request.body.productId,
+      quantity: request.body.quantity,
+    });
+    response.status(201).json(presentCart(cart));
+  }
 }

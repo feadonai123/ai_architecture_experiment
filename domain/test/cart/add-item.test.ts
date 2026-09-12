@@ -37,7 +37,7 @@ describe('add item', () => {
         mockProductRepository({ findById: productMock }),
         mockCartRepository({ findById: cartMock, findWithItems: cartWithItemMock }),
         mockCartItemRepository({ findByCartAndProduct: null }),
-      ).execute({
+      ).run({
         cartId: cartMock.id,
         productId: productMock.id,
         quantity: itemMock.quantity,
@@ -51,7 +51,7 @@ describe('add item', () => {
         mockProductRepository({ findById: productMock }),
         mockCartRepository({ findById: cartMock, findWithItems: cartWithIncrementedItemMock }),
         mockCartItemRepository({ findByCartAndProduct: itemMock }),
-      ).execute({
+      ).run({
         cartId: cartMock.id,
         productId: productMock.id,
         quantity: incrementQuantityMock,
@@ -64,7 +64,7 @@ describe('add item', () => {
   describe('errors', () => {
     it('throws InvalidQuantityError', async () => {
       await expect(
-        addCartItem().execute({
+        addCartItem().run({
           cartId: cartMock.id,
           productId: productMock.id,
           quantity: invalidQuantityMock,
@@ -74,7 +74,7 @@ describe('add item', () => {
 
     it('throws ProductNotFoundError', async () => {
       await expect(
-        addCartItem(mockProductRepository({ findById: null })).execute({
+        addCartItem(mockProductRepository({ findById: null })).run({
           cartId: cartMock.id,
           productId: missingProductMock.id,
           quantity: itemMock.quantity,
@@ -87,7 +87,7 @@ describe('add item', () => {
         addCartItem(
           mockProductRepository({ findById: productMock }),
           mockCartRepository({ findById: null }),
-        ).execute({
+        ).run({
           cartId: missingCartMock.id,
           productId: productMock.id,
           quantity: itemMock.quantity,
@@ -97,7 +97,7 @@ describe('add item', () => {
 
     it('throws InsufficientStockError', async () => {
       await expect(
-        addCartItem(mockProductRepository({ findById: lowStockProductMock })).execute({
+        addCartItem(mockProductRepository({ findById: lowStockProductMock })).run({
           cartId: cartMock.id,
           productId: productMock.id,
           quantity: exceedingQuantityMock,

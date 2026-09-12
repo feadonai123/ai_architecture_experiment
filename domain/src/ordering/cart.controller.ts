@@ -11,9 +11,9 @@ export function createCartController(controllers: {
   removeCartItem: RemoveCartItemController;
 }): Router {
   const router = Router();
-  router.post('/cart', controllers.createCart.handle);
-  router.get('/cart/:cartId', controllers.getCart.handle);
-  router.post('/cart/items', controllers.addCartItem.handle);
-  router.delete('/cart/items/:productId', controllers.removeCartItem.handle);
+  router.post('/cart', controllers.createCart.asHandler());
+  router.get('/cart/:cartId', controllers.getCart.asHandler());
+  router.post('/cart/items', controllers.addCartItem.asHandler());
+  router.delete('/cart/items/:productId', controllers.removeCartItem.asHandler());
   return router;
 }

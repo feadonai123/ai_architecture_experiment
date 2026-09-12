@@ -1,27 +1,31 @@
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { DbManager } from '../manager/db.manager';
 import { Cart } from '../entities/Cart';
 import { CartItem } from '../entities/CartItem';
-import { CartRepository } from '../ports/CartRepository';
 import { CartItemRecord } from '../infrastructure/typeorm/CartItemRecord';
 import { CartRecord } from '../infrastructure/typeorm/CartRecord';
+import { CartRepository } from '../ports/CartRepository';
+import { now } from '../utils/time';
 
 export class TypeOrmCartRepository implements CartRepository {
   constructor(private readonly dataSource: DataSource) {}
 
   async create(): Promise<Cart> {
-    const repository = this.dataSource.getRepository(CartRecord);
+    const repository = DbManager.getManager(this.dataSource).getRepository(CartRecord);
     const saved = await repository.save(
       repository.create({
         id: uuidv4(),
-        createdAt: new Date(),
+        createdAt: now(),
       }),
     );
     return new Cart(saved.id, saved.createdAt, []);
   }
 
   async findById(id: string): Promise<Cart | null> {
-    const record = await this.dataSource.getRepository(CartRecord).findOne({ where: { id } });
+    const record = await DbManager.getManager(this.dataSource)
+      .getRepository(CartRecord)
+      .findOne({ where: { id } });
     if (!record) {
       return null;
     }
@@ -29,13 +33,12 @@ export class TypeOrmCartRepository implements CartRepository {
   }
 
   async findWithItems(id: string): Promise<Cart | null> {
-    const record = await this.dataSource.getRepository(CartRecord).findOne({ where: { id } });
+    const manager = DbManager.getManager(this.dataSource);
+    const record = await manager.getRepository(CartRecord).findOne({ where: { id } });
     if (!record) {
       return null;
     }
-    const items = await this.dataSource
-      .getRepository(CartItemRecord)
-      .find({ where: { cartId: id } });
+    const items = await manager.getRepository(CartItemRecord).find({ where: { cartId: id } });
     return new Cart(
       record.id,
       record.createdAt,

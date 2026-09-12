@@ -1,0 +1,55 @@
+# Regras gerais
+
+Estas regras valem para **todas** as abordagens (`monolith/`, `mvc/`, `clean/`, `domain/`). Regras específicas de cada arquitetura estão em `<abordagem>/rules.md`. O mapa estrutural normativo continua em `architecture-rules.md`.
+
+## Experimento
+
+As quatro codebases implementam o **mesmo** recorte de carrinho: mesmo contrato HTTP, mesmos status, mesmos erros, mesma modelagem e a mesma infra (Node, TypeScript, Express, TypeORM, PostgreSQL, Redis).
+
+A variável do experimento é **só a organização do código**. Não mude comportamento para “melhorar” uma abordagem.
+
+Contrato canônico: `test/contracts/cart.md` e `docs/openapi.yaml`.
+
+## Pasta define responsabilidade
+
+O nome da pasta define o que pode existir nela. Todo arquivo exportado deve ter a responsabilidade da pasta em que está.
+
+Exemplos:
+
+- `mocks/` — somente mocks. Nada de helpers, `invokeHandler`, factories de app ou asserts.
+- `prefabs/` — somente montagem de dados de teste no banco.
+- `presenters/` — somente transformação do modelo no payload HTTP.
+- `middleware/` — somente middlewares HTTP.
+- `utils/` — somente utilitários técnicos, sem regra de negócio.
+
+Se uma função não for da pasta, ela não entra nessa pasta. Prefira o arquivo de teste, `helpers/`, ou a pasta cuja responsabilidade corresponde.
+
+## Autenticação, auditoria e env
+
+- Header obrigatório `x-api-key` igual a `X_API_KEY` (sem fallback). Ausente ou diferente → `ForbiddenError` (403). Todas as rotas, inclusive `/docs`.
+- `audit` loga chamada (método, path, params, query, body) e resposta JSON. Não loga a API key.
+- `requireEnv` não tem valor default. Variáveis novas entram em `.env`, `.env.example` e `.env.test`.
+
+## Testes de integração
+
+Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`APP_TARGET=monolith|mvc|clean|domain`).
+
+- Sempre cobrir caminho de sucesso **e** caminho de erro.
+- Casos de erro testam **apenas** erros lançados pela aplicação (`CartNotFoundError`, `InvalidQuantityError`, `ForbiddenError`, etc.), com o `error`, `message` e `statusCode` do contrato.
+- Não testar timeouts de rede, SQL cru, stack de framework, nem mensagens genéricas que a aplicação não emite.
+- Dados de persistência via `test/prefabs/`. HTTP autenticado via `test/helpers/api.ts` (não via `mocks/`).
+- Novo endpoint, status ou classe de erro no contrato → novo teste de integração compartilhado.
+
+## Testes unitários
+
+- Clean e Domain: unitários **somente de use cases** (`run`), com ports/repositórios mockados.
+- MVC: unitários dos handlers de rota, com models mockados. `invokeHandler` vive no arquivo de teste, não em `mocks/`.
+- Monólito: unitários das rotas, com TypeORM mockado.
+- Mocks em `test/mocks/` de cada abordagem: só funções/objetos mock.
+
+## O que não fazer
+
+- Não criar pasta, wrapper ou padrão só para evitar poucas linhas duplicadas.
+- Não introduzir tecnologia diferente numa abordagem (outro ORM, outro HTTP framework, etc.).
+- Não copiar estrutura de outra abordagem (ex.: `usecases/` no MVC, `src/controllers/` global no Domain).
+- Não enfraquecer `requireEnv` com fallback.

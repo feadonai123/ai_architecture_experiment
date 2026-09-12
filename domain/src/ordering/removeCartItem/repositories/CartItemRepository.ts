@@ -1,14 +1,17 @@
 import { DataSource } from 'typeorm';
-import { CartItem } from '../../../shared/entities/CartItem';
+import { DbManager } from '../../../manager/db.manager';
 import { CartItemRecord } from '../../../shared/database/CartItemRecord';
+import { CartItem } from '../../../shared/entities/CartItem';
 
 export class CartItemRepository {
   constructor(private readonly dataSource: DataSource) {}
 
   async findByCartAndProduct(cartId: string, productId: string): Promise<CartItem | null> {
-    const record = await this.dataSource.getRepository(CartItemRecord).findOne({
-      where: { cartId, productId },
-    });
+    const record = await DbManager.getManager(this.dataSource)
+      .getRepository(CartItemRecord)
+      .findOne({
+        where: { cartId, productId },
+      });
     if (!record) {
       return null;
     }
@@ -16,6 +19,8 @@ export class CartItemRepository {
   }
 
   async remove(item: CartItem): Promise<void> {
-    await this.dataSource.getRepository(CartItemRecord).delete({ id: item.id });
+    await DbManager.getManager(this.dataSource)
+      .getRepository(CartItemRecord)
+      .delete({ id: item.id });
   }
 }

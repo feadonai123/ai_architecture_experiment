@@ -15,8 +15,13 @@ module.exports = {
             ],
             patterns: [
               {
-                group: ['**/infrastructure/**', '**/infrastructure', '**/repositories/**'],
-                message: 'Domain/application layers cannot import infrastructure or repositories.',
+                group: [
+                  '**/infrastructure/**',
+                  '**/infrastructure',
+                  '**/repositories/**',
+                  '**/manager/**',
+                ],
+                message: 'Domain/application layers cannot import infrastructure, repositories or manager.',
               },
             ],
           },

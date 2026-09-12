@@ -1,9 +1,10 @@
+import { UseCase } from '../../../shared/base/useCase.base';
 import { Cart } from '../../../shared/entities/Cart';
 import { CartItem } from '../../../shared/entities/CartItem';
 import { CartItemNotFoundError } from '../errors/CartItemNotFoundError';
 import { CartNotFoundError } from '../errors/CartNotFoundError';
 
-export class RemoveCartItem {
+export class RemoveCartItem extends UseCase<[string, string], Cart> {
   constructor(
     private readonly carts: {
       findById(id: string): Promise<Cart | null>;
@@ -13,9 +14,11 @@ export class RemoveCartItem {
       findByCartAndProduct(cartId: string, productId: string): Promise<CartItem | null>;
       remove(item: CartItem): Promise<void>;
     },
-  ) {}
+  ) {
+    super();
+  }
 
-  async execute(cartId: string, productId: string): Promise<Cart> {
+  protected async execute(cartId: string, productId: string): Promise<Cart> {
     const cart = await this.carts.findById(cartId);
     if (!cart) {
       throw new CartNotFoundError(cartId);

@@ -79,6 +79,20 @@ module.exports = {
       to: { path: '^src/repositories' },
     },
     {
+      name: 'usecases-no-router-base',
+      comment: 'Use cases cannot import RouterBase; transactions live on the router',
+      severity: 'error',
+      from: { path: '^src/usecases' },
+      to: { path: 'router\\.base' },
+    },
+    {
+      name: 'usecases-no-manager',
+      comment: 'Use cases cannot import DbManager; persistence transactions are started by the router',
+      severity: 'error',
+      from: { path: '^src/usecases' },
+      to: { path: '^src/manager' },
+    },
+    {
       name: 'controllers-no-infrastructure',
       comment: 'Controllers cannot talk to TypeORM or infrastructure directly',
       severity: 'error',
@@ -91,13 +105,6 @@ module.exports = {
       severity: 'error',
       from: {},
       to: { path: '^src/repositories/.+Record' },
-    },
-    {
-      name: 'controllers-no-typeorm',
-      comment: 'Controllers cannot import TypeORM',
-      severity: 'error',
-      from: { path: '^src/controllers' },
-      to: { path: 'typeorm' },
     },
   ],
   options: {

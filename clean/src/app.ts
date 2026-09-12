@@ -31,7 +31,7 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   app.use(authenticate);
   mountSwagger(app);
   app.use(
-    createCartController({
+    createCartController(dataSource, {
       createCart,
       getCart,
       addCartItem,

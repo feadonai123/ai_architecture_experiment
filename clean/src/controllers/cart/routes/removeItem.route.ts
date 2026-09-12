@@ -1,14 +1,22 @@
-import { NextFunction, Request, Response } from 'express';
+import { Request, Response } from 'express';
+import { DataSource } from 'typeorm';
+import { RouterBase } from '../../../base/router.base';
 import { presentCart } from '../../../presenters/cart.presenter';
 import { RemoveCartItem } from '../../../usecases/RemoveCartItem';
 
-export function removeItem(useCase: RemoveCartItem) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const cart = await useCase.execute(String(req.query.cartId ?? ''), req.params.productId);
-      res.status(200).json(presentCart(cart));
-    } catch (error) {
-      next(error);
-    }
-  };
+export class RemoveItemRoute extends RouterBase {
+  constructor(
+    dataSource: DataSource,
+    private readonly removeCartItem: RemoveCartItem,
+  ) {
+    super(dataSource);
+  }
+
+  async handle(request: Request, response: Response): Promise<void> {
+    const cart = await this.removeCartItem.run(
+      String(request.query.cartId ?? ''),
+      request.params.productId,
+    );
+    response.status(200).json(presentCart(cart));
+  }
 }

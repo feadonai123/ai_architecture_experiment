@@ -15,8 +15,8 @@ module.exports = {
             ],
             patterns: [
               {
-                group: ['**/shared/database/**', '**/shared/database'],
-                message: 'Use cases and entities cannot import persistence records.',
+                group: ['**/shared/database/**', '**/shared/database', '**/manager/**'],
+                message: 'Use cases and entities cannot import persistence records or DbManager.',
               },
             ],
           },

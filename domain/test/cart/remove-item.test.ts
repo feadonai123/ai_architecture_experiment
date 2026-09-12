@@ -18,7 +18,7 @@ describe('remove item', () => {
       const result = await new RemoveCartItem(
         mockCartRepository({ findById: cartMock, findWithItems: emptyCartMock }),
         mockCartItemRepository({ findByCartAndProduct: itemMock }),
-      ).execute(cartMock.id, productMock.id);
+      ).run(cartMock.id, productMock.id);
 
       expect(result.items).toEqual(emptyCartMock.items);
     });
@@ -30,7 +30,7 @@ describe('remove item', () => {
         new RemoveCartItem(
           mockCartRepository({ findById: null }),
           mockCartItemRepository(),
-        ).execute(missingCartMock.id, productMock.id),
+        ).run(missingCartMock.id, productMock.id),
       ).rejects.toBeInstanceOf(CartNotFoundError);
     });
 
@@ -39,7 +39,7 @@ describe('remove item', () => {
         new RemoveCartItem(
           mockCartRepository({ findById: cartMock }),
           mockCartItemRepository(),
-        ).execute(cartMock.id, missingProductMock.id),
+        ).run(cartMock.id, missingProductMock.id),
       ).rejects.toBeInstanceOf(CartItemNotFoundError);
     });
   });
