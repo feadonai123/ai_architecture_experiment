@@ -1,0 +1,60 @@
+{
+  "name": "ai-architecture-experiment",
+  "private": true,
+  "workspaces": [
+    "monolith",
+    "mvc",
+    "clean",
+    "domain"
+  ],
+  "scripts": {
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "test": "npm run test:unit && npm run test:integration:all",
+    "test:unit": "npm run test:unit --workspaces --if-present",
+    "test:integration": "jest --config jest.integration.config.cjs --runInBand",
+    "test:integration:monolith": "cross-env APP_TARGET=monolith npm run test:integration",
+    "test:integration:mvc": "cross-env APP_TARGET=mvc npm run test:integration",
+    "test:integration:clean": "cross-env APP_TARGET=clean npm run test:integration",
+    "test:integration:domain": "cross-env APP_TARGET=domain npm run test:integration",
+    "test:integration:all": "npm run test:integration:monolith && npm run test:integration:mvc && npm run test:integration:clean && npm run test:integration:domain",
+    "lint": "npm run lint --workspaces --if-present",
+    "architecture": "npm run architecture --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/jest": "^29.5.14",
+    "@types/node": "^22.10.2",
+    "@types/supertest": "^6.0.2",
+    "@types/swagger-ui-express": "^4.1.7",
+    "@types/uuid": "^9.0.8",
+    "@typescript-eslint/eslint-plugin": "^8.18.2",
+    "@typescript-eslint/parser": "^8.18.2",
+    "cross-env": "^7.0.3",
+    "dependency-cruiser": "^16.8.0",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "prettier": "^3.4.2",
+    "supertest": "^7.0.0",
+    "ts-jest": "^29.2.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ioredis": "^5.4.2",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "swagger-ui-express": "^5.0.1",
+    "typeorm": "^0.3.20",
+    "uuid": "^9.0.1",
+    "yaml": "^2.6.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

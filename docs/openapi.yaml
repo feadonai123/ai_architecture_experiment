@@ -1,0 +1,190 @@
+openapi: 3.0.3
+info:
+  title: E-commerce Cart API
+  version: 1.0.0
+  description: Contrato HTTP compartilhado da fatia vertical de carrinho.
+servers:
+  - url: /
+security:
+  - ApiKeyAuth: []
+paths:
+  /cart:
+    post:
+      summary: Cria um carrinho vazio
+      operationId: createCart
+      responses:
+        '201':
+          description: Carrinho criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /cart/{cartId}:
+    get:
+      summary: Retorna o carrinho e seus itens
+      operationId: getCart
+      parameters:
+        - $ref: '#/components/parameters/CartIdPath'
+      responses:
+        '200':
+          description: Carrinho encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Carrinho inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /cart/items:
+    post:
+      summary: Adiciona um produto ao carrinho
+      operationId: addCartItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddCartItemRequest'
+      responses:
+        '201':
+          description: Item criado ou quantidade incrementada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '400':
+          description: Quantidade inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto ou carrinho inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estoque insuficiente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /cart/items/{productId}:
+    delete:
+      summary: Remove um item do carrinho
+      operationId: removeCartItem
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+        - $ref: '#/components/parameters/CartIdQuery'
+      responses:
+        '200':
+          description: Item removido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Carrinho ou item inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: x-api-key
+  responses:
+    Forbidden:
+      description: Header x-api-key ausente ou diferente de X_API_KEY
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  parameters:
+    CartIdPath:
+      name: cartId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ProductIdPath:
+      name: productId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    CartIdQuery:
+      name: cartId
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Cart:
+      type: object
+      required: [id, createdAt, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+    CartItem:
+      type: object
+      required: [id, productId, quantity]
+      properties:
+        id:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+    AddCartItemRequest:
+      type: object
+      required: [cartId, productId, quantity]
+      properties:
+        cartId:
+          type: string
+          format: uuid
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+    Error:
+      type: object
+      required: [error, message, statusCode]
+      properties:
+        error:
+          type: string
+          example: ProductNotFoundError
+        message:
+          type: string
+        statusCode:
+          type: integer
