@@ -29,7 +29,7 @@ Pastas internas só existem se houver código. Sem `presenters/` dentro do conte
 
 ```text
 src/services/     Redis
-src/middleware/   errorHandler, authenticate, audit
+src/middleware/   errorHandler, authenticate (por rota), audit
 src/utils/        env, Logger, format, parser, time
 src/manager/      DbManager
 ```

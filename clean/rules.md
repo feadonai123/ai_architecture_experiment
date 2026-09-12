@@ -33,7 +33,7 @@ src/
 - `ports/` — interfaces de persistência usadas pelos use cases.
 - `repositories/` — implementações TypeORM das ports. Sem records TypeORM nesta pasta.
 - `presenters/` — domínio → payload HTTP.
-- `middleware/` — `errorHandler`, `authenticate`, `audit`.
+- `middleware/` — `errorHandler`, `authenticate` (por rota da API, não `app.use` global) e `audit`.
 - `utils/` — `env`, `Logger`, `format`, `parser`, `time`.
 - `base/` — `UseCase` e `RouterBase`. Use cases não importam `router.base`.
 - `manager/` — `DbManager`: QueryRunner, commit/rollback. Repos usam `DbManager.getManager(dataSource)`.

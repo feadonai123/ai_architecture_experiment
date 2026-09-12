@@ -14,13 +14,12 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   const app = express();
   app.use(express.json());
   app.use(audit);
-  app.use(authenticate);
   mountSwagger(app);
 
-  app.post('/cart', createCartRoute(dataSource));
-  app.get('/cart/:cartId', getCartRoute(dataSource));
-  app.post('/cart/items', addCartItemRoute(dataSource));
-  app.delete('/cart/items/:productId', removeCartItemRoute(dataSource));
+  app.post('/cart', authenticate, createCartRoute(dataSource));
+  app.get('/cart/:cartId', authenticate, getCartRoute(dataSource));
+  app.post('/cart/items', authenticate, addCartItemRoute(dataSource));
+  app.delete('/cart/items/:productId', authenticate, removeCartItemRoute(dataSource));
 
   app.use(errorHandler);
   return app;

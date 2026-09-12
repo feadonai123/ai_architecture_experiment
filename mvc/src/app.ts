@@ -7,7 +7,6 @@ import { DataSource } from 'typeorm';
 import { parse } from 'yaml';
 import { createCartController } from './controllers/cart/cart.controller';
 import { setDataSource } from './database';
-import { authenticate } from './middleware/authenticate';
 import { audit } from './middleware/audit';
 import { errorHandler } from './middleware/errorHandler';
 
@@ -22,7 +21,6 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   const app = express();
   app.use(express.json());
   app.use(audit);
-  app.use(authenticate);
   mountSwagger(app);
   app.use(createCartController());
   app.use(errorHandler);

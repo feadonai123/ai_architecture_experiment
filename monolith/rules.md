@@ -27,7 +27,7 @@ src/
 - `routes/` — um arquivo por operação HTTP. Lê o request, aplica regra de negócio, acessa TypeORM direto, responde via presenter.
 - `entities/` — somente mapeamento TypeORM.
 - `presenters/` — modelo persistido → payload HTTP.
-- `middleware/` — `errorHandler`, `authenticate`, `audit`.
+- `middleware/` — `errorHandler`, `authenticate` (por rota, não global) e `audit`.
 - `services/` — factory do Redis (`createRedis`). Rotas e `server.ts` usam o cliente direto (`redis.ping()`).
 - `utils/` — somente `Logger`.
 - `helpers.ts` — `requireEnv`, `loadAppEnv`, validação pontual, wrap de handlers, Swagger. Sem pasta `helpers/`.

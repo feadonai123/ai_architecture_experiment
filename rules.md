@@ -26,7 +26,7 @@ Se uma função não for da pasta, ela não entra nessa pasta. Prefira o arquivo
 
 ## Autenticação, auditoria e env
 
-- Header obrigatório `x-api-key` igual a `X_API_KEY` (sem fallback). Ausente ou diferente → `ForbiddenError` (403). Todas as rotas, inclusive `/docs`.
+- Header obrigatório `x-api-key` igual a `X_API_KEY` (sem fallback) nas rotas da API. Ausente ou diferente → `ForbiddenError` (403). O middleware `authenticate` é registrado **em cada rota**, não com `app.use` global. `/docs` (Swagger) fica público.
 - `audit` loga chamada (método, path, params, query, body) e resposta JSON. Não loga a API key.
 - `requireEnv` não tem valor default. Variáveis novas entram em `.env`, `.env.example` e `.env.test`.
 

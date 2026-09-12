@@ -3,7 +3,6 @@ import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { createCartController } from './controllers/cart/cart.controller';
-import { authenticate } from './middleware/authenticate';
 import { audit } from './middleware/audit';
 import { errorHandler } from './middleware/errorHandler';
 import { mountSwagger } from './infrastructure/swagger';
@@ -28,7 +27,6 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   const app = express();
   app.use(express.json());
   app.use(audit);
-  app.use(authenticate);
   mountSwagger(app);
   app.use(
     createCartController(dataSource, {

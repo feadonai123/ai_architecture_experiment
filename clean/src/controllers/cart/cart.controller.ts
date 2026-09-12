@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
+import { authenticate } from '../../middleware/authenticate';
 import { AddCartItem } from '../../usecases/AddCartItem';
 import { CreateCart } from '../../usecases/CreateCart';
 import { GetCart } from '../../usecases/GetCart';
@@ -19,11 +20,12 @@ export function createCartController(
   },
 ): Router {
   const router = Router();
-  router.post('/cart', new CreateCartRoute(dataSource, deps.createCart).asHandler());
-  router.get('/cart/:cartId', new ShowCartRoute(dataSource, deps.getCart).asHandler());
-  router.post('/cart/items', new AddItemRoute(dataSource, deps.addCartItem).asHandler());
+  router.post('/cart', authenticate, new CreateCartRoute(dataSource, deps.createCart).asHandler());
+  router.get('/cart/:cartId', authenticate, new ShowCartRoute(dataSource, deps.getCart).asHandler());
+  router.post('/cart/items', authenticate, new AddItemRoute(dataSource, deps.addCartItem).asHandler());
   router.delete(
     '/cart/items/:productId',
+    authenticate,
     new RemoveItemRoute(dataSource, deps.removeCartItem).asHandler(),
   );
   return router;

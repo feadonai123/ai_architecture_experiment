@@ -33,6 +33,7 @@ O mesmo vale para `presenters/`, `middleware/`, `utils/`, `prefabs/`, `manager/`
 
 ## Testes
 
+- `authenticate` só nas rotas da API (registrado em cada `router.METHOD` / `app.METHOD`). `/docs` (Swagger) é público.
 - Integração (`test/integration/`) funciona para **as quatro** abordagens. Sempre sucesso **e** erro. Erro = somente erros lançados pela aplicação (nome da classe + status do contrato), nunca falha genérica de infra.
 - Prefabs em `test/prefabs/` para dados no Postgres de teste. Header `x-api-key` via `test/helpers/` (não via mocks).
 - Unitários Clean/Domain: **apenas use cases**. MVC/monólito: a unidade de negócio daquela abordagem (handler/rota), com mocks da pasta `test/mocks/`.

@@ -36,7 +36,7 @@ Documento canônico da fatia vertical de carrinho. Todas as quatro implementaç�
 
 ## Autenticação
 
-Todas as rotas exigem o header `x-api-key` com o mesmo valor da variável de ambiente `X_API_KEY`.
+Todas as rotas da API de carrinho exigem o header `x-api-key` com o mesmo valor da variável de ambiente `X_API_KEY`. `/docs` (Swagger UI) não exige autenticação.
 
 | Condição                         | Erro              | HTTP |
 | -------------------------------- | ----------------- | ---: |
@@ -136,7 +136,7 @@ Exemplo: `DELETE /cart/items/0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f?cartId=3fa85f6
 
 | Operação                 | Condição                 | Erro                     | HTTP |
 | ------------------------ | ------------------------ | ------------------------ | ---: |
-| qualquer rota            | header x-api-key inválido | ForbiddenError          |  403 |
+| qualquer rota da API     | header x-api-key inválido | ForbiddenError          |  403 |
 | GET /cart/:cartId        | carrinho inexistente     | CartNotFoundError        |  404 |
 | POST /cart/items         | quantidade inválida      | InvalidQuantityError     |  400 |
 | POST /cart/items         | produto inexistente      | ProductNotFoundError     |  404 |

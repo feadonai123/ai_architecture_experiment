@@ -6,7 +6,6 @@ import swaggerUi from 'swagger-ui-express';
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { parse } from 'yaml';
-import { authenticate } from './middleware/authenticate';
 import { audit } from './middleware/audit';
 import { errorHandler } from './middleware/errorHandler';
 import { createCartController } from './ordering/cart.controller';
@@ -49,7 +48,6 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   const app = express();
   app.use(express.json());
   app.use(audit);
-  app.use(authenticate);
   mountSwagger(app);
   app.use(
     createCartController({

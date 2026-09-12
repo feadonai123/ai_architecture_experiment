@@ -67,7 +67,7 @@ O nome da pasta define o conteúdo permitido. Uma pasta `mocks/` só pode conter
 
 Todas as implementações possuem:
 
-- `middleware/authenticate.ts`: exige o header `x-api-key` igual a `X_API_KEY`; caso contrário, `ForbiddenError` (HTTP 403). Todas as rotas passam por este middleware.
+- `middleware/authenticate.ts`: exige o header `x-api-key` igual a `X_API_KEY`; caso contrário, `ForbiddenError` (HTTP 403). Aplicado **por rota** da API (não via `app.use` global), para `/docs` permanecer público.
 - `middleware/audit.ts`: registra a chamada da rota (método, path, params, query, body) e, em seguida, a resposta (status e body). Não registra a API key.
 - `utils/Logger.ts`: `Logger.info`, `Logger.warn` e `Logger.error`. No monólito, `requireEnv` permanece em `helpers.ts`; nas demais abordagens, permanece em `utils/env.ts`.
 
@@ -687,7 +687,7 @@ Além de `shared/`, existem componentes técnicos globais que não pertencem a u
 
 ```text
 src/services/      # Redis: createRedis, getRedis, ping
-src/middleware/    # errorHandler, authenticate, audit
+src/middleware/    # errorHandler, authenticate (por rota), audit
 src/utils/         # requireEnv, loadAppEnv, Logger, format, parser, time
 src/manager/       # DbManager (transação TypeORM)
 ```

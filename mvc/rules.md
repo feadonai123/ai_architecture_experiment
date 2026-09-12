@@ -30,7 +30,7 @@ Não existe `src/routes/` nem `src/database/`.
 - `models/` — operações de persistência como métodos estáticos sobre a entity.
 - `services/` — Redis centralizado (`createRedis`, `getRedis`, `ping`). Sem service “só para mover código”.
 - `presenters/` — um presenter por entidade.
-- `middleware/` — `errorHandler`, `authenticate`, `audit`.
+- `middleware/` — `errorHandler`, `authenticate` (por rota, não global) e `audit`.
 - `errors/` — classes de erro da aplicação (`AppError` + erros semânticos).
 - `utils/` — `requireEnv`, `loadAppEnv`, `Logger`.
 - `database.ts` — arquivo único de conexão TypeORM.
