@@ -25,6 +25,8 @@ Antes de alterar código:
 
 Seguir essas regras **fielmente**. Não “melhorar” uma abordagem copiando estrutura de outra. Não criar pasta, classe ou wrapper fora do que as rules permitem.
 
+Os arquivos `<abordagem>/rules.md` devem ser autocontidos e tratar cada abordagem como um projeto independente. Eles não podem citar caminhos, arquivos ou estruturas do repositório agregador. Regras sobre recursos compartilhados entre as quatro implementações, como `test/integration/`, pertencem somente ao `/rules.md` e a este `AGENT.md`.
+
 ## Pasta = responsabilidade
 
 Todo arquivo deve ter a responsabilidade da pasta em que está. Exemplo obrigatório: em `mocks/`, **toda** função/objeto exportado é mock. `invokeHandler`, helpers HTTP reais e asserts não entram em `mocks/`.
@@ -35,6 +37,7 @@ O mesmo vale para `presenters/`, `middleware/`, `utils/`, `prefabs/`, `manager/`
 
 - `authenticate` só nas rotas da API (registrado em cada `router.METHOD` / `app.METHOD`). `/docs` (Swagger) é público.
 - Integração (`test/integration/`) funciona para **as quatro** abordagens. Sempre sucesso **e** erro. Erro = somente erros lançados pela aplicação (nome da classe + status do contrato), nunca falha genérica de infra.
+- `monolith/test/` contém exclusivamente testes unitários das funções de negócio das rotas. Não recebe testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Prefabs em `test/prefabs/` para dados no Postgres de teste. Header `x-api-key` via `test/helpers/` (não via mocks).
 - Unitários Clean/Domain: **apenas use cases**. MVC/monólito: a unidade de negócio daquela abordagem (handler/rota), com mocks da pasta `test/mocks/`.
 
