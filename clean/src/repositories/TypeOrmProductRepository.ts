@@ -7,6 +7,19 @@ import { ProductRepository } from '../ports/ProductRepository';
 export class TypeOrmProductRepository implements ProductRepository {
   constructor(private readonly dataSource: DataSource) {}
 
+  async findAll(): Promise<Product[]> {
+    const records = await DbManager.getManager(this.dataSource)
+      .getRepository(ProductRecord)
+      .find({ order: { id: 'ASC' } });
+    return records.map((record) => new Product(record.id, record.name, record.price, record.stock));
+  }
+
+  async save(product: Product): Promise<void> {
+    await DbManager.getManager(this.dataSource)
+      .getRepository(ProductRecord)
+      .save({ ...product });
+  }
+
   async findById(id: string): Promise<Product | null> {
     const record = await DbManager.getManager(this.dataSource)
       .getRepository(ProductRecord)
