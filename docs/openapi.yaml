@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: E-commerce Cart API
+  title: E-commerce Cart and Stock API
   version: 1.0.0
-  description: Contrato HTTP compartilhado da fatia vertical de carrinho.
+  description: Contrato HTTP das APIs de carrinho e estoque.
 servers:
   - url: /
 security:
@@ -101,6 +101,146 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /stocks:
+    get:
+      summary: Lista o estoque de todos os produtos
+      operationId: listStocks
+      responses:
+        '200':
+          description: Produtos e seus estoques
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /stocks/{productId}:
+    get:
+      summary: Consulta o estoque de um produto
+      operationId: getStock
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+      responses:
+        '200':
+          description: Produto e seu estoque
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Define a quantidade em estoque de um produto
+      operationId: updateStock
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateStockRequest'
+      responses:
+        '200':
+          description: Estoque atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Quantidade inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /stocks/{productId}/increase:
+    patch:
+      summary: Adiciona unidades ao estoque
+      operationId: increaseStock
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustStockRequest'
+      responses:
+        '200':
+          description: Estoque incrementado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Quantidade inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /stocks/{productId}/decrease:
+    patch:
+      summary: Remove unidades do estoque
+      operationId: decreaseStock
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustStockRequest'
+      responses:
+        '200':
+          description: Estoque reduzido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Quantidade inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Quantidade maior que o estoque atual
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -164,6 +304,21 @@ components:
         quantity:
           type: integer
           minimum: 1
+    Product:
+      type: object
+      required: [id, name, price, stock]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        price:
+          type: number
+          format: double
+        stock:
+          type: integer
+          minimum: 0
     AddCartItemRequest:
       type: object
       required: [cartId, productId, quantity]
@@ -174,6 +329,20 @@ components:
         productId:
           type: string
           format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+    UpdateStockRequest:
+      type: object
+      required: [quantity]
+      properties:
+        quantity:
+          type: integer
+          minimum: 0
+    AdjustStockRequest:
+      type: object
+      required: [quantity]
+      properties:
         quantity:
           type: integer
           minimum: 1

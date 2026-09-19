@@ -1,0 +1,32 @@
+import { v4 as uuidv4 } from 'uuid';
+import { api } from '../../helpers/api';
+import { getTestDataSource } from '../../helpers/setup';
+import { ProductPrefab } from '../../prefabs/product.prefab';
+
+describe('GET /stocks/:productId', () => {
+  describe('success', () => {
+    it('returns the requested product and its stock', async () => {
+      const product = await ProductPrefab.create(getTestDataSource(), { stock: 10 });
+
+      const response = await api().get(`/stocks/${product.id}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(product);
+    });
+  });
+
+  describe('errors', () => {
+    it('returns ProductNotFoundError when the product does not exist', async () => {
+      const productId = uuidv4();
+
+      const response = await api().get(`/stocks/${productId}`);
+
+      expect(response.status).toBe(404);
+      expect(response.body).toEqual({
+        error: 'ProductNotFoundError',
+        message: `Product not found: ${productId}`,
+        statusCode: 404,
+      });
+    });
+  });
+});

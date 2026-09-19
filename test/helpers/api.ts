@@ -13,6 +13,8 @@ export function api(app?: Express) {
   return {
     get: (url: string) => request(target).get(url).set(headers),
     post: (url: string) => request(target).post(url).set(headers),
+    put: (url: string) => request(target).put(url).set(headers),
+    patch: (url: string) => request(target).patch(url).set(headers),
     delete: (url: string) => request(target).delete(url).set(headers),
   };
 }

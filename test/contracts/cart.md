@@ -1,6 +1,6 @@
 # Contrato HTTP: Carrinho
 
-Documento canônico da fatia vertical de carrinho. Todas as quatro implementações devem respeitar exatamente estes endpoints, payloads, status e erros.
+Documento canônico da API de carrinho. Todas as quatro implementações devem respeitar exatamente estes endpoints, payloads, status e erros.
 
 ## Representação do carrinho
 
