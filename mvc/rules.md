@@ -1,7 +1,5 @@
 # MVC técnico
 
-Leia também `/rules.md` (regras de todas as abordagens).
-
 ## Objetivo
 
 Primeira dimensão = **responsabilidade técnica** (Controller, Model, Entity, Service, Presenter, Middleware, Error). Domínios diferentes convivem nas mesmas pastas técnicas.
@@ -54,4 +52,7 @@ Não organizar primeiro por domínio (`products/`, `orders/`).
 
 ## Testes desta abordagem
 
-Unitários dos handlers de rota. `invokeHandler` (ou equivalente) fica **no arquivo de teste**, nunca em `test/mocks/`. Integração compartilhada em `/test/integration/`.
+- `test/` contém exclusivamente testes unitários das funções de negócio das rotas, com TypeORM mockado em `test/mocks/`.
+- Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
+- Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
+- `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.

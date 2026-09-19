@@ -1,7 +1,5 @@
 # Domain-Oriented Modular Monolith
 
-Leia também `/rules.md` (regras de todas as abordagens).
-
 ## Objetivo
 
 Organizar primeiro por **contexto**, depois por **operação**, depois por responsabilidade técnica.
@@ -10,7 +8,7 @@ Organizar primeiro por **contexto**, depois por **operação**, depois por respo
 contexto → operação → responsabilidade técnica
 ```
 
-Nesta fatia o único contexto é `ordering/` (carrinho). Não criar `catalog/` só porque o carrinho lê `products`.
+Os contextos são `ordering/` (carrinho) e `inventory/` (estoque, RF03). Cada operação de estoque possui seus próprios use cases, repositories, controllers e erros, seguindo os componentes existentes. Não criar `catalog/` só porque o carrinho lê `products`.
 
 ## Estrutura de um contexto
 
@@ -70,4 +68,7 @@ Um contexto não acessa a implementação interna de outro. Integração explíc
 
 ## Testes desta abordagem
 
-Unitários **somente de use cases** (`run`), com dependências mockadas em `test/mocks/`. Integração compartilhada em `/test/integration/`.
+- `test/` contém exclusivamente testes unitários das funções de negócio das rotas, com TypeORM mockado em `test/mocks/`.
+- Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
+- Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
+- `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.

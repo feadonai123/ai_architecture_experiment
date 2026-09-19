@@ -4,7 +4,7 @@
 
 Experimento de TCC: o **mesmo** recorte de carrinho de e-commerce implementado em quatro organizações de código. Funcionalidade, contrato HTTP, modelo de dados e tecnologias são constantes. A variável é **como as responsabilidades são organizadas**.
 
-Stack comum: Node.js, TypeScript, Express, TypeORM, PostgreSQL, Redis. Contrato: `test/contracts/cart.md` e `docs/openapi.yaml`.
+Stack comum: Node.js, TypeScript, Express, TypeORM, PostgreSQL, Redis. Contratos: `test/contracts/cart.md`, `test/contracts/stock.md` e `docs/openapi.yaml`.
 
 Workspaces: `monolith/`, `mvc/`, `clean/`, `domain/`. Testes de integração compartilhados em `test/integration/`.
 
@@ -13,7 +13,7 @@ Workspaces: `monolith/`, `mvc/`, `clean/`, `domain/`. Testes de integração com
 - **Monólito acoplado** (`monolith/`) — organização mínima. Rotas com regra de negócio e TypeORM no mesmo arquivo.
 - **MVC técnico** (`mvc/`) — primeira dimensão por papel técnico (controller, model, entity, presenter).
 - **Clean Architecture** (`clean/`) — camadas técnicas + Dependency Rule (use cases → ports; entities sem infra).
-- **Domain-Oriented Modular Monolith** (`domain/`) — contexto → operação → responsabilidade técnica. Único contexto atual: `ordering/`.
+- **Domain-Oriented Modular Monolith** (`domain/`) — contexto → operação → responsabilidade técnica. Contextos atuais: `ordering/` (carrinho) e `inventory/` (estoque, RF03).
 
 ## Sempre ler e seguir as rules
 
@@ -25,6 +25,8 @@ Antes de alterar código:
 
 Seguir essas regras **fielmente**. Não “melhorar” uma abordagem copiando estrutura de outra. Não criar pasta, classe ou wrapper fora do que as rules permitem.
 
+Os arquivos `<abordagem>/rules.md` devem ser autocontidos e tratar cada abordagem como um projeto independente. Eles não podem citar caminhos, arquivos ou estruturas do repositório agregador. Regras sobre recursos compartilhados entre as quatro implementações, como `test/integration/`, pertencem somente ao `/rules.md` e a este `AGENT.md`.
+
 ## Pasta = responsabilidade
 
 Todo arquivo deve ter a responsabilidade da pasta em que está. Exemplo obrigatório: em `mocks/`, **toda** função/objeto exportado é mock. `invokeHandler`, helpers HTTP reais e asserts não entram em `mocks/`.
@@ -35,6 +37,9 @@ O mesmo vale para `presenters/`, `middleware/`, `utils/`, `prefabs/`, `manager/`
 
 - `authenticate` só nas rotas da API (registrado em cada `router.METHOD` / `app.METHOD`). `/docs` (Swagger) é público.
 - Integração (`test/integration/`) funciona para **as quatro** abordagens. Sempre sucesso **e** erro. Erro = somente erros lançados pela aplicação (nome da classe + status do contrato), nunca falha genérica de infra.
+- Em `test/integration/<recurso>/`, cada rota/operação possui seu próprio arquivo `*.test.ts`. Cenários transversais, como autenticação, ficam em arquivo próprio. Não agrupar todas as rotas de um recurso em um único teste.
+- Em `test/contracts/`, cada recurso possui seu próprio contrato Markdown. Não misturar o contrato de estoque em `cart.md`; estoque pertence a `stock.md`.
+- `monolith/test/` contém exclusivamente testes unitários das funções de negócio das rotas. Não recebe testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Prefabs em `test/prefabs/` para dados no Postgres de teste. Header `x-api-key` via `test/helpers/` (não via mocks).
 - Unitários Clean/Domain: **apenas use cases**. MVC/monólito: a unidade de negócio daquela abordagem (handler/rota), com mocks da pasta `test/mocks/`.
 

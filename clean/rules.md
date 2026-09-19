@@ -1,7 +1,5 @@
 # Clean Architecture
 
-Leia também `/rules.md` (regras de todas as abordagens).
-
 ## Objetivo
 
 Organização por **camada técnica** com direção explícita de dependências. Não organizar por bounded context.
@@ -58,4 +56,7 @@ Pastas de contexto como primeira dimensão (`ordering/`, `catalog/`, `contexts/`
 
 ## Testes desta abordagem
 
-Unitários **somente de use cases** (`run`), com ports mockados em `test/mocks/`. Integração compartilhada em `/test/integration/`.
+- `test/` contém exclusivamente testes unitários das funções de negócio das rotas, com TypeORM mockado em `test/mocks/`.
+- Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
+- Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
+- `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.

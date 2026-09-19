@@ -1,4 +1,10 @@
 import express, { Express } from 'express';
+import { createStockController } from './controllers/stock/stock.controller';
+import { ListStocks } from './usecases/ListStocks';
+import { GetStock } from './usecases/GetStock';
+import { UpdateStock } from './usecases/UpdateStock';
+import { IncreaseStock } from './usecases/IncreaseStock';
+import { DecreaseStock } from './usecases/DecreaseStock';
 import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -34,6 +40,15 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
       getCart,
       addCartItem,
       removeCartItem,
+    }),
+  );
+  app.use(
+    createStockController(dataSource, {
+      listStocks: new ListStocks(products),
+      getStock: new GetStock(products),
+      updateStock: new UpdateStock(products),
+      increaseStock: new IncreaseStock(products),
+      decreaseStock: new DecreaseStock(products),
     }),
   );
   app.use(errorHandler);

@@ -631,7 +631,7 @@ ordering/
 
 ## 6.2 Contextos permitidos
 
-Nesta fatia experimental o único contexto existente é `ordering/` (carrinho).
+Os contextos implementados são `ordering/` (carrinho) e `inventory/` (estoque, RF03). As operações de estoque seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
 
 Outros contextos (`payments/`, `inventory/`, `catalog/`) não devem ser criados sem que exista uma funcionalidade pertencente a eles.
 
