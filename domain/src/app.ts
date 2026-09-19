@@ -1,6 +1,22 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import express, { Express } from 'express';
+import { createStockController } from './inventory/stock.controller';
+import { ListStocks } from './inventory/listStocks/usecases/ListStocks';
+import { ProductRepository as ListStocksRepository } from './inventory/listStocks/repositories/ProductRepository';
+import { ListStocksController } from './inventory/listStocks/controllers/ListStocksController';
+import { GetStock } from './inventory/getStock/usecases/GetStock';
+import { ProductRepository as GetStockRepository } from './inventory/getStock/repositories/ProductRepository';
+import { GetStockController } from './inventory/getStock/controllers/GetStockController';
+import { UpdateStock } from './inventory/updateStock/usecases/UpdateStock';
+import { ProductRepository as UpdateStockRepository } from './inventory/updateStock/repositories/ProductRepository';
+import { UpdateStockController } from './inventory/updateStock/controllers/UpdateStockController';
+import { IncreaseStock } from './inventory/increaseStock/usecases/IncreaseStock';
+import { ProductRepository as IncreaseStockRepository } from './inventory/increaseStock/repositories/ProductRepository';
+import { IncreaseStockController } from './inventory/increaseStock/controllers/IncreaseStockController';
+import { DecreaseStock } from './inventory/decreaseStock/usecases/DecreaseStock';
+import { ProductRepository as DecreaseStockRepository } from './inventory/decreaseStock/repositories/ProductRepository';
+import { DecreaseStockController } from './inventory/decreaseStock/controllers/DecreaseStockController';
 import type Redis from 'ioredis';
 import swaggerUi from 'swagger-ui-express';
 import { DataSource } from 'typeorm';
@@ -55,6 +71,30 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
       getCart: new GetCartController(dataSource, getCart),
       addCartItem: new AddCartItemController(dataSource, addCartItem),
       removeCartItem: new RemoveCartItemController(dataSource, removeCartItem),
+    }),
+  );
+  app.use(
+    createStockController({
+      listStocks: new ListStocksController(
+        dataSource,
+        new ListStocks(new ListStocksRepository(dataSource)),
+      ),
+      getStock: new GetStockController(
+        dataSource,
+        new GetStock(new GetStockRepository(dataSource)),
+      ),
+      updateStock: new UpdateStockController(
+        dataSource,
+        new UpdateStock(new UpdateStockRepository(dataSource)),
+      ),
+      increaseStock: new IncreaseStockController(
+        dataSource,
+        new IncreaseStock(new IncreaseStockRepository(dataSource)),
+      ),
+      decreaseStock: new DecreaseStockController(
+        dataSource,
+        new DecreaseStock(new DecreaseStockRepository(dataSource)),
+      ),
     }),
   );
   app.use(errorHandler);

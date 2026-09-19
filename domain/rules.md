@@ -8,7 +8,7 @@ Organizar primeiro por **contexto**, depois por **operação**, depois por respo
 contexto → operação → responsabilidade técnica
 ```
 
-Nesta fatia o único contexto é `ordering/` (carrinho). Não criar `catalog/` só porque o carrinho lê `products`.
+Os contextos são `ordering/` (carrinho) e `inventory/` (estoque, RF03). Cada operação de estoque possui seus próprios use cases, repositories, controllers e erros, seguindo os componentes existentes. Não criar `catalog/` só porque o carrinho lê `products`.
 
 ## Estrutura de um contexto
 
