@@ -6,6 +6,7 @@ import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { parse } from 'yaml';
 import { createCartController } from './controllers/cart/cart.controller';
+import { createStockController } from './controllers/stock/stock.controller';
 import { setDataSource } from './database';
 import { audit } from './middleware/audit';
 import { errorHandler } from './middleware/errorHandler';
@@ -23,6 +24,7 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   app.use(audit);
   mountSwagger(app);
   app.use(createCartController());
+  app.use(createStockController());
   app.use(errorHandler);
   return app;
 }
