@@ -27,6 +27,18 @@ export class ProductNotFoundError extends AppError {
   }
 }
 
+export class UserNotFoundError extends AppError {
+  constructor(userId: string) {
+    super(`User not found: ${userId}`, 404);
+  }
+}
+
+export class EmptyOrderItemsError extends AppError {
+  constructor() {
+    super('Order items must be a non-empty array', 400);
+  }
+}
+
 export class InvalidQuantityError extends AppError {
   constructor(quantity: unknown) {
     super(`Invalid quantity: ${String(quantity)}`, 400);

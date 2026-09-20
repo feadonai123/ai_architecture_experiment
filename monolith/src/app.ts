@@ -7,6 +7,7 @@ import { audit } from './middleware/audit';
 import { errorHandler } from './middleware/errorHandler';
 import { addCartItemRoute } from './routes/addCartItem';
 import { createCartRoute } from './routes/createCart';
+import { createOrderRoute } from './routes/createOrder';
 import { decreaseStockRoute } from './routes/decreaseStock';
 import { getCartRoute } from './routes/getCart';
 import { getStockRoute } from './routes/getStock';
@@ -25,6 +26,7 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   app.get('/cart/:cartId', authenticate, getCartRoute(dataSource));
   app.post('/cart/items', authenticate, addCartItemRoute(dataSource));
   app.delete('/cart/items/:productId', authenticate, removeCartItemRoute(dataSource));
+  app.post('/orders', authenticate, createOrderRoute(dataSource));
   app.get('/stocks', authenticate, listStocksRoute(dataSource));
   app.get('/stocks/:productId', authenticate, getStockRoute(dataSource));
   app.put('/stocks/:productId', authenticate, updateStockRoute(dataSource));
