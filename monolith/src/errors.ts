@@ -56,3 +56,11 @@ export class ForbiddenError extends AppError {
     super('Forbidden', 403);
   }
 }
+
+export class InvalidOrderCreatedPayloadError extends Error {
+  constructor() {
+    super('Invalid OrderCreated payload');
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}

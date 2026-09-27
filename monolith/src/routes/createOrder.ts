@@ -5,7 +5,7 @@ import { Order } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { User } from '../entities/User';
-import { OrderCreatedEvent } from '../events/OrderCreatedEvent';
+import { OrderCreatedEvent, OrderCreatedPayload } from '../events/OrderCreatedEvent';
 import {
   EmptyOrderItemsError,
   InsufficientStockError,
@@ -113,11 +113,12 @@ export async function createOrder(
     return savedOrder;
   });
 
-  const event = new OrderCreatedEvent(
-    order.id,
-    order.userId,
-    order.items.map(({ productId, quantity }) => ({ productId, quantity })),
-  );
+  const payload = new OrderCreatedPayload({
+    orderId: order.id,
+    userId: order.userId,
+    items: order.items.map(({ productId, quantity }) => ({ productId, quantity })),
+  });
+  const event = new OrderCreatedEvent(order.id, payload);
   await publish(redis, event);
 
   return order;

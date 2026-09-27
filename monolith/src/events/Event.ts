@@ -1,17 +1,20 @@
 export type RedisStreamFields = Record<string, string>;
 
 export abstract class Event<TPayload> {
+  private payload?: TPayload;
   private readonly timestamp: Date;
 
   protected constructor(
     private readonly id: string,
     private readonly type: string,
     private readonly stream: string,
-    private readonly payload: TPayload,
+    private readonly rawPayload: unknown,
     timestamp: Date = new Date(),
   ) {
     this.timestamp = timestamp;
   }
+
+  abstract convertPayload(payload: unknown): TPayload;
 
   getId(): string {
     return this.id;
@@ -30,6 +33,9 @@ export abstract class Event<TPayload> {
   }
 
   getPayload(): TPayload {
+    if (this.payload === undefined) {
+      this.payload = this.convertPayload(this.rawPayload);
+    }
     return this.payload;
   }
 
@@ -38,7 +44,7 @@ export abstract class Event<TPayload> {
       event: this.type,
       eventId: this.id,
       timestamp: this.timestamp.toISOString(),
-      payload: JSON.stringify(this.payload),
+      payload: JSON.stringify(this.getPayload()),
     };
   }
 }
