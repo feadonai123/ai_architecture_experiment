@@ -1,3 +1,6 @@
+import { EventType } from './EventType';
+import type { EventStreamName } from './EventStream';
+
 export type RedisStreamFields = Record<string, string>;
 
 export abstract class Event<TPayload> {
@@ -6,8 +9,8 @@ export abstract class Event<TPayload> {
 
   protected constructor(
     private readonly id: string,
-    private readonly type: string,
-    private readonly stream: string,
+    private readonly type: EventType,
+    private readonly stream: EventStreamName,
     private readonly rawPayload: unknown,
     timestamp: Date = new Date(),
   ) {
@@ -20,11 +23,11 @@ export abstract class Event<TPayload> {
     return this.id;
   }
 
-  getType(): string {
+  getType(): EventType {
     return this.type;
   }
 
-  getStream(): string {
+  getStream(): EventStreamName {
     return this.stream;
   }
 

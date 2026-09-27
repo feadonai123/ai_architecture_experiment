@@ -1,4 +1,6 @@
 import { Event } from './Event';
+import { EventStream } from './EventStream';
+import { EventType } from './EventType';
 import { InvalidOrderCreatedPayloadError } from '../errors';
 
 export type OrderCreatedItem = {
@@ -53,7 +55,7 @@ export class OrderCreatedEvent extends Event<OrderCreatedPayload> {
     payload: OrderCreatedPayload | string | undefined,
     timestamp?: Date,
   ) {
-    super(eventId, 'OrderCreated', 'orders', payload, timestamp);
+    super(eventId, EventType.OrderCreated, EventStream.Orders, payload, timestamp);
   }
 
   convertPayload(payload: unknown): OrderCreatedPayload {
