@@ -33,6 +33,12 @@ export class UserNotFoundError extends AppError {
   }
 }
 
+export class OrderNotFoundError extends AppError {
+  constructor(orderId: string) {
+    super(`Order not found: ${orderId}`, 404);
+  }
+}
+
 export class EmptyOrderItemsError extends AppError {
   constructor() {
     super('Order items must be a non-empty array', 400);

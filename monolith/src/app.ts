@@ -1,6 +1,7 @@
 import express, { Express } from 'express';
 import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
+import { startFinancialConsumer } from './consumers/consumerFinancial';
 import { mountSwagger } from './helpers';
 import { authenticate } from './middleware/authenticate';
 import { audit } from './middleware/audit';
@@ -16,8 +17,11 @@ import { listStocksRoute } from './routes/listStocks';
 import { removeCartItemRoute } from './routes/removeCartItem';
 import { updateStockRoute } from './routes/updateStock';
 
-export function createApp(dataSource: DataSource, _redis: Redis): Express {
+export function createApp(dataSource: DataSource, redis: Redis): Express {
   const app = express();
+  const financialConsumer = startFinancialConsumer(dataSource, redis);
+  app.locals.stopConsumers = () => financialConsumer.stop();
+
   app.use(express.json());
   app.use(audit);
   mountSwagger(app);
@@ -26,7 +30,7 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   app.get('/cart/:cartId', authenticate, getCartRoute(dataSource));
   app.post('/cart/items', authenticate, addCartItemRoute(dataSource));
   app.delete('/cart/items/:productId', authenticate, removeCartItemRoute(dataSource));
-  app.post('/orders', authenticate, createOrderRoute(dataSource));
+  app.post('/orders', authenticate, createOrderRoute(dataSource, redis));
   app.get('/stocks', authenticate, listStocksRoute(dataSource));
   app.get('/stocks/:productId', authenticate, getStockRoute(dataSource));
   app.put('/stocks/:productId', authenticate, updateStockRoute(dataSource));

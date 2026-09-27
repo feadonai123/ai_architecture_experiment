@@ -1,5 +1,9 @@
 import Redis from 'ioredis';
+import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { Order } from '../entities/Order';
+import { OrderPayment } from '../entities/OrderPayment';
+import { OrderNotFoundError } from '../errors';
 import { EventStream, EventStreamName } from '../events/EventStream';
 import { EventType } from '../events/EventType';
 import { OrderCreatedEvent, OrderCreatedPayload } from '../events/OrderCreatedEvent';
@@ -28,9 +32,42 @@ function toFieldRecord(fields: string[]): Record<string, string> {
 }
 
 export async function handleOrderCreated(
+  dataSource: DataSource,
   eventId: string,
   payload: OrderCreatedPayload,
 ): Promise<void> {
+  await dataSource.transaction(async (manager) => {
+    const orderRepository = manager.getRepository(Order);
+    const orderPaymentRepository = manager.getRepository(OrderPayment);
+    const order = await orderRepository.findOne({
+      where: { id: payload.orderId },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    if (!order) {
+      throw new OrderNotFoundError(payload.orderId);
+    }
+
+    const existingPayment = await orderPaymentRepository.findOne({
+      where: { orderId: payload.orderId },
+    });
+    if (existingPayment) {
+      return;
+    }
+
+    const orderPayment = orderPaymentRepository.create({
+      orderId: order.id,
+      status: 'PENDING',
+      paymentDetails: null,
+      paidAt: null,
+      createdAt: new Date(),
+    });
+    await orderPaymentRepository.save(orderPayment);
+
+    order.status = 'PAYMENT_PENDING';
+    await orderRepository.save(order);
+  });
+
   Logger.info(`financial consumer handled ${EventType.OrderCreated}`, {
     eventId,
     orderId: payload.orderId,
@@ -74,6 +111,7 @@ export async function readEvents(
 }
 
 export async function processEvents(
+  dataSource: DataSource,
   redis: Redis,
   stream: EventStreamName,
   entryId: string,
@@ -93,7 +131,7 @@ export async function processEvents(
   switch (fields.event) {
     case EventType.OrderCreated: {
       const event = new OrderCreatedEvent(fields.eventId ?? entryId, fields.payload);
-      await handleOrderCreated(event.getId(), event.getPayload());
+      await handleOrderCreated(dataSource, event.getId(), event.getPayload());
       break;
     }
   }
@@ -105,7 +143,7 @@ function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export function startFinancialConsumer(redis: Redis): FinancialConsumer {
+export function startFinancialConsumer(dataSource: DataSource, redis: Redis): FinancialConsumer {
   const consumerRedis = redis.duplicate();
   const consumerName = `financial-${process.pid}-${uuidv4()}`;
   let running = true;
@@ -119,7 +157,7 @@ export function startFinancialConsumer(redis: Redis): FinancialConsumer {
         for (const [stream, messages] of response ?? []) {
           for (const [entryId, fields] of messages) {
             try {
-              await processEvents(consumerRedis, stream, entryId, fields);
+              await processEvents(dataSource, consumerRedis, stream, entryId, fields);
             } catch (error) {
               Logger.error('financial consumer failed to handle event', {
                 entryId,

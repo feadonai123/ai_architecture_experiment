@@ -1,5 +1,6 @@
-import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
 import { OrderItem } from './OrderItem';
+import { OrderPayment } from './OrderPayment';
 import { User } from './User';
 
 const numericTransformer = {
@@ -30,4 +31,7 @@ export class Order {
 
   @OneToMany(() => OrderItem, (item) => item.order)
   items!: OrderItem[];
+
+  @OneToOne(() => OrderPayment, (payment) => payment.order)
+  payment!: OrderPayment;
 }
