@@ -1,10 +1,11 @@
+import type Redis from 'ioredis';
 import { DataSource, In } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
-// import { OrderCreatedEvent } from '../events/OrderCreatedEvent';
 import { Order } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { User } from '../entities/User';
+import { OrderCreatedEvent } from '../events/OrderCreatedEvent';
 import {
   EmptyOrderItemsError,
   InsufficientStockError,
@@ -14,6 +15,7 @@ import {
 } from '../errors';
 import { isValidQuantity, wrap } from '../helpers';
 import { presentOrder } from '../presenters/order.presenter';
+import { publish } from '../services/redis';
 
 type CreateOrderItemInput = {
   productId: string;
@@ -30,7 +32,11 @@ type CreateOrderInput = {
   items: unknown;
 };
 
-export async function createOrder(dataSource: DataSource, input: CreateOrderInput): Promise<Order> {
+export async function createOrder(
+  dataSource: DataSource,
+  redis: Redis,
+  input: CreateOrderInput,
+): Promise<Order> {
   if (!Array.isArray(input.items) || input.items.length === 0) {
     throw new EmptyOrderItemsError();
   }
@@ -107,21 +113,19 @@ export async function createOrder(dataSource: DataSource, input: CreateOrderInpu
     return savedOrder;
   });
 
-  // TODO: publicar o evento OrderCreated no Redis Stream após a persistência bem-sucedida.
-  // const event = new OrderCreatedEvent(
-  //   order.id,
-  //   order.userId,
-  //   order.items.map(({ productId, quantity }) => ({ productId, quantity })),
-  // );
-  // const fields = Object.entries(event.toRedisStreamFields()).flat();
-  // await redis.xadd(event.getStream(), '*', ...fields);
+  const event = new OrderCreatedEvent(
+    order.id,
+    order.userId,
+    order.items.map(({ productId, quantity }) => ({ productId, quantity })),
+  );
+  await publish(redis, event);
 
   return order;
 }
 
-export function createOrderRoute(dataSource: DataSource) {
+export function createOrderRoute(dataSource: DataSource, redis: Redis) {
   return wrap(async (req, res) => {
-    const order = await createOrder(dataSource, {
+    const order = await createOrder(dataSource, redis, {
       userId: req.body.userId,
       items: req.body.items,
     });

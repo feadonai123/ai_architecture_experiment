@@ -95,6 +95,8 @@ src/
 ├── entities/
 ├── presenters/
 ├── middleware/
+├── events/
+├── consumers/
 ├── services/
 └── utils/
 ```
@@ -105,15 +107,19 @@ A pasta `presenters/` transforma o modelo persistido no payload HTTP.
 
 A pasta `middleware/` contém middlewares HTTP compartilhados: `errorHandler`, `authenticate` e `audit`.
 
+A pasta `events/` contém a representação dos eventos destinados a Redis Streams: a classe abstrata comum e os eventos concretos. Ela não encapsula o cliente Redis nem a publicação; no monólito, a rota continua responsável por chamar o Redis diretamente.
+
+A pasta `consumers/` contém os processos consumidores de Redis Streams organizados por setor do e-commerce. No monólito, cada consumidor concentra a leitura do stream e os handlers dos eventos daquele setor.
+
 A pasta `utils/` contém somente `Logger`. `requireEnv` / `loadAppEnv` permanecem em `helpers.ts`.
 
-A pasta `services/` existe para expor o cliente Redis (`createRedis`). O monólito não centraliza operações Redis no service: rotas e `server.ts` chamam o cliente diretamente (`redis.ping()`, futuros get/set).
+A pasta `services/` expõe o cliente Redis (`createRedis`) e a publicação de eventos em Redis Streams (`publish`). O `server.ts` chama o cliente diretamente para verificação de saúde (`redis.ping()`).
 
 ## 3.3 Responsabilidade das estruturas
 
 ### `app.ts`
 
-Responsável por montar a aplicação Express: registrar rotas, Swagger e o tratamento de erros HTTP.
+Responsável por montar a aplicação Express, registrar rotas, Swagger e o tratamento de erros HTTP, além de iniciar os consumidores Redis da aplicação.
 
 ### `database.ts`
 
@@ -133,7 +139,7 @@ Não deve existir uma pasta `helpers/`. `utils/` existe somente para `Logger`.
 
 ### `routes/`
 
-Um arquivo por rota/operação HTTP. Cada arquivo contém a leitura da requisição, a regra de negócio, o acesso direto ao TypeORM e, quando houver Redis de negócio, a chamada direta ao cliente Redis.
+Um arquivo por rota/operação HTTP. Cada arquivo contém a leitura da requisição, a regra de negócio, o acesso direto ao TypeORM e, quando houver publicação de evento, a chamada ao `publish` do serviço Redis.
 
 A resposta HTTP é produzida via `presenters/`.
 
@@ -152,7 +158,15 @@ Responsável exclusivamente por representar as entidades persistidas necessária
 
 ### `services/`
 
-Contém o factory do cliente Redis. Não deve encapsular a lógica de uso do Redis; isso permanece nas rotas/`server.ts`.
+Contém o factory do cliente Redis e a operação técnica comum de publicação em Redis Streams. A criação do evento e a decisão de publicá-lo permanecem na rota; o `server.ts` usa o cliente diretamente para `ping`.
+
+### `events/`
+
+Contém somente classes de eventos para Redis Streams. A classe abstrata concentra propriedades e serialização comuns, enquanto cada classe concreta define seu tipo, stream e payload.
+
+### `consumers/`
+
+Contém um consumidor Redis Streams por setor do e-commerce. O arquivo do consumidor define seu consumer group, executa `XREADGROUP`, confirma mensagens com `XACK` somente após o handler e mantém os handlers dos eventos consumidos pelo setor.
 
 ### `presenters/`
 
@@ -757,7 +771,7 @@ Também não devem ser criados contextos artificiais apenas para aumentar a modu
 | Presenter | pasta `presenters/` | pasta `presenters/` | pasta `presenters/` | `shared/presenters/` |
 | Middleware | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` |
 | Repository abstraction | não | não | `ports/` | implementação por operação |
-| Services | factory Redis; uso direto nas rotas | Redis centralizado | Redis centralizado | Redis centralizado |
+| Services | factory Redis + publicação em Streams | Redis centralizado | Redis centralizado | Redis centralizado |
 | Errors | arquivo único | global | global | por operação |
 | Env (`requireEnv`) | `helpers.ts` | `utils/` | `utils/` | `utils/` |
 | Infrastructure | mínima (`database.ts`) | `database.ts` | explícita | compartilhada + específica quando necessária |

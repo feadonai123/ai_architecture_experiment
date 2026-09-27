@@ -56,7 +56,7 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 
 - Clean e Domain: unitários **somente de use cases** (`run`), com ports/repositórios mockados.
 - MVC: unitários dos handlers de rota, com models mockados. `invokeHandler` vive no arquivo de teste, não em `mocks/`.
-- Monólito: unitários das rotas, com TypeORM mockado.
+- Monólito: unitários das rotas e dos handlers de consumidores, com TypeORM e Redis mockados.
 - Mocks em `test/mocks/` de cada abordagem: só funções/objetos mock.
 
 ## O que não fazer
