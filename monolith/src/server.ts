@@ -1,5 +1,4 @@
 import 'reflect-metadata';
-import { createApp } from './app';
 import { applySchema, createDataSource } from './database';
 import { loadAppEnv, requireEnv } from './helpers';
 import { createRedis } from './services/redis';
@@ -7,6 +6,7 @@ import { createRedis } from './services/redis';
 loadAppEnv();
 
 async function start(): Promise<void> {
+  const { createApp } = await import('./app');
   const dataSource = createDataSource();
   await dataSource.initialize();
   await applySchema(dataSource);

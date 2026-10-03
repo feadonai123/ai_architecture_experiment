@@ -107,9 +107,9 @@ A pasta `presenters/` transforma o modelo persistido no payload HTTP.
 
 A pasta `middleware/` contém middlewares HTTP compartilhados: `errorHandler`, `authenticate` e `audit`.
 
-A pasta `events/` contém a representação dos eventos destinados a Redis Streams: a classe abstrata comum e os eventos concretos. Ela não encapsula o cliente Redis nem a publicação; no monólito, a rota continua responsável por chamar o Redis diretamente.
+A pasta `events/` contém a representação dos eventos destinados a Redis Streams: a classe abstrata comum, que exige um método de conversão, os eventos concretos com suas classes de payload, a classe que centraliza os nomes dos streams e o enum que centraliza os tipos de evento. Ela não encapsula o cliente Redis nem a publicação; no monólito, a rota continua responsável por chamar o serviço Redis.
 
-A pasta `consumers/` contém os processos consumidores de Redis Streams organizados por setor do e-commerce. No monólito, cada consumidor concentra a leitura do stream e os handlers dos eventos daquele setor.
+A pasta `consumers/` contém os processos consumidores de Redis Streams organizados por setor do e-commerce. No monólito, cada consumidor declara as listas de streams observados e eventos suportados, lê lotes de até dez mensagens e concentra o despacho e os handlers dos eventos daquele setor.
 
 A pasta `utils/` contém somente `Logger`. `requireEnv` / `loadAppEnv` permanecem em `helpers.ts`.
 
@@ -128,6 +128,8 @@ Responsável exclusivamente pela configuração/conexão do banco de dados.
 ### `errors.ts`
 
 Arquivo único com todas as classes de erro da aplicação.
+
+Erros específicos de payload de eventos herdam de `InvalidPayloadError`.
 
 Não deve existir uma pasta `errors/`.
 
@@ -162,11 +164,13 @@ Contém o factory do cliente Redis e a operação técnica comum de publicação
 
 ### `events/`
 
-Contém somente classes de eventos para Redis Streams. A classe abstrata concentra propriedades e serialização comuns, enquanto cada classe concreta define seu tipo, stream e payload.
+Contém somente classes de eventos para Redis Streams. A classe abstrata concentra propriedades e serialização comuns e declara o método abstrato de conversão do payload. Cada evento concreto implementa esse método e define seu tipo, stream e classe de payload. Uma classe própria centraliza os nomes de streams e um enum próprio centraliza os tipos de evento usados por produtores e consumidores.
+
+Na rota que produz um evento, a classe concreta de payload é instanciada explicitamente antes da classe do evento.
 
 ### `consumers/`
 
-Contém um consumidor Redis Streams por setor do e-commerce. O arquivo do consumidor define seu consumer group, executa `XREADGROUP`, confirma mensagens com `XACK` somente após o handler e mantém os handlers dos eventos consumidos pelo setor.
+Contém um consumidor Redis Streams por setor do e-commerce. O arquivo do consumidor define seu consumer group, as listas de streams observados e tipos suportados, executa `XREADGROUP` com lotes de até dez mensagens, percorre cada lote e usa `processEvents` para selecionar o tipo e chamar o handler correspondente. O consumidor também mantém um loop de retry com conexão Redis própria, agenda as tentativas em Sorted Set, mantém os metadados em Hash, aplica exponential backoff tabelado, usa `XCLAIM` para reclamar mensagens elegíveis e reconcilia a agenda com `XPENDING`. Erros de payload derivados de `InvalidPayloadError` enviam a entrada para uma Dead Letter Stream antes de `XACK`, tanto na leitura inicial quanto no retry; no retry, a agenda e os metadados também são removidos. Handlers que alteram persistência acessam o TypeORM diretamente e executam todas as alterações relacionadas em uma única transação. O sucesso do handler recebe `XACK` somente após o commit da transação.
 
 ### `presenters/`
 

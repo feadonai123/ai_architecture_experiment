@@ -63,9 +63,23 @@ export class ForbiddenError extends AppError {
   }
 }
 
-export class InvalidOrderCreatedPayloadError extends Error {
+export class InvalidPayloadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class InvalidOrderCreatedPayloadError extends InvalidPayloadError {
   constructor() {
     super('Invalid OrderCreated payload');
+  }
+}
+
+export class RetryAttemptsExhaustedError extends Error {
+  constructor(maxAttempts: number, lastError: string) {
+    super(`Retry attempts exhausted after ${maxAttempts} attempts. Last error: ${lastError}`);
     this.name = new.target.name;
     Object.setPrototypeOf(this, new.target.prototype);
   }
