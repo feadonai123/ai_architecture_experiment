@@ -92,7 +92,6 @@ export async function handleOrderCreated(
   payload: OrderCreatedPayload,
 ): Promise<void> {
   await dataSource.transaction(async (manager) => {
-    throw new Error('handleOrderCreated is not implemented yet');
     const orderRepository = manager.getRepository(Order);
     const orderPaymentRepository = manager.getRepository(OrderPayment);
     const order = await orderRepository.findOne({
