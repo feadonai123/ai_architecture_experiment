@@ -1,4 +1,5 @@
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryColumn } from 'typeorm';
+import { OrderStatus } from '../enums/OrderStatus';
 import { OrderItem } from './OrderItem';
 import { OrderPayment } from './OrderPayment';
 import { User } from './User';
@@ -16,8 +17,8 @@ export class Order {
   @Column({ name: 'user_id', type: 'uuid' })
   userId!: string;
 
-  @Column({ type: 'varchar', length: 50 })
-  status!: string;
+  @Column({ type: 'smallint' })
+  status!: OrderStatus;
 
   @Column({ type: 'numeric', precision: 10, scale: 2, transformer: numericTransformer })
   total!: number;
