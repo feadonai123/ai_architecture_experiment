@@ -1,4 +1,5 @@
 import { Order } from '../../src/entities/Order';
+import { OrderStatus } from '../../src/enums/OrderStatus';
 
 export const userMock = {
   id: 'user-1',
@@ -30,7 +31,7 @@ export const createOrderInputMock = {
 export const orderMock = {
   id: 'order-1',
   userId: userMock.id,
-  status: 'PENDING',
+  status: OrderStatus.PENDING,
   total: 250,
   createdAt: new Date('2026-09-19T18:30:00.000Z'),
   items: [

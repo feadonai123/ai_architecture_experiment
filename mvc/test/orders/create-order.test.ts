@@ -1,19 +1,17 @@
 import { Request, Response } from 'express';
 import { create } from '../../src/controllers/order/routes/create.route';
+import { setDataSource } from '../../src/database';
+import { OrderStatus } from '../../src/enums/OrderStatus';
 import { EmptyOrderItemsError } from '../../src/errors/EmptyOrderItemsError';
 import { InsufficientStockError } from '../../src/errors/InsufficientStockError';
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { UserNotFoundError } from '../../src/errors/UserNotFoundError';
 import { OrderCreatedEvent } from '../../src/events/OrderCreatedEvent';
-import {
-  createOrderInputMock,
-  orderMock,
-  productsMock,
-  userMock,
-} from '../mocks/create-order';
+import { createOrderInputMock, orderMock, productsMock, userMock } from '../mocks/create-order';
 import { mockRes } from '../mocks/http';
-import { mockOrderCreateWithItems } from '../mocks/order';
+import { mockOrderCreate } from '../mocks/order';
+import { mockOrderItemCreate } from '../mocks/orderItem';
 import { mockProductFindByIds } from '../mocks/product';
 import { mockPublish } from '../mocks/redis';
 import { mockUserFindById } from '../mocks/user';
@@ -44,15 +42,30 @@ describe('create order', () => {
     it('creates a pending order with current prices and calculated total', async () => {
       mockUserFindById(userMock);
       mockProductFindByIds(productsMock);
-      const createWithItems = mockOrderCreateWithItems(orderMock);
+      const createOrderModel = mockOrderCreate(orderMock);
+      const createOrderItems = mockOrderItemCreate(orderMock.items);
+      const transaction = jest.fn(async (run) => run({}));
+      setDataSource({ transaction } as never);
       const publish = mockPublish();
 
       const result = await createOrder(createOrderInputMock);
 
-      expect(createWithItems).toHaveBeenCalledWith(userMock.id, [
-        { productId: productsMock[0].id, quantity: 2, unitPrice: 100 },
-        { productId: productsMock[1].id, quantity: 1, unitPrice: 50 },
-      ]);
+      expect(createOrderModel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: userMock.id,
+          status: OrderStatus.PENDING,
+          total: 250,
+        }),
+        expect.any(Object),
+      );
+      expect(createOrderItems).toHaveBeenCalledWith(
+        [
+          expect.objectContaining({ productId: productsMock[0].id, quantity: 2, unitPrice: 100 }),
+          expect.objectContaining({ productId: productsMock[1].id, quantity: 1, unitPrice: 50 }),
+        ],
+        expect.any(Object),
+      );
+      expect(transaction).toHaveBeenCalledTimes(1);
       expect(publish).toHaveBeenCalledWith(expect.any(OrderCreatedEvent));
       const event = publish.mock.calls[0][0] as OrderCreatedEvent;
       expect(event.getId()).toBe(orderMock.id);
@@ -66,7 +79,7 @@ describe('create order', () => {
         body: {
           id: orderMock.id,
           userId: userMock.id,
-          status: 'PENDING',
+          status: OrderStatus.PENDING,
           total: 250,
           createdAt: '2026-09-19T18:30:00.000Z',
           items: [
