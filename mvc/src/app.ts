@@ -6,6 +6,7 @@ import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { parse } from 'yaml';
 import { createCartController } from './controllers/cart/cart.controller';
+import { ConsumerFinancial } from './consumers/ConsumerFinancial';
 import { createOrderController } from './controllers/order/order.controller';
 import { createStockController } from './controllers/stock/stock.controller';
 import { setDataSource } from './database';
@@ -23,6 +24,9 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
   setDataSource(dataSource);
   setRedis(redis);
   const app = express();
+  const financialConsumer = new ConsumerFinancial(redis);
+  financialConsumer.start();
+  app.locals.stopConsumers = () => financialConsumer.stop();
   app.use(express.json());
   app.use(audit);
   mountSwagger(app);

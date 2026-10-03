@@ -59,6 +59,15 @@ export async function publish<TPayload>(
   return entryId;
 }
 
+export function addStreamEntry(
+  stream: string,
+  fields: Record<string, string>,
+  redis: Redis = getRedis(),
+): Promise<string | null> {
+  const values = Object.entries(fields).flatMap(([key, value]) => [key, value]);
+  return redis.xadd(stream, '*', ...values);
+}
+
 export function createConsumerGroup(
   stream: string,
   group: string,
@@ -110,10 +119,7 @@ export async function listPending(
   return (await redis.xpending(stream, group, startId, endId, count)) as PendingEntry[];
 }
 
-export function getHash(
-  key: string,
-  redis: Redis = getRedis(),
-): Promise<Record<string, string>> {
+export function getHash(key: string, redis: Redis = getRedis()): Promise<Record<string, string>> {
   return redis.hgetall(key);
 }
 
@@ -169,7 +175,14 @@ export async function saveHashAndSchedule(
   member: string,
   redis: Redis = getRedis(),
 ): Promise<void> {
-  await redis.multi().hset(metadataKey, values).zadd(scheduleKey, score, member).exec();
+  const results = await redis
+    .multi()
+    .hset(metadataKey, values)
+    .zadd(scheduleKey, score, member)
+    .exec();
+  if (!results || results.some(([commandError]) => commandError)) {
+    throw new Error(`Failed to save retry schedule: ${member}`);
+  }
 }
 
 export async function removeHashAndSchedule(
@@ -178,7 +191,10 @@ export async function removeHashAndSchedule(
   member: string,
   redis: Redis = getRedis(),
 ): Promise<void> {
-  await redis.multi().zrem(scheduleKey, member).del(metadataKey).exec();
+  const results = await redis.multi().zrem(scheduleKey, member).del(metadataKey).exec();
+  if (!results || results.some(([commandError]) => commandError)) {
+    throw new Error(`Failed to remove retry schedule: ${member}`);
+  }
 }
 
 export async function acknowledgeAndRemoveHashAndSchedule(

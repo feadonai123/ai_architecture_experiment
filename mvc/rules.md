@@ -11,7 +11,9 @@ src/
 ├── controllers/
 ├── models/
 ├── entities/
+├── enums/
 ├── events/
+├── consumers/
 ├── services/
 ├── presenters/
 ├── middleware/
@@ -26,8 +28,10 @@ Não existe `src/routes/` nem `src/database/`.
 
 - `controllers/<recurso>/` — `*.controller.ts` só registra HTTP. `routes/*.route.ts` lê request, coordena models/services, chama presenter, responde.
 - `entities/` — mapeamento TypeORM, sem métodos de persistência de negócio.
+- `enums/` — valores finitos de status e outros tipos limitados usados pela aplicação.
 - `events/` — contrato, validação e serialização dos eventos da aplicação, sem acesso direto ao Redis.
-- `models/` — operações de persistência como métodos estáticos sobre a entity.
+- `consumers/` — `ConfigConsumer` valida as configurações de ambiente; `Consumer` concentra leitura, retry e Dead Letter; consumidores concretos implementam `processEvent` e os handlers do seu setor.
+- `models/` — somente operações de acesso e persistência (`find`, `create`, `update`) como métodos estáticos sobre a entity. Decisões de negócio, como status, total, idempotência, composição de pedido e quando criar pagamento, ficam na rota ou no handler do consumer. A rota coordena a transação que persiste pedido e itens.
 - `services/` — Redis centralizado (`createRedis`, `getRedis`, `ping`, `publish` e operações de consumo). Sem service “só para mover código”.
 - `presenters/` — um presenter por entidade.
 - `middleware/` — `errorHandler`, `authenticate` (por rota, não global) e `audit`.
@@ -54,7 +58,7 @@ Não organizar primeiro por domínio (`products/`, `orders/`).
 
 ## Testes desta abordagem
 
-- `test/` contém exclusivamente testes unitários das funções de negócio das rotas, com TypeORM mockado em `test/mocks/`.
+- `test/` contém exclusivamente testes unitários das funções de negócio das rotas e dos consumers, com Redis, TypeORM e models mockados em `test/mocks/`.
 - Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
 - `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.
