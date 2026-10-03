@@ -3,6 +3,8 @@ import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Order } from '../entities/Order';
 import { OrderPayment } from '../entities/OrderPayment';
+import { OrderPaymentStatus } from '../enums/OrderPaymentStatus';
+import { OrderStatus } from '../enums/OrderStatus';
 import { InvalidPayloadError, OrderNotFoundError, RetryAttemptsExhaustedError } from '../errors';
 import { EventStream, EventStreamName } from '../events/EventStream';
 import { EventType } from '../events/EventType';
@@ -112,14 +114,14 @@ export async function handleOrderCreated(
 
     const orderPayment = orderPaymentRepository.create({
       orderId: order.id,
-      status: 'PENDING',
+      status: OrderPaymentStatus.PENDING,
       paymentDetails: null,
       paidAt: null,
       createdAt: new Date(),
     });
     await orderPaymentRepository.save(orderPayment);
 
-    order.status = 'PAYMENT_PENDING';
+    order.status = OrderStatus.PAYMENT_PENDING;
     await orderRepository.save(order);
   });
 

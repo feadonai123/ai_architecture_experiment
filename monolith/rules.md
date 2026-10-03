@@ -16,6 +16,7 @@ src/
 ├── helpers.ts
 ├── routes/
 ├── entities/
+├── enums/
 ├── presenters/
 ├── middleware/
 ├── events/
@@ -28,6 +29,7 @@ src/
 
 - `routes/` — um arquivo por operação HTTP. Lê o request, aplica regra de negócio, acessa TypeORM direto, responde via presenter.
 - `entities/` — somente mapeamento TypeORM.
+- `enums/` — valores finitos de status e outros tipos limitados usados pela aplicação.
 - `presenters/` — modelo persistido → payload HTTP.
 - `middleware/` — `errorHandler`, `authenticate` (por rota, não global) e `audit`.
 - `events/` — classes que representam eventos publicados em Redis Streams. A classe abstrata exige um método de conversão do payload, implementado por cada evento concreto para sua classe específica de payload. Os nomes dos streams ficam em uma classe própria e os tipos de evento em um enum próprio nesta pasta. Não publica eventos nem cria o cliente Redis.

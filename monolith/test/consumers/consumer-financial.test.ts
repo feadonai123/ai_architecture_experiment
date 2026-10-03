@@ -13,6 +13,8 @@ import {
 } from '../../src/errors';
 import { EventStream } from '../../src/events/EventStream';
 import { EventType } from '../../src/events/EventType';
+import { OrderPaymentStatus } from '../../src/enums/OrderPaymentStatus';
+import { OrderStatus } from '../../src/enums/OrderStatus';
 import { Logger } from '../../src/utils/Logger';
 import { mockDataSource } from '../mocks/dataSource';
 import { mockOrderPaymentRepo, mockOrderRepo } from '../mocks/order';
@@ -22,7 +24,7 @@ describe('financial consumer', () => {
   describe('success', () => {
     it('handles OrderCreated before acknowledging the stream entry', async () => {
       const redis = mockRedis();
-      const order = { id: 'order-1', status: 'PENDING' };
+      const order = { id: 'order-1', status: OrderStatus.PENDING };
       const orderRepository = mockOrderRepo({ findOne: order });
       const orderPaymentRepository = mockOrderPaymentRepo({ findOne: null });
       const dataSource = mockDataSource({
@@ -61,14 +63,14 @@ describe('financial consumer', () => {
       });
       expect(orderPaymentRepository.save).toHaveBeenCalledWith({
         orderId: payload.orderId,
-        status: 'PENDING',
+        status: OrderPaymentStatus.PENDING,
         paymentDetails: null,
         paidAt: null,
         createdAt: expect.any(Date),
       });
       expect(orderRepository.save).toHaveBeenCalledWith({
         id: payload.orderId,
-        status: 'PAYMENT_PENDING',
+        status: OrderStatus.PAYMENT_PENDING,
       });
       expect(redis.xack).toHaveBeenCalledWith(EventStream.Orders, 'financial', 'stream-entry-1');
       expect(orderRepository.save.mock.invocationCallOrder[0]).toBeLessThan(
@@ -110,10 +112,10 @@ describe('financial consumer', () => {
       const redis = mockRedis();
       const log = jest.spyOn(Logger, 'info').mockImplementation();
       const orderRepository = mockOrderRepo({
-        findOne: { id: 'order-1', status: 'PAYMENT_PENDING' },
+        findOne: { id: 'order-1', status: OrderStatus.PAYMENT_PENDING },
       });
       const orderPaymentRepository = mockOrderPaymentRepo({
-        findOne: { orderId: 'order-1', status: 'PENDING' },
+        findOne: { orderId: 'order-1', status: OrderPaymentStatus.PENDING },
       });
       const dataSource = mockDataSource({
         order: orderRepository,
@@ -258,7 +260,7 @@ describe('financial consumer', () => {
         ],
       ]);
       const orderRepository = mockOrderRepo({
-        findOne: { id: 'order-1', status: 'PENDING' },
+        findOne: { id: 'order-1', status: OrderStatus.PENDING },
       });
       const dataSource = mockDataSource({
         order: orderRepository,
@@ -286,7 +288,7 @@ describe('financial consumer', () => {
       );
       expect(orderRepository.save).toHaveBeenCalledWith({
         id: 'order-1',
-        status: 'PAYMENT_PENDING',
+        status: OrderStatus.PAYMENT_PENDING,
       });
       const transaction = (redis.multi as jest.Mock).mock.results[0].value;
       expect(transaction.xack).toHaveBeenCalledWith(

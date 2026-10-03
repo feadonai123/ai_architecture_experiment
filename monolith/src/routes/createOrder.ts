@@ -5,6 +5,7 @@ import { Order } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
 import { Product } from '../entities/Product';
 import { User } from '../entities/User';
+import { OrderStatus } from '../enums/OrderStatus';
 import { OrderCreatedEvent, OrderCreatedPayload } from '../events/OrderCreatedEvent';
 import {
   EmptyOrderItemsError,
@@ -102,7 +103,7 @@ export async function createOrder(
     const newOrder = orderRepository.create({
       id,
       userId: input.userId,
-      status: 'PENDING',
+      status: OrderStatus.PENDING,
       total,
       createdAt: new Date(),
       items: orderItems,

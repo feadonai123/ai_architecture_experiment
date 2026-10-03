@@ -7,6 +7,7 @@ import {
 } from '../../src/errors';
 import { EventStream } from '../../src/events/EventStream';
 import { EventType } from '../../src/events/EventType';
+import { OrderStatus } from '../../src/enums/OrderStatus';
 import { createOrder } from '../../src/routes/createOrder';
 import { createOrderInputMock, productsMock, userMock } from '../mocks/create-order';
 import { mockDataSource } from '../mocks/dataSource';
@@ -32,7 +33,7 @@ describe('create order', () => {
 
       expect(result).toMatchObject({
         userId: userMock.id,
-        status: 'PENDING',
+        status: OrderStatus.PENDING,
         total: 250,
         items: [
           { productId: productsMock[0].id, quantity: 2, unitPrice: 100 },
