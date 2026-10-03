@@ -3,7 +3,11 @@ import path from 'node:path';
 import { DataSource } from 'typeorm';
 import { Cart } from './entities/Cart';
 import { CartItem } from './entities/CartItem';
+import { Order } from './entities/Order';
+import { OrderItem } from './entities/OrderItem';
+import { OrderPayment } from './entities/OrderPayment';
 import { Product } from './entities/Product';
+import { User } from './entities/User';
 import { requireEnv } from './utils/env';
 
 let dataSource: DataSource | undefined;
@@ -27,7 +31,7 @@ export function createDataSource(): DataSource {
     username: requireEnv('POSTGRES_USER'),
     password: requireEnv('POSTGRES_PASSWORD'),
     database: requireEnv('POSTGRES_DB'),
-    entities: [Product, Cart, CartItem],
+    entities: [Product, User, Cart, CartItem, Order, OrderItem, OrderPayment],
     synchronize: false,
     logging: false,
   });
