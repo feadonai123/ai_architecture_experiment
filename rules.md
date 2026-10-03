@@ -47,6 +47,7 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 
 ## Contratos HTTP
 
+- Campos de status e outros campos com um conjunto limitado de valores são representados por `enum` na aplicação. O contrato HTTP define se o valor serializado é texto ou número.
 - Cada recurso possui seu próprio arquivo Markdown em `test/contracts/`.
 - Rotas de carrinho pertencem a `test/contracts/cart.md`.
 - Rotas de estoque pertencem a `test/contracts/stock.md`.
@@ -55,7 +56,7 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 ## Testes unitários
 
 - Clean e Domain: unitários **somente de use cases** (`run`), com ports/repositórios mockados.
-- MVC: unitários dos handlers de rota, com models mockados. `invokeHandler` vive no arquivo de teste, não em `mocks/`.
+- MVC: unitários dos handlers de rota, com models mockados, e dos consumers, com Redis e models mockados. `invokeHandler` vive no arquivo de teste, não em `mocks/`.
 - Monólito: unitários das rotas e dos handlers de consumidores, com TypeORM e Redis mockados.
 - Mocks em `test/mocks/` de cada abordagem: só funções/objetos mock.
 

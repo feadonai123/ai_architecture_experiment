@@ -93,6 +93,7 @@ src/
 ├── helpers.ts
 ├── routes/
 ├── entities/
+├── enums/
 ├── presenters/
 ├── middleware/
 ├── events/
@@ -102,6 +103,8 @@ src/
 ```
 
 A pasta `entities/` é permitida exclusivamente para representar as entidades necessárias ao TypeORM.
+
+A pasta `enums/` define status e outros conjuntos limitados de valores usados pela aplicação.
 
 A pasta `presenters/` transforma o modelo persistido no payload HTTP.
 
@@ -228,6 +231,7 @@ Controller
 Model
 Entity
 Event
+Consumer
 Service
 Presenter
 Middleware
@@ -245,7 +249,9 @@ src/
 ├── controllers/
 ├── models/
 ├── entities/
+├── enums/
 ├── events/
+├── consumers/
 ├── services/
 ├── presenters/
 ├── middleware/
@@ -283,13 +289,21 @@ A regra de negócio pode permanecer no arquivo da rota neste experimento.
 
 Mapeamento TypeORM (decorators, colunas, relações). Sem métodos de persistência além do que o TypeORM exige.
 
+### `enums/`
+
+Define status e outros conjuntos limitados de valores usados pela aplicação.
+
 ### `models/`
 
-Importam a entity correspondente e concentram as operações de persistência (`createEmpty`, `findById`, `save`, `remove`, etc.) como métodos estáticos.
+Importam a entity correspondente e concentram somente as operações de acesso e persistência (`find`, `create`, `update`, `remove`, etc.) como métodos estáticos. No fluxo de pedidos, cálculos, status, idempotência e composição de pedido pertencem à rota ou ao handler do consumer; os models podem receber um `EntityManager` para usar a mesma transação. A rota coordena a transação que persiste pedido e itens.
 
 ### `events/`
 
 Contém o contrato, a validação e a serialização dos eventos da aplicação. Eventos não acessam o Redis diretamente; a publicação permanece em `services/`.
+
+### `consumers/`
+
+`ConfigConsumer` valida os parâmetros de ambiente. `Consumer` implementa o ciclo de leitura, retry, reconciliação da PEL e Dead Letter. Cada consumer concreto implementa `processEvent` e os handlers dos tipos aceitos. Comandos Redis ficam em `services/redis.ts`; persistência fica nos models.
 
 ### `services/`
 

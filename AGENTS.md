@@ -1,4 +1,4 @@
-# Diretrizes do agente
+# Diretrizes dos agentes
 
 ## O que é este repositório
 
@@ -25,7 +25,7 @@ Antes de alterar código:
 
 Seguir essas regras **fielmente**. Não “melhorar” uma abordagem copiando estrutura de outra. Não criar pasta, classe ou wrapper fora do que as rules permitem.
 
-Os arquivos `<abordagem>/rules.md` devem ser autocontidos e tratar cada abordagem como um projeto independente. Eles não podem citar caminhos, arquivos ou estruturas do repositório agregador. Regras sobre recursos compartilhados entre as quatro implementações, como `test/integration/`, pertencem somente ao `/rules.md` e a este `AGENT.md`.
+Os arquivos `<abordagem>/rules.md` devem ser autocontidos e tratar cada abordagem como um projeto independente. Eles não podem citar caminhos, arquivos ou estruturas do repositório agregador. Regras sobre recursos compartilhados entre as quatro implementações, como `test/integration/`, pertencem somente ao `/rules.md` e a este `AGENTS.md`.
 
 ## Pasta = responsabilidade
 
@@ -55,6 +55,7 @@ Não esperar o usuário pedir para documentar.
 
 ## Outras diretrizes
 
+- Campos de status e outros campos com um conjunto limitado de valores devem ser representados por `enum` na aplicação. Usar os membros do enum, sem strings ou números mágicos para esses valores.
 - Responder em PT-BR.
 - `requireEnv` sem fallback.
 - Não commitar a menos que o usuário peça.
