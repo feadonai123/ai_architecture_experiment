@@ -15,7 +15,7 @@ import {
 } from '../errors';
 import { isValidQuantity, wrap } from '../helpers';
 import { presentOrder } from '../presenters/order.presenter';
-import { publish } from '../services/redis';
+
 
 type CreateOrderItemInput = {
   productId: string;
@@ -119,8 +119,16 @@ export async function createOrder(
     items: order.items.map(({ productId, quantity }) => ({ productId, quantity })),
   });
   const event = new OrderCreatedEvent(order.id, payload);
-  await publish(redis, event);
 
+  const fields = Object.entries(event.toRedisStreamFields()).flatMap(([field, value]) => [
+    field,
+    value,
+  ]);
+  const entryId = await redis.xadd(event.getStream(), '*', ...fields);
+
+  if (!entryId) {
+    throw new Error(`Failed to publish ${event.getType()} to Redis Stream`);
+  }
   return order;
 }
 
