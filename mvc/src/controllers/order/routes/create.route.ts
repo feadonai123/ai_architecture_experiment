@@ -4,10 +4,12 @@ import { InsufficientStockError } from '../../../errors/InsufficientStockError';
 import { InvalidQuantityError } from '../../../errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../../errors/ProductNotFoundError';
 import { UserNotFoundError } from '../../../errors/UserNotFoundError';
+import { OrderCreatedEvent, OrderCreatedPayload } from '../../../events/OrderCreatedEvent';
 import { Order } from '../../../models/Order';
 import { Product } from '../../../models/Product';
 import { User } from '../../../models/User';
 import { presentOrder } from '../../../presenters/order.presenter';
+import { publish } from '../../../services/redis';
 
 type CreateOrderItemInput = {
   productId: string;
@@ -77,12 +79,13 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       })),
     );
 
-    // TODO(RF05): publicar o evento após implementar a infraestrutura de eventos.
-    // await publishOrderCreated({
-    //   orderId: order.id,
-    //   userId: order.userId,
-    //   items: order.items.map(({ productId, quantity }) => ({ productId, quantity })),
-    // });
+    const payload = new OrderCreatedPayload({
+      orderId: order.id,
+      userId: order.userId,
+      items: order.items.map(({ productId, quantity }) => ({ productId, quantity })),
+    });
+    const event = new OrderCreatedEvent(order.id, payload);
+    await publish(event);
 
     res.status(201).json(presentOrder(order));
   } catch (error) {

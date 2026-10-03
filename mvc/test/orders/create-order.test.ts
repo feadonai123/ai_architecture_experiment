@@ -5,6 +5,7 @@ import { InsufficientStockError } from '../../src/errors/InsufficientStockError'
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { UserNotFoundError } from '../../src/errors/UserNotFoundError';
+import { OrderCreatedEvent } from '../../src/events/OrderCreatedEvent';
 import {
   createOrderInputMock,
   orderMock,
@@ -14,6 +15,7 @@ import {
 import { mockRes } from '../mocks/http';
 import { mockOrderCreateWithItems } from '../mocks/order';
 import { mockProductFindByIds } from '../mocks/product';
+import { mockPublish } from '../mocks/redis';
 import { mockUserFindById } from '../mocks/user';
 
 async function invokeHandler(
@@ -43,6 +45,7 @@ describe('create order', () => {
       mockUserFindById(userMock);
       mockProductFindByIds(productsMock);
       const createWithItems = mockOrderCreateWithItems(orderMock);
+      const publish = mockPublish();
 
       const result = await createOrder(createOrderInputMock);
 
@@ -50,6 +53,14 @@ describe('create order', () => {
         { productId: productsMock[0].id, quantity: 2, unitPrice: 100 },
         { productId: productsMock[1].id, quantity: 1, unitPrice: 50 },
       ]);
+      expect(publish).toHaveBeenCalledWith(expect.any(OrderCreatedEvent));
+      const event = publish.mock.calls[0][0] as OrderCreatedEvent;
+      expect(event.getId()).toBe(orderMock.id);
+      expect(event.getPayload()).toEqual({
+        orderId: orderMock.id,
+        userId: userMock.id,
+        items: createOrderInputMock.items,
+      });
       expect(result).toEqual({
         status: 201,
         body: {

@@ -227,6 +227,7 @@ A primeira dimensão de organização é:
 Controller
 Model
 Entity
+Event
 Service
 Presenter
 Middleware
@@ -244,6 +245,7 @@ src/
 ├── controllers/
 ├── models/
 ├── entities/
+├── events/
 ├── services/
 ├── presenters/
 ├── middleware/
@@ -284,6 +286,10 @@ Mapeamento TypeORM (decorators, colunas, relações). Sem métodos de persistên
 ### `models/`
 
 Importam a entity correspondente e concentram as operações de persistência (`createEmpty`, `findById`, `save`, `remove`, etc.) como métodos estáticos.
+
+### `events/`
+
+Contém o contrato, a validação e a serialização dos eventos da aplicação. Eventos não acessam o Redis diretamente; a publicação permanece em `services/`.
 
 ### `services/`
 
