@@ -61,6 +61,10 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
+  const stopConsumers = app?.locals.stopConsumers;
+  if (typeof stopConsumers === 'function') {
+    await stopConsumers();
+  }
   if (testDataSource?.isInitialized) {
     await truncateAll(testDataSource);
   }

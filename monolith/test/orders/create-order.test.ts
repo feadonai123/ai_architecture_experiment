@@ -5,6 +5,8 @@ import {
   ProductNotFoundError,
   UserNotFoundError,
 } from '../../src/errors';
+import { EventStream } from '../../src/events/EventStream';
+import { EventType } from '../../src/events/EventType';
 import { createOrder } from '../../src/routes/createOrder';
 import { createOrderInputMock, productsMock, userMock } from '../mocks/create-order';
 import { mockDataSource } from '../mocks/dataSource';
@@ -41,10 +43,10 @@ describe('create order', () => {
       expect(orderItemRepository.save).toHaveBeenCalledTimes(1);
       expect(ds.transaction).toHaveBeenCalledTimes(1);
       expect(redis.xadd).toHaveBeenCalledWith(
-        'orders',
+        EventStream.Orders,
         '*',
         'event',
-        'OrderCreated',
+        EventType.OrderCreated,
         'eventId',
         result.id,
         'timestamp',

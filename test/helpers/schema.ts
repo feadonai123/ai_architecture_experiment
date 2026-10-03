@@ -10,6 +10,6 @@ export async function applySchema(dataSource: DataSource): Promise<void> {
 
 export async function truncateAll(dataSource: DataSource): Promise<void> {
   await dataSource.query(
-    'TRUNCATE order_items, orders, cart_items, carts, users, products RESTART IDENTITY CASCADE',
+    'TRUNCATE order_payments, order_items, orders, cart_items, carts, users, products RESTART IDENTITY CASCADE',
   );
 }

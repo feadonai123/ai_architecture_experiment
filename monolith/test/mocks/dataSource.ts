@@ -3,6 +3,7 @@ import { Cart } from '../../src/entities/Cart';
 import { CartItem } from '../../src/entities/CartItem';
 import { Order } from '../../src/entities/Order';
 import { OrderItem } from '../../src/entities/OrderItem';
+import { OrderPayment } from '../../src/entities/OrderPayment';
 import { Product } from '../../src/entities/Product';
 import { User } from '../../src/entities/User';
 
@@ -13,6 +14,7 @@ export function mockDataSource(repos: {
   user?: Partial<Record<string, jest.Mock>>;
   order?: Partial<Record<string, jest.Mock>>;
   orderItem?: Partial<Record<string, jest.Mock>>;
+  orderPayment?: Partial<Record<string, jest.Mock>>;
 }): DataSource {
   const getRepository = jest.fn((entity) => {
     if (entity === Product) return repos.product;
@@ -21,6 +23,7 @@ export function mockDataSource(repos: {
     if (entity === User) return repos.user;
     if (entity === Order) return repos.order;
     if (entity === OrderItem) return repos.orderItem;
+    if (entity === OrderPayment) return repos.orderPayment;
     throw new Error('unknown entity');
   });
 
