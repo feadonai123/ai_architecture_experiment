@@ -4,7 +4,7 @@
 
 Experimento de TCC: o **mesmo** recorte de carrinho de e-commerce implementado em quatro organizações de código. Funcionalidade, contrato HTTP, modelo de dados e tecnologias são constantes. A variável é **como as responsabilidades são organizadas**.
 
-Stack comum: Node.js, TypeScript, Express, TypeORM, PostgreSQL, Redis. Contratos: `test/contracts/cart.md`, `test/contracts/stock.md` e `docs/openapi.yaml`.
+Stack comum: Node.js, TypeScript, Express, TypeORM, PostgreSQL, Redis. Contratos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/order.md` e `docs/openapi.yaml`.
 
 Workspaces: `monolith/`, `mvc/`, `clean/`, `domain/`. Testes de integração compartilhados em `test/integration/`.
 

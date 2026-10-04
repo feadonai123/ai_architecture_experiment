@@ -436,9 +436,11 @@ src/
 ├── controllers/
 ├── usecases/
 ├── entities/
+├── events/
 ├── ports/
 ├── repositories/
 ├── services/
+├── consumers/
 ├── presenters/
 ├── middleware/
 ├── errors/
@@ -502,9 +504,13 @@ Estendem `UseCase` em `base/useCase.base.ts`. A entrada pública é `run`; `exec
 
 Responsável pelas regras e objetos centrais do domínio, sem depender diretamente de Express, TypeORM ou infraestrutura externa.
 
+### `events/`
+
+Contratos tipados de eventos, payloads validados e enums de tipos e streams. Não executa comandos Redis.
+
 ### `ports/`
 
-Responsável pelas abstrações de persistência utilizadas pelos Use Cases.
+Responsável pelas abstrações de persistência e publicação utilizadas pelos Use Cases.
 
 Exemplo:
 
@@ -512,6 +518,7 @@ Exemplo:
 ProductRepository
 CartRepository
 CartItemRepository
+IEventService
 ```
 
 ### `repositories/`
@@ -523,6 +530,12 @@ Implementações concretas das ports (TypeORM). Não contém entidades TypeORM.
 Responsável por operações técnicas ou de domínio compartilhadas que não sejam adequadamente representadas por Entity ou Use Case.
 
 Redis: todas as ações (`createRedis`, `getRedis`, `ping` e futuras) ficam no service.
+
+`EventRedisService` implementa `IEventService`, registrando a publicação para depois do commit via `DbManager`; a serialização e o `XADD` ficam nesta camada.
+
+### `consumers/`
+
+Contém contratos e implementações dos consumidores de eventos. O consumo e retry são técnicos; os efeitos de negócio ficam nos Use Cases. `XACK` só ocorre após o commit do processamento.
 
 ### `presenters/`
 
@@ -541,13 +554,13 @@ Utilitários técnicos sem regra de negócio: `requireEnv`, `loadAppEnv`, `Logge
 Classes abstratas compartilhadas da aplicação:
 
 - `useCase.base.ts`: `UseCase.run` com logs
-- `router.base.ts`: `RouterBase.asHandler` envolve o handle numa transação via `DbManager` e loga início/commit/rollback
+- `router.base.ts`: `RouterBase.asHandler` envolve o handle numa transação via `DbManager`; rotas que retornam `RouteResponse` enviam a resposta após o commit e as ações pós-commit
 
 Use cases não importam `router.base`.
 
 ### `manager/`
 
-`DbManager` encapsula QueryRunner (connect, transação, commit/rollback, release). Repositórios obtêm o `EntityManager` corrente com `DbManager.getManager(dataSource)`.
+`DbManager` encapsula QueryRunner (connect, transação, commit/rollback, release) e executa ações registradas somente depois do commit. Repositórios obtêm o `EntityManager` corrente com `DbManager.getManager(dataSource)`.
 
 ### `errors/`
 
@@ -572,7 +585,7 @@ A regra fundamental é:
 ```text
 Infrastructure → Application/Domain
 Application/Controllers → Use Cases
-Use Cases → ports
+Use Cases → ports, entities, events
 Entities → nenhum detalhe externo
 ```
 

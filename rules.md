@@ -8,7 +8,7 @@ As quatro codebases implementam o **mesmo** recorte de carrinho: mesmo contrato 
 
 A variável do experimento é **só a organização do código**. Não mude comportamento para “melhorar” uma abordagem.
 
-Contratos canônicos: `test/contracts/cart.md`, `test/contracts/stock.md` e `docs/openapi.yaml`.
+Contratos canônicos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/order.md` e `docs/openapi.yaml`.
 
 ## Pasta define responsabilidade
 
@@ -51,6 +51,7 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 - Cada recurso possui seu próprio arquivo Markdown em `test/contracts/`.
 - Rotas de carrinho pertencem a `test/contracts/cart.md`.
 - Rotas de estoque pertencem a `test/contracts/stock.md`.
+- Rotas de pedidos pertencem a `test/contracts/order.md`.
 - Não misturar contratos de recursos diferentes no mesmo arquivo.
 
 ## Testes unitários

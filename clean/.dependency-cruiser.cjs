@@ -37,6 +37,13 @@ module.exports = {
       to: { path: '^src/infrastructure' },
     },
     {
+      name: 'events-no-infrastructure',
+      comment: 'Event contracts cannot depend on Redis, TypeORM or infrastructure',
+      severity: 'error',
+      from: { path: '^src/events' },
+      to: { path: '(^src/infrastructure|ioredis|typeorm)' },
+    },
+    {
       name: 'entities-no-express',
       comment: 'Entities cannot import Express',
       severity: 'error',
@@ -77,6 +84,13 @@ module.exports = {
       severity: 'error',
       from: { path: '^src/usecases' },
       to: { path: '^src/repositories' },
+    },
+    {
+      name: 'usecases-no-services',
+      comment: 'Use cases publish through ports, never concrete services',
+      severity: 'error',
+      from: { path: '^src/usecases' },
+      to: { path: '^src/services' },
     },
     {
       name: 'usecases-no-router-base',
