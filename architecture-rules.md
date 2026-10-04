@@ -535,7 +535,7 @@ Redis: todas as ações (`createRedis`, `getRedis`, `ping` e futuras) ficam no s
 
 ### `consumers/`
 
-`Consumer` organiza o ciclo de leitura, desserialização, despacho e confirmação. `RedisConsumer` executa leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter conforme o fluxo funcional. `IConsumerSettings` descreve os parâmetros e `ConsumerSettings` lê e valida o ambiente. `EventDispatcher` chama handlers registrados por tipo. Handlers apenas delimitam a transação e chamam Use Cases; os efeitos de negócio ficam nos Use Cases. `XACK` só ocorre após o commit do processamento. Falhas de `XACK` não são classificadas como falhas do handler.
+`Consumer` organiza o ciclo de vida (`start`/`stop`), leitura, desserialização, despacho e confirmação. `RedisConsumer` executa leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter conforme o fluxo funcional. `FinancialConsumer` compõe um `Consumer` abstrato e registra handlers financeiros, sem herdar nem depender de `RedisConsumer`; o ponto de entrada monta as implementações e inicia o consumidor após as conexões. `IConsumerSettings` descreve os parâmetros e `ConsumerSettings` lê e valida o ambiente. `EventDispatcher` chama handlers registrados por tipo. Handlers apenas delimitam a transação e chamam Use Cases; os efeitos de negócio ficam nos Use Cases. `XACK` só ocorre após o commit do processamento. Falhas de `XACK` não são classificadas como falhas do handler.
 
 ### `presenters/`
 

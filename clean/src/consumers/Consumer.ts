@@ -14,6 +14,8 @@ export abstract class Consumer {
     protected readonly settings: IConsumerSettings,
   ) {}
 
+  abstract start(): Promise<void>;
+  abstract stop(): Promise<void>;
   abstract initialize(): Promise<void>;
   protected abstract readMessages(): Promise<ConsumerMessage[]>;
   protected abstract deserialize(message: ConsumerMessage): Event<unknown> | null;

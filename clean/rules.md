@@ -34,7 +34,7 @@ src/
 - `ports/` — interfaces de persistência e de publicação usadas pelos use cases.
 - `repositories/` — implementações TypeORM das ports. Sem records TypeORM nesta pasta.
 - `presenters/` — domínio → payload HTTP.
-- `consumers/` — `Consumer` define o ciclo de leitura e despacho; `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter. `EventDispatcher` seleciona handlers. Handlers abrem a transação e chamam use cases; não contêm regras de negócio. A falha de `XACK` é tratada separadamente da falha do handler.
+- `consumers/` — `Consumer` define o ciclo de vida (`start`/`stop`), leitura e despacho; `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter. `FinancialConsumer` compõe um `Consumer` abstrato e registra os handlers financeiros no `EventDispatcher`, sem herdar nem depender de `RedisConsumer`. O ponto de entrada monta as implementações concretas e inicia o consumidor após as conexões. Handlers abrem a transação e chamam use cases; não contêm regras de negócio. A falha de `XACK` é tratada separadamente da falha do handler.
 - `IConsumerSettings` define a configuração; `ConsumerSettings` lê e valida o ambiente antes da inicialização. Streams, tipos, tempos e limites são obrigatórios e não têm fallback.
 - `middleware/` — `errorHandler`, `authenticate` (por rota da API, não `app.use` global) e `audit`.
 - `utils/` — `env`, `Logger`, `format`, `parser`, `time`.
