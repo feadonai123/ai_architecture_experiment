@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { authenticate } from '../../middleware/authenticate';
-import { listStocksRoute } from './routes/listStocks.route';
-import { getStockRoute } from './routes/getStock.route';
-import { updateStockRoute } from './routes/updateStock.route';
-import { increaseStockRoute } from './routes/increaseStock.route';
-import { decreaseStockRoute } from './routes/decreaseStock.route';
+import { decreaseStock } from './routes/decreaseStock.route';
+import { getStock } from './routes/getStock.route';
+import { increaseStock } from './routes/increaseStock.route';
+import { listStocks } from './routes/listStocks.route';
+import { updateStock } from './routes/updateStock.route';
+
 export function createStockController(): Router {
   const router = Router();
-  router.get('/stocks', authenticate, listStocksRoute);
-  router.get('/stocks/:productId', authenticate, getStockRoute);
-  router.put('/stocks/:productId', authenticate, updateStockRoute);
-  router.patch('/stocks/:productId/increase', authenticate, increaseStockRoute);
-  router.patch('/stocks/:productId/decrease', authenticate, decreaseStockRoute);
+  router.get('/stocks', authenticate, listStocks);
+  router.get('/stocks/:productId', authenticate, getStock);
+  router.put('/stocks/:productId', authenticate, updateStock);
+  router.patch('/stocks/:productId/increase', authenticate, increaseStock);
+  router.patch('/stocks/:productId/decrease', authenticate, decreaseStock);
   return router;
 }

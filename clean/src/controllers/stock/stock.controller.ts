@@ -1,16 +1,17 @@
 import { Router } from 'express';
 import { DataSource } from 'typeorm';
 import { authenticate } from '../../middleware/authenticate';
-import { ListStocks } from '../../usecases/ListStocks';
-import { ListStocksRoute } from './routes/listStocks.route';
-import { GetStock } from '../../usecases/GetStock';
-import { GetStockRoute } from './routes/getStock.route';
-import { UpdateStock } from '../../usecases/UpdateStock';
-import { UpdateStockRoute } from './routes/updateStock.route';
-import { IncreaseStock } from '../../usecases/IncreaseStock';
-import { IncreaseStockRoute } from './routes/increaseStock.route';
 import { DecreaseStock } from '../../usecases/DecreaseStock';
+import { GetStock } from '../../usecases/GetStock';
+import { IncreaseStock } from '../../usecases/IncreaseStock';
+import { ListStocks } from '../../usecases/ListStocks';
+import { UpdateStock } from '../../usecases/UpdateStock';
 import { DecreaseStockRoute } from './routes/decreaseStock.route';
+import { GetStockRoute } from './routes/getStock.route';
+import { IncreaseStockRoute } from './routes/increaseStock.route';
+import { ListStocksRoute } from './routes/listStocks.route';
+import { UpdateStockRoute } from './routes/updateStock.route';
+
 export function createStockController(
   dataSource: DataSource,
   deps: {

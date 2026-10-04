@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/authenticate';
-import { ListStocksController } from './listStocks/controllers/ListStocksController';
-import { GetStockController } from './getStock/controllers/GetStockController';
-import { UpdateStockController } from './updateStock/controllers/UpdateStockController';
-import { IncreaseStockController } from './increaseStock/controllers/IncreaseStockController';
 import { DecreaseStockController } from './decreaseStock/controllers/DecreaseStockController';
+import { GetStockController } from './getStock/controllers/GetStockController';
+import { IncreaseStockController } from './increaseStock/controllers/IncreaseStockController';
+import { ListStocksController } from './listStocks/controllers/ListStocksController';
+import { UpdateStockController } from './updateStock/controllers/UpdateStockController';
+
 export function createStockController(controllers: {
   listStocks: ListStocksController;
   getStock: GetStockController;

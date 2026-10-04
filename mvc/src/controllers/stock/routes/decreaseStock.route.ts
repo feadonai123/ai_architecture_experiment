@@ -1,40 +1,34 @@
 import { NextFunction, Request, Response } from 'express';
-import { Product as ProductEntity } from '../../../entities/Product';
-import { Product } from '../../../models/Product';
-import { presentProduct } from '../../../presenters/product.presenter';
+import { InsufficientStockError } from '../../../errors/InsufficientStockError';
 import { InvalidQuantityError } from '../../../errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../../errors/ProductNotFoundError';
-import { InsufficientStockError } from '../../../errors/InsufficientStockError';
+import { Product } from '../../../models/Product';
+import { presentProduct } from '../../../presenters/product.presenter';
 
-export async function decreaseStock(input: {
-  productId: string;
-  quantity: unknown;
-}): Promise<ProductEntity> {
-  if (
-    typeof input.quantity !== 'number' ||
-    !Number.isInteger(input.quantity) ||
-    input.quantity <= 0
-  ) {
-    throw new InvalidQuantityError(input.quantity);
-  }
-  const product = await Product.findById(input.productId);
-  if (!product) throw new ProductNotFoundError(input.productId);
-  if (input.quantity > product.stock) throw new InsufficientStockError();
-  product.stock -= input.quantity;
-  return Product.save(product);
+function isValidQuantity(quantity: unknown): quantity is number {
+  return typeof quantity === 'number' && Number.isInteger(quantity) && quantity > 0;
 }
 
-export async function decreaseStockRoute(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
+export async function decreaseStock(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const result = await decreaseStock({
-      productId: req.params.productId,
-      quantity: req.body?.quantity,
-    });
-    res.status(200).json(presentProduct(result));
+    const { productId } = req.params;
+    const { quantity } = req.body ?? {};
+
+    if (!isValidQuantity(quantity)) {
+      throw new InvalidQuantityError(quantity);
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new ProductNotFoundError(productId);
+    }
+    if (quantity > product.stock) {
+      throw new InsufficientStockError();
+    }
+
+    product.stock -= quantity;
+    const updated = await Product.save(product);
+    res.status(200).json(presentProduct(updated));
   } catch (error) {
     next(error);
   }

@@ -1,9 +1,11 @@
 import { UseCase } from '../../../shared/base/useCase.base';
 import { Product } from '../../../shared/entities/Product';
-
+import { parsePositiveInteger } from '../../../utils/parser';
 import { InvalidQuantityError } from '../errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../errors/ProductNotFoundError';
+
 export type IncreaseStockInput = { productId: string; quantity: unknown };
+
 export class IncreaseStock extends UseCase<[IncreaseStockInput], Product> {
   constructor(
     private readonly products: {
@@ -13,23 +15,19 @@ export class IncreaseStock extends UseCase<[IncreaseStockInput], Product> {
   ) {
     super();
   }
+
   protected async execute(input: IncreaseStockInput): Promise<Product> {
-    if (
-      typeof input.quantity !== 'number' ||
-      !Number.isInteger(input.quantity) ||
-      input.quantity <= 0
-    ) {
+    const quantity = parsePositiveInteger(input.quantity);
+    if (quantity === null) {
       throw new InvalidQuantityError(input.quantity);
     }
-    const product = await this.products.findById(input.productId);
-    if (!product) throw new ProductNotFoundError(input.productId);
 
-    const updated = new Product(
-      product.id,
-      product.name,
-      product.price,
-      product.stock + input.quantity,
-    );
+    const product = await this.products.findById(input.productId);
+    if (!product) {
+      throw new ProductNotFoundError(input.productId);
+    }
+
+    const updated = new Product(product.id, product.name, product.price, product.stock + quantity);
     await this.products.save(updated);
     return updated;
   }

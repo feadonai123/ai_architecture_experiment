@@ -1,7 +1,5 @@
 # Monólito acoplado
 
-Leia também `/rules.md` (regras de todas as abordagens).
-
 ## Objetivo
 
 Organização mínima, forte acoplamento, sem fronteiras internas formais. A menor quantidade razoável de estruturas.

@@ -8,6 +8,13 @@ export function parsePositiveInteger(value: unknown): number | null {
   return value;
 }
 
+export function parseNonNegativeInteger(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 0) {
+    return null;
+  }
+  return value;
+}
+
 export function parseUuid(value: unknown): string | null {
   if (typeof value !== 'string' || !UUID_PATTERN.test(value)) {
     return null;
