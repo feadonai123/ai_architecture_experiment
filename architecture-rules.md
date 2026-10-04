@@ -531,11 +531,11 @@ Responsável por operações técnicas ou de domínio compartilhadas que não se
 
 Redis: todas as ações (`createRedis`, `getRedis`, `ping` e futuras) ficam no service.
 
-`EventRedisService` implementa `IEventService`, registrando a publicação para depois do commit via `DbManager`; a serialização e o `XADD` ficam nesta camada.
+`EventRedisService` implementa `IEventService`, registrando a publicação de eventos da aplicação para depois do commit via `DbManager` e publicando Dead Letter imediatamente quando solicitado. A serialização e o `XADD` ficam nesta camada. Os comandos Redis de leitura, PEL, retry e confirmação ficam em `services/redis.ts`.
 
 ### `consumers/`
 
-Contém contratos e implementações dos consumidores de eventos. O consumo e retry são técnicos; os efeitos de negócio ficam nos Use Cases. `XACK` só ocorre após o commit do processamento.
+`Consumer` organiza o ciclo de leitura, desserialização, despacho e confirmação. `RedisConsumer` executa leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter conforme o fluxo funcional. `IConsumerSettings` descreve os parâmetros e `ConsumerSettings` lê e valida o ambiente. `EventDispatcher` chama handlers registrados por tipo. Handlers apenas delimitam a transação e chamam Use Cases; os efeitos de negócio ficam nos Use Cases. `XACK` só ocorre após o commit do processamento. Falhas de `XACK` não são classificadas como falhas do handler.
 
 ### `presenters/`
 

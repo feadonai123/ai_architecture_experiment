@@ -34,7 +34,8 @@ src/
 - `ports/` — interfaces de persistência e de publicação usadas pelos use cases.
 - `repositories/` — implementações TypeORM das ports. Sem records TypeORM nesta pasta.
 - `presenters/` — domínio → payload HTTP.
-- `consumers/` — contratos e implementações dos consumidores de eventos; a lógica de negócio dos handlers fica nos use cases.
+- `consumers/` — `Consumer` define o ciclo de leitura e despacho; `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter. `EventDispatcher` seleciona handlers. Handlers abrem a transação e chamam use cases; não contêm regras de negócio. A falha de `XACK` é tratada separadamente da falha do handler.
+- `IConsumerSettings` define a configuração; `ConsumerSettings` lê e valida o ambiente antes da inicialização. Streams, tipos, tempos e limites são obrigatórios e não têm fallback.
 - `middleware/` — `errorHandler`, `authenticate` (por rota da API, não `app.use` global) e `audit`.
 - `utils/` — `env`, `Logger`, `format`, `parser`, `time`.
 - `base/` — `UseCase` e `RouterBase`. Use cases não importam `router.base`.
@@ -49,12 +50,14 @@ usecases → ports, entities e events (não TypeORM, Express, infrastructure, re
 controllers → usecases, presenters, base/router
 repositories → ports + infrastructure/typeorm + manager
 services → ports + Redis + manager
+consumers → events + ports + services + manager + usecases (sem regra de negócio nos handlers)
 ```
 
 ## Transação
 
 Toda rota (`RouterBase.asHandler`) roda dentro de uma transação. A transação **não** vive no use case.
 Um use case pode solicitar publicação pela port `IEventService.publishAfterCommit`; a implementação registra a publicação no `DbManager`, que a executa somente após o commit. Rotas de pedido enviam a resposta somente após a publicação. Uma falha de publicação após o commit não desfaz os dados já persistidos.
+`IEventService.publishNow` publica a Dead Letter Stream imediatamente. O consumidor só faz `XACK` após o processamento e seu commit; no retry, `XACK`, remoção da agenda e exclusão do Hash ocorrem na mesma transação Redis.
 
 ## Proibido
 
