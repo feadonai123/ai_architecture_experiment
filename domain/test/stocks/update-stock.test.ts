@@ -9,7 +9,7 @@ import {
   productMock,
   updatedProductMock,
   updateQuantityMock,
-} from '../mocks/stocks';
+} from '../mocks/update-stock';
 
 function updateStock(products = mockProductRepository({ findById: productMock })) {
   return new UpdateStock(products);
@@ -27,9 +27,9 @@ describe('update stock', () => {
     });
 
     it('allows setting stock to zero', async () => {
-      await expect(
-        updateStock().run({ productId: productMock.id, quantity: 0 }),
-      ).resolves.toEqual(emptiedProductMock);
+      await expect(updateStock().run({ productId: productMock.id, quantity: 0 })).resolves.toEqual(
+        emptiedProductMock,
+      );
     });
   });
 

@@ -8,6 +8,7 @@ Documento canônico da API de estoque. Todas as quatro implementações devem re
 {
   "id": "0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f",
   "name": "Produto",
+  "description": "",
   "price": 100,
   "stock": 25
 }
@@ -61,7 +62,7 @@ Consulta a quantidade em estoque de um produto.
 
 | Condição            | Erro                   | HTTP |
 | ------------------- | ---------------------- | ---: |
-| produto inexistente | `ProductNotFoundError` |  404 |
+| produto inexistente ou deletado | `ProductNotFoundError` |  404 |
 
 ---
 
@@ -88,7 +89,7 @@ Define a quantidade absoluta em estoque; não incrementa a quantidade atual.
 | Condição                                           | Erro                   | HTTP |
 | -------------------------------------------------- | ---------------------- | ---: |
 | `quantity` ausente, não inteiro ou menor que zero | `InvalidQuantityError` |  400 |
-| produto inexistente                                | `ProductNotFoundError` |  404 |
+| produto inexistente ou deletado                                | `ProductNotFoundError` |  404 |
 
 ---
 
@@ -115,7 +116,7 @@ Adiciona `quantity` unidades ao estoque atual.
 | Condição                                        | Erro                   | HTTP |
 | ----------------------------------------------- | ---------------------- | ---: |
 | `quantity` ausente, não inteiro ou menor que um | `InvalidQuantityError` |  400 |
-| produto inexistente                             | `ProductNotFoundError` |  404 |
+| produto inexistente ou deletado                             | `ProductNotFoundError` |  404 |
 
 ---
 
@@ -142,7 +143,7 @@ Remove `quantity` unidades do estoque atual sem permitir estoque negativo.
 | Condição                                        | Erro                     | HTTP |
 | ----------------------------------------------- | ------------------------ | ---: |
 | `quantity` ausente, não inteiro ou menor que um | `InvalidQuantityError`   |  400 |
-| produto inexistente                             | `ProductNotFoundError`   |  404 |
+| produto inexistente ou deletado                             | `ProductNotFoundError`   |  404 |
 | `quantity` maior que o estoque atual            | `InsufficientStockError` |  409 |
 
 ---
@@ -152,11 +153,11 @@ Remove `quantity` unidades do estoque atual sem permitir estoque negativo.
 | Operação                    | Condição                  | Erro                     | HTTP |
 | --------------------------- | ------------------------- | ------------------------ | ---: |
 | qualquer rota da API        | header x-api-key inválido | ForbiddenError           |  403 |
-| GET /stocks/:productId      | produto inexistente       | ProductNotFoundError     |  404 |
+| GET /stocks/:productId      | produto inexistente ou deletado       | ProductNotFoundError     |  404 |
 | PUT /stocks/:productId      | quantidade inválida      | InvalidQuantityError     |  400 |
-| PUT /stocks/:productId      | produto inexistente       | ProductNotFoundError     |  404 |
+| PUT /stocks/:productId      | produto inexistente ou deletado       | ProductNotFoundError     |  404 |
 | PATCH /stocks/:id/increase  | quantidade inválida      | InvalidQuantityError     |  400 |
-| PATCH /stocks/:id/increase  | produto inexistente       | ProductNotFoundError     |  404 |
+| PATCH /stocks/:id/increase  | produto inexistente ou deletado       | ProductNotFoundError     |  404 |
 | PATCH /stocks/:id/decrease  | quantidade inválida      | InvalidQuantityError     |  400 |
-| PATCH /stocks/:id/decrease  | produto inexistente       | ProductNotFoundError     |  404 |
+| PATCH /stocks/:id/decrease  | produto inexistente ou deletado       | ProductNotFoundError     |  404 |
 | PATCH /stocks/:id/decrease  | estoque insuficiente      | InsufficientStockError   |  409 |

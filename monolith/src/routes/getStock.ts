@@ -1,11 +1,13 @@
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { Product } from '../entities/Product';
 import { ProductNotFoundError } from '../errors';
 import { wrap } from '../helpers';
 import { presentProduct } from '../presenters/product.presenter';
 
 export async function getStock(dataSource: DataSource, productId: string): Promise<Product> {
-  const product = await dataSource.getRepository(Product).findOne({ where: { id: productId } });
+  const product = await dataSource
+    .getRepository(Product)
+    .findOne({ where: { id: productId, deletedAt: IsNull() } });
   if (!product) {
     throw new ProductNotFoundError(productId);
   }

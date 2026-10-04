@@ -31,7 +31,14 @@ export class DecreaseStock extends UseCase<[DecreaseStockInput], Product> {
       throw new InsufficientStockError();
     }
 
-    const updated = new Product(product.id, product.name, product.price, product.stock - quantity);
+    const updated = new Product(
+      product.id,
+      product.name,
+      product.description,
+      product.price,
+      product.stock - quantity,
+      product.deletedAt,
+    );
     await this.products.save(updated);
     return updated;
   }

@@ -26,7 +26,7 @@ describe('add item', () => {
   describe('success', () => {
     it('creates a new cart item', async () => {
       const ds = mockDataSource({
-        product: mockProductRepo({ findOne: productMock }),
+        product: mockProductRepo({ findOne: productMock, find: [productMock] }),
         cart: mockCartRepo({ findOne: cartMock }),
         cartItem: mockCartItemRepo({ findOne: null, find: [itemMock], save: itemMock }),
       });
@@ -42,7 +42,7 @@ describe('add item', () => {
 
     it('increments existing item quantity', async () => {
       const ds = mockDataSource({
-        product: mockProductRepo({ findOne: productMock }),
+        product: mockProductRepo({ findOne: productMock, find: [productMock] }),
         cart: mockCartRepo({ findOne: cartMock }),
         cartItem: mockCartItemRepo({
           findOne: itemMock,

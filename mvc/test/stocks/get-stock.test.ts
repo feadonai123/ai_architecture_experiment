@@ -3,7 +3,7 @@ import { getStock } from '../../src/controllers/stock/routes/getStock.route';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
 import { mockProductFindById } from '../mocks/product';
-import { missingProductMock, productMock } from '../mocks/stocks';
+import { missingProductMock, productMock } from '../mocks/get-stock';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,

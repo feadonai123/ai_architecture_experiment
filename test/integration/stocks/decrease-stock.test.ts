@@ -12,7 +12,13 @@ describe('PATCH /stocks/:productId/decrease', () => {
       const response = await api().patch(`${path}/decrease`).send({ quantity: 4 });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ ...product, stock: 6 });
+      expect(response.body).toEqual({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: 6,
+      });
       expect((await api().get(path)).body.stock).toBe(6);
     });
 

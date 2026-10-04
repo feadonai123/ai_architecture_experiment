@@ -11,7 +11,7 @@ import {
   invalidQuantityMock,
   missingProductMock,
   productMock,
-} from '../mocks/stocks';
+} from '../mocks/decrease-stock';
 
 function decreaseStock(products = mockProductRepository({ findById: productMock })) {
   return new DecreaseStock(products);

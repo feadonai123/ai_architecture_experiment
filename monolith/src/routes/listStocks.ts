@@ -1,10 +1,12 @@
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { Product } from '../entities/Product';
 import { wrap } from '../helpers';
 import { presentProduct } from '../presenters/product.presenter';
 
 export async function listStocks(dataSource: DataSource): Promise<Product[]> {
-  return dataSource.getRepository(Product).find({ order: { id: 'ASC' } });
+  return dataSource
+    .getRepository(Product)
+    .find({ where: { deletedAt: IsNull() }, order: { id: 'ASC' } });
 }
 
 export function listStocksRoute(dataSource: DataSource) {

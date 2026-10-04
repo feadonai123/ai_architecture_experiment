@@ -17,6 +17,22 @@ import { IncreaseStockController } from './inventory/increaseStock/controllers/I
 import { DecreaseStock } from './inventory/decreaseStock/usecases/DecreaseStock';
 import { ProductRepository as DecreaseStockRepository } from './inventory/decreaseStock/repositories/ProductRepository';
 import { DecreaseStockController } from './inventory/decreaseStock/controllers/DecreaseStockController';
+import { createProductController } from './catalog/product.controller';
+import { ListProducts } from './catalog/listProducts/usecases/ListProducts';
+import { ProductRepository as ListProductsRepository } from './catalog/listProducts/repositories/ProductRepository';
+import { ListProductsController } from './catalog/listProducts/controllers/ListProductsController';
+import { GetProduct } from './catalog/getProduct/usecases/GetProduct';
+import { ProductRepository as GetProductRepository } from './catalog/getProduct/repositories/ProductRepository';
+import { GetProductController } from './catalog/getProduct/controllers/GetProductController';
+import { CreateProduct } from './catalog/createProduct/usecases/CreateProduct';
+import { ProductRepository as CreateProductRepository } from './catalog/createProduct/repositories/ProductRepository';
+import { CreateProductController } from './catalog/createProduct/controllers/CreateProductController';
+import { UpdateProduct } from './catalog/updateProduct/usecases/UpdateProduct';
+import { ProductRepository as UpdateProductRepository } from './catalog/updateProduct/repositories/ProductRepository';
+import { UpdateProductController } from './catalog/updateProduct/controllers/UpdateProductController';
+import { DeleteProduct } from './catalog/deleteProduct/usecases/DeleteProduct';
+import { ProductRepository as DeleteProductRepository } from './catalog/deleteProduct/repositories/ProductRepository';
+import { DeleteProductController } from './catalog/deleteProduct/controllers/DeleteProductController';
 import type Redis from 'ioredis';
 import swaggerUi from 'swagger-ui-express';
 import { DataSource } from 'typeorm';
@@ -94,6 +110,30 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
       decreaseStock: new DecreaseStockController(
         dataSource,
         new DecreaseStock(new DecreaseStockRepository(dataSource)),
+      ),
+    }),
+  );
+  app.use(
+    createProductController({
+      listProducts: new ListProductsController(
+        dataSource,
+        new ListProducts(new ListProductsRepository(dataSource)),
+      ),
+      getProduct: new GetProductController(
+        dataSource,
+        new GetProduct(new GetProductRepository(dataSource)),
+      ),
+      createProduct: new CreateProductController(
+        dataSource,
+        new CreateProduct(new CreateProductRepository(dataSource), uuidv4),
+      ),
+      updateProduct: new UpdateProductController(
+        dataSource,
+        new UpdateProduct(new UpdateProductRepository(dataSource)),
+      ),
+      deleteProduct: new DeleteProductController(
+        dataSource,
+        new DeleteProduct(new DeleteProductRepository(dataSource)),
       ),
     }),
   );

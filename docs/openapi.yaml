@@ -2,7 +2,7 @@ openapi: 3.0.3
 info:
   title: E-commerce Cart and Stock API
   version: 1.0.0
-  description: Contrato HTTP das APIs de carrinho e estoque.
+  description: Contrato HTTP das APIs de carrinho, estoque e catálogo.
 servers:
   - url: /
 security:
@@ -241,6 +241,147 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /products:
+    get:
+      summary: Lista produtos do catálogo
+      operationId: listProducts
+      parameters:
+        - name: name
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: minPrice
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+        - name: maxPrice
+          in: query
+          required: false
+          schema:
+            type: number
+            minimum: 0
+        - name: available
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Produtos encontrados
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        '400':
+          description: Filtro inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      summary: Cria um produto com estoque zero
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+      responses:
+        '201':
+          description: Produto criado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Nome ou preço inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /products/{productId}:
+    get:
+      summary: Consulta um produto
+      operationId: getProduct
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+      responses:
+        '200':
+          description: Produto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto inexistente ou deletado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Atualiza nome, descrição e preço
+      operationId: updateProduct
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProductRequest'
+      responses:
+        '200':
+          description: Produto atualizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          description: Nome ou preço inválido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto inexistente ou deletado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Soft delete de um produto
+      operationId: deleteProduct
+      parameters:
+        - $ref: '#/components/parameters/ProductIdPath'
+      responses:
+        '200':
+          description: Produto marcado como deletado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Produto inexistente ou já deletado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -306,18 +447,42 @@ components:
           minimum: 1
     Product:
       type: object
-      required: [id, name, price, stock]
+      required: [id, name, description, price, stock]
       properties:
         id:
           type: string
           format: uuid
         name:
           type: string
+        description:
+          type: string
         price:
           type: number
           format: double
         stock:
           type: integer
+          minimum: 0
+    CreateProductRequest:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          minimum: 0
+    UpdateProductRequest:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
           minimum: 0
     AddCartItemRequest:
       type: object

@@ -7,7 +7,7 @@ import {
   invalidQuantityMock,
   missingProductMock,
   productMock,
-} from '../mocks/stocks';
+} from '../mocks/increase-stock';
 
 describe('increase stock', () => {
   describe('success', () => {

@@ -1,7 +1,7 @@
 import { listStocks } from '../../src/routes/listStocks';
 import { mockDataSource } from '../mocks/dataSource';
 import { mockProductRepo } from '../mocks/product';
-import { productMock, secondProductMock } from '../mocks/stocks';
+import { productMock, secondProductMock } from '../mocks/list-stocks';
 
 describe('list stocks', () => {
   describe('success', () => {

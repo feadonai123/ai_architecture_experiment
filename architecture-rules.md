@@ -144,6 +144,8 @@ routes/createCart.ts
 routes/getCart.ts
 routes/addCartItem.ts
 routes/removeCartItem.ts
+routes/listProducts.ts
+routes/createProduct.ts
 ```
 
 ### `entities/`
@@ -631,11 +633,9 @@ ordering/
 
 ## 6.2 Contextos permitidos
 
-Os contextos implementados são `ordering/` (carrinho) e `inventory/` (estoque, RF03). As operações de estoque seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
+Os contextos implementados são `ordering/` (carrinho), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). As operações de cada contexto seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
 
-Outros contextos (`payments/`, `catalog/`) não devem ser criados sem que exista uma funcionalidade pertencente a eles.
-
-Não criar o contexto `catalog/` apenas porque o carrinho consulta a tabela `products`.
+Outros contextos (`payments/`) não devem ser criados sem que exista uma funcionalidade pertencente a eles.
 
 ## 6.3 Estrutura interna obrigatória de cada contexto
 
@@ -648,7 +648,7 @@ Dentro do contexto, a primeira subdivisão é a **operação**. Cada operação 
 │   ├── repositories/
 │   ├── controllers/
 │   └── errors/
-└── <recurso>.controller.ts   # registra as rotas HTTP do contexto (cart.controller.ts, stock.controller.ts)
+└── <recurso>.controller.ts   # registra as rotas HTTP do contexto (cart.controller.ts, stock.controller.ts, product.controller.ts)
 ```
 
 As estruturas devem ser criadas somente quando houver código correspondente àquela responsabilidade.

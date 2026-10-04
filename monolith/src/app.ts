@@ -7,12 +7,17 @@ import { audit } from './middleware/audit';
 import { errorHandler } from './middleware/errorHandler';
 import { addCartItemRoute } from './routes/addCartItem';
 import { createCartRoute } from './routes/createCart';
+import { createProductRoute } from './routes/createProduct';
 import { decreaseStockRoute } from './routes/decreaseStock';
+import { deleteProductRoute } from './routes/deleteProduct';
 import { getCartRoute } from './routes/getCart';
+import { getProductRoute } from './routes/getProduct';
 import { getStockRoute } from './routes/getStock';
 import { increaseStockRoute } from './routes/increaseStock';
+import { listProductsRoute } from './routes/listProducts';
 import { listStocksRoute } from './routes/listStocks';
 import { removeCartItemRoute } from './routes/removeCartItem';
+import { updateProductRoute } from './routes/updateProduct';
 import { updateStockRoute } from './routes/updateStock';
 
 export function createApp(dataSource: DataSource, _redis: Redis): Express {
@@ -30,6 +35,11 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
   app.put('/stocks/:productId', authenticate, updateStockRoute(dataSource));
   app.patch('/stocks/:productId/increase', authenticate, increaseStockRoute(dataSource));
   app.patch('/stocks/:productId/decrease', authenticate, decreaseStockRoute(dataSource));
+  app.get('/products', authenticate, listProductsRoute(dataSource));
+  app.post('/products', authenticate, createProductRoute(dataSource));
+  app.get('/products/:productId', authenticate, getProductRoute(dataSource));
+  app.put('/products/:productId', authenticate, updateProductRoute(dataSource));
+  app.delete('/products/:productId', authenticate, deleteProductRoute(dataSource));
 
   app.use(errorHandler);
   return app;

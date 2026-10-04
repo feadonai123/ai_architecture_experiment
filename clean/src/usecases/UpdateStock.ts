@@ -23,7 +23,14 @@ export class UpdateStock extends UseCase<[UpdateStockInput], Product> {
       throw new ProductNotFoundError(input.productId);
     }
 
-    const updated = new Product(product.id, product.name, product.price, quantity);
+    const updated = new Product(
+      product.id,
+      product.name,
+      product.description,
+      product.price,
+      quantity,
+      product.deletedAt,
+    );
     await this.products.save(updated);
     return updated;
   }

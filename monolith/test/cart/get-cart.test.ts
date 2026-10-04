@@ -3,7 +3,8 @@ import { getCart } from '../../src/routes/getCart';
 import { mockCartRepo } from '../mocks/cart';
 import { mockCartItemRepo } from '../mocks/cartItem';
 import { mockDataSource } from '../mocks/dataSource';
-import { cartMock, cartWithItemsMock, missingCartMock } from '../mocks/get-cart';
+import { cartMock, cartWithItemsMock, missingCartMock, productMock } from '../mocks/get-cart';
+import { mockProductRepo } from '../mocks/product';
 
 describe('get cart', () => {
   describe('success', () => {
@@ -23,6 +24,7 @@ describe('get cart', () => {
       const ds = mockDataSource({
         cart: mockCartRepo({ findOne: cartWithItemsMock }),
         cartItem: mockCartItemRepo({ find: cartWithItemsMock.items }),
+        product: mockProductRepo({ find: [productMock] }),
       });
 
       await expect(getCart(ds, cartWithItemsMock.id)).resolves.toMatchObject({

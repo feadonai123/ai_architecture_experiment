@@ -21,6 +21,38 @@ export function isValidQuantity(quantity: unknown): quantity is number {
   return typeof quantity === 'number' && Number.isInteger(quantity) && quantity > 0;
 }
 
+export function isValidName(name: unknown): name is string {
+  return typeof name === 'string' && name.trim().length > 0;
+}
+
+export function isValidPrice(price: unknown): price is number {
+  return typeof price === 'number' && Number.isFinite(price) && price >= 0;
+}
+
+export function parseNonNegativeNumber(value: unknown): number | null {
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  }
+  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) {
+    return value;
+  }
+  return null;
+}
+
+export function parseOptionalBoolean(value: unknown): boolean | undefined | 'invalid' {
+  if (value === undefined || value === '') {
+    return undefined;
+  }
+  if (value === true || value === 'true') {
+    return true;
+  }
+  if (value === false || value === 'false') {
+    return false;
+  }
+  return 'invalid';
+}
+
 export function wrap(handler: (req: Request, res: Response) => Promise<void>) {
   return (req: Request, res: Response, next: NextFunction) => {
     handler(req, res).catch(next);

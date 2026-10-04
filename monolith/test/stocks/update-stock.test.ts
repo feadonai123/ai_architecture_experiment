@@ -7,7 +7,7 @@ import {
   missingProductMock,
   productMock,
   updateQuantityMock,
-} from '../mocks/stocks';
+} from '../mocks/update-stock';
 
 describe('update stock', () => {
   describe('success', () => {
@@ -25,9 +25,9 @@ describe('update stock', () => {
     it('allows setting stock to zero', async () => {
       const ds = mockDataSource({ product: mockProductRepo({ findOne: { ...productMock } }) });
 
-      await expect(
-        updateStock(ds, { productId: productMock.id, quantity: 0 }),
-      ).resolves.toEqual(expect.objectContaining({ stock: 0 }));
+      await expect(updateStock(ds, { productId: productMock.id, quantity: 0 })).resolves.toEqual(
+        expect.objectContaining({ stock: 0 }),
+      );
     });
   });
 

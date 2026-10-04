@@ -23,7 +23,14 @@ export class IncreaseStock extends UseCase<[IncreaseStockInput], Product> {
       throw new ProductNotFoundError(input.productId);
     }
 
-    const updated = new Product(product.id, product.name, product.price, product.stock + quantity);
+    const updated = new Product(
+      product.id,
+      product.name,
+      product.description,
+      product.price,
+      product.stock + quantity,
+      product.deletedAt,
+    );
     await this.products.save(updated);
     return updated;
   }

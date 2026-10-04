@@ -12,7 +12,13 @@ describe('PUT /stocks/:productId', () => {
       const response = await api().put(path).send({ quantity: 25 });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ ...product, stock: 25 });
+      expect(response.body).toEqual({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        stock: 25,
+      });
       expect((await api().get(path)).body.stock).toBe(25);
     });
 

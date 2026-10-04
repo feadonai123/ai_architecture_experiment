@@ -9,7 +9,7 @@ import {
   missingProductMock,
   productMock,
   updateQuantityMock,
-} from '../mocks/stocks';
+} from '../mocks/update-stock';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,

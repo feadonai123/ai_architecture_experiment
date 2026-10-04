@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { listStocks } from '../../src/controllers/stock/routes/listStocks.route';
 import { mockRes } from '../mocks/http';
 import { mockProductFindAll } from '../mocks/product';
-import { productMock, secondProductMock } from '../mocks/stocks';
+import { productMock, secondProductMock } from '../mocks/list-stocks';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,

@@ -24,12 +24,13 @@ module.exports = {
       severity: 'error',
       from: {},
       to: {
-        path: '^src/ordering/(ports|infrastructure|http|routes)(/|$)',
+        path: '^src/(ordering|inventory|catalog)/(ports|infrastructure|http|routes)(/|$)',
       },
     },
     {
       name: 'no-shared-extras',
-      comment: 'shared/ may only contain database, entities, presenters, base, messaging and integrations',
+      comment:
+        'shared/ may only contain database, entities, presenters, base, messaging and integrations',
       severity: 'error',
       from: {},
       to: { path: '^src/shared/(http|errors|redis|services|env)(/|$)' },
@@ -39,14 +40,7 @@ module.exports = {
       comment: 'Presenters live in shared/presenters, not inside a bounded context',
       severity: 'error',
       from: {},
-      to: { path: '^src/ordering/presenters(/|$)' },
-    },
-    {
-      name: 'no-catalog-context',
-      comment: 'This slice only implements cart/ordering; catalog is not a context',
-      severity: 'error',
-      from: {},
-      to: { path: '^src/catalog(/|$)' },
+      to: { path: '^src/(ordering|inventory|catalog)/presenters(/|$)' },
     },
     {
       name: 'entities-no-express',
@@ -85,7 +79,8 @@ module.exports = {
     },
     {
       name: 'usecases-no-manager',
-      comment: 'Use cases cannot import DbManager; persistence transactions are started by the router',
+      comment:
+        'Use cases cannot import DbManager; persistence transactions are started by the router',
       severity: 'error',
       from: { path: '^src/.*/usecases' },
       to: { path: '^src/manager' },

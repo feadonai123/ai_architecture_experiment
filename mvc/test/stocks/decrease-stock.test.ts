@@ -11,7 +11,7 @@ import {
   invalidQuantityMock,
   missingProductMock,
   productMock,
-} from '../mocks/stocks';
+} from '../mocks/decrease-stock';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,

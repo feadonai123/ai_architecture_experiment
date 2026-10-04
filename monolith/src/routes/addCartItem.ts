@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Cart } from '../entities/Cart';
 import { CartItem } from '../entities/CartItem';
@@ -23,7 +23,7 @@ export async function addCartItem(
 
   const product = await dataSource
     .getRepository(Product)
-    .findOne({ where: { id: input.productId } });
+    .findOne({ where: { id: input.productId, deletedAt: IsNull() } });
   if (!product) {
     throw new ProductNotFoundError(input.productId);
   }

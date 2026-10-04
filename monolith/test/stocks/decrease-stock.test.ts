@@ -12,7 +12,7 @@ import {
   invalidQuantityMock,
   missingProductMock,
   productMock,
-} from '../mocks/stocks';
+} from '../mocks/decrease-stock';
 
 describe('decrease stock', () => {
   describe('success', () => {

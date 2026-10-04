@@ -8,7 +8,7 @@ Organizar primeiro por **contexto**, depois por **operação**, depois por respo
 contexto → operação → responsabilidade técnica
 ```
 
-Os contextos são `ordering/` (carrinho) e `inventory/` (estoque, RF03). Cada operação de estoque possui seus próprios use cases, repositories, controllers e erros, seguindo os componentes existentes. Não criar `catalog/` só porque o carrinho lê `products`.
+Os contextos são `ordering/` (carrinho), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). Cada operação possui seus próprios use cases, repositories, controllers e erros, seguindo os componentes existentes.
 
 ## Estrutura de um contexto
 
@@ -27,6 +27,14 @@ inventory/
 ├── increaseStock/
 ├── decreaseStock/
 └── stock.controller.ts
+
+catalog/
+├── listProducts/
+├── getProduct/
+├── createProduct/
+├── updateProduct/
+├── deleteProduct/
+└── product.controller.ts
 ```
 
 Pastas internas só existem se houver código. Sem `presenters/` dentro do contexto.
