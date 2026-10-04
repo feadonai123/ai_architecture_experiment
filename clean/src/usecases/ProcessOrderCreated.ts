@@ -3,11 +3,10 @@ import { OrderPayment } from '../entities/OrderPayment';
 import { OrderPaymentStatus } from '../entities/OrderPaymentStatus';
 import { OrderStatus } from '../entities/OrderStatus';
 import { OrderNotFoundError } from '../errors/OrderNotFoundError';
-import { OrderCreatedEvent } from '../events/OrderCreatedEvent';
 import { OrderPaymentRepository } from '../ports/OrderPaymentRepository';
 import { OrderRepository } from '../ports/OrderRepository';
 
-export class ProcessOrderCreated extends UseCase<[OrderCreatedEvent], void> {
+export class ProcessOrderCreated extends UseCase<[orderId: string], void> {
   constructor(
     private readonly orders: OrderRepository,
     private readonly payments: OrderPaymentRepository,
@@ -16,10 +15,9 @@ export class ProcessOrderCreated extends UseCase<[OrderCreatedEvent], void> {
     super();
   }
 
-  protected async execute(event: OrderCreatedEvent): Promise<void> {
-    const payload = event.getPayload();
-    const order = await this.orders.findByIdForUpdate(payload.orderId);
-    if (!order) throw new OrderNotFoundError(payload.orderId);
+  protected async execute(orderId: string): Promise<void> {
+    const order = await this.orders.findByIdForUpdate(orderId);
+    if (!order) throw new OrderNotFoundError(orderId);
     if (await this.payments.findByOrderId(order.id)) return;
     await this.payments.create(
       new OrderPayment(order.id, OrderPaymentStatus.PENDING, null, null, this.now()),

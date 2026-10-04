@@ -20,8 +20,8 @@ export class OrderCreatedHandler implements EventHandler {
     if (!(event instanceof OrderCreatedEvent)) {
       throw new Error(`OrderCreatedHandler cannot process ${event.getType()}`);
     }
-    await this.dbManager.startTransaction(() => this.processOrderCreated.run(event));
     const payload = event.getPayload();
+    await this.dbManager.startTransaction(() => this.processOrderCreated.run(payload.orderId));
     Logger.info(`financial consumer handled ${event.getType()}`, {
       eventId: event.getId(),
       orderId: payload.orderId,
