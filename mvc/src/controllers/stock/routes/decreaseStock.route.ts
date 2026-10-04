@@ -9,7 +9,11 @@ function isValidQuantity(quantity: unknown): quantity is number {
   return typeof quantity === 'number' && Number.isInteger(quantity) && quantity > 0;
 }
 
-export async function decreaseStock(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function decreaseStock(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   try {
     const { productId } = req.params;
     const { quantity } = req.body ?? {};

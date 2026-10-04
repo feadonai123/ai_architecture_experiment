@@ -1,9 +1,11 @@
 import { Request, Response } from 'express';
 import { createProduct } from '../../src/controllers/product/routes/createProduct.route';
+import { DuplicateSlugError } from '../../src/errors/DuplicateSlugError';
 import { InvalidNameError } from '../../src/errors/InvalidNameError';
 import { InvalidPriceError } from '../../src/errors/InvalidPriceError';
+import { InvalidSlugError } from '../../src/errors/InvalidSlugError';
 import { mockRes } from '../mocks/http';
-import { mockProductCreate } from '../mocks/product';
+import { mockProductCreate, mockProductFindBySlug } from '../mocks/product';
 import { createdProductMock, productMock } from '../mocks/create-product';
 
 async function invokeHandler(
@@ -26,11 +28,12 @@ describe('create product', () => {
 
   describe('success', () => {
     it('creates a product with stock 0', async () => {
+      mockProductFindBySlug(null);
       mockProductCreate(createdProductMock);
 
       await expect(
         invokeHandler(createProduct, {
-          body: { name: productMock.name, price: productMock.price },
+          body: { name: productMock.name, slug: productMock.slug, price: productMock.price },
         }),
       ).resolves.toEqual(createdProductMock);
     });
@@ -39,14 +42,30 @@ describe('create product', () => {
   describe('errors', () => {
     it('throws InvalidNameError', async () => {
       await expect(
-        invokeHandler(createProduct, { body: { name: '  ', price: 10 } }),
+        invokeHandler(createProduct, { body: { name: '  ', slug: 'tea', price: 10 } }),
       ).rejects.toBeInstanceOf(InvalidNameError);
+    });
+
+    it('throws InvalidSlugError', async () => {
+      await expect(
+        invokeHandler(createProduct, { body: { name: 'Tea', slug: '  ', price: 10 } }),
+      ).rejects.toBeInstanceOf(InvalidSlugError);
     });
 
     it('throws InvalidPriceError', async () => {
       await expect(
-        invokeHandler(createProduct, { body: { name: 'Tea', price: -1 } }),
+        invokeHandler(createProduct, { body: { name: 'Tea', slug: 'tea', price: -1 } }),
       ).rejects.toBeInstanceOf(InvalidPriceError);
+    });
+
+    it('throws DuplicateSlugError', async () => {
+      mockProductFindBySlug(productMock);
+
+      await expect(
+        invokeHandler(createProduct, {
+          body: { name: productMock.name, slug: productMock.slug, price: 10 },
+        }),
+      ).rejects.toBeInstanceOf(DuplicateSlugError);
     });
   });
 });

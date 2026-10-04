@@ -15,6 +15,7 @@ export class CreateProductController extends RouterBase {
   async handle(request: Request, response: Response): Promise<void> {
     const result = await this.operation.run({
       name: request.body?.name,
+      slug: request.body?.slug,
       description: request.body?.description,
       price: request.body?.price,
     });

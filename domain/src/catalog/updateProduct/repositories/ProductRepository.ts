@@ -14,6 +14,24 @@ export class ProductRepository {
       ? new Product(
           record.id,
           record.name,
+          record.slug,
+          record.description,
+          record.price,
+          record.stock,
+          record.deletedAt,
+        )
+      : null;
+  }
+
+  async findBySlug(slug: string): Promise<Product | null> {
+    const record = await DbManager.getManager(this.dataSource)
+      .getRepository(ProductRecord)
+      .findOne({ where: { slug } });
+    return record
+      ? new Product(
+          record.id,
+          record.name,
+          record.slug,
           record.description,
           record.price,
           record.stock,

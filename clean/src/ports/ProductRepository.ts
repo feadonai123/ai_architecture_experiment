@@ -10,6 +10,7 @@ export type ProductFilters = {
 export interface ProductRepository {
   findAll(): Promise<Product[]>;
   findById(id: string): Promise<Product | null>;
+  findBySlug(slug: string): Promise<Product | null>;
   findByFilters(filters: ProductFilters): Promise<Product[]>;
   save(product: Product): Promise<void>;
   create(product: Product): Promise<void>;

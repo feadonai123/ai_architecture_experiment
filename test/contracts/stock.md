@@ -8,6 +8,7 @@ Documento canônico da API de estoque. Todas as quatro implementações devem re
 {
   "id": "0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f",
   "name": "Produto",
+  "slug": "produto",
   "description": "",
   "price": 100,
   "stock": 25

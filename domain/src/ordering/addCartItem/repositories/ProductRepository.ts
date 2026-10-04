@@ -16,6 +16,7 @@ export class ProductRepository {
     return new Product(
       record.id,
       record.name,
+      record.slug,
       record.description,
       record.price,
       record.stock,

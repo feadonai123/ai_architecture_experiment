@@ -27,6 +27,10 @@ export class Product {
       .findOne({ where: { id, deletedAt: IsNull() } });
   }
 
+  static findBySlug(slug: string): Promise<ProductEntity | null> {
+    return getDataSource().getRepository(ProductEntity).findOne({ where: { slug } });
+  }
+
   static findByFilters(filters: ProductFilters): Promise<ProductEntity[]> {
     const qb = getDataSource()
       .getRepository(ProductEntity)
@@ -57,6 +61,7 @@ export class Product {
 
   static create(input: {
     name: string;
+    slug: string;
     description: string;
     price: number;
   }): Promise<ProductEntity> {
@@ -64,6 +69,7 @@ export class Product {
     const product = repository.create({
       id: uuidv4(),
       name: input.name,
+      slug: input.slug,
       description: input.description,
       price: input.price,
       stock: 0,

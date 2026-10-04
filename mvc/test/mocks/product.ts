@@ -5,6 +5,10 @@ export function mockProductFindById(value: ProductEntity | null) {
   return jest.spyOn(Product, 'findById').mockResolvedValue(value);
 }
 
+export function mockProductFindBySlug(value: ProductEntity | null) {
+  return jest.spyOn(Product, 'findBySlug').mockResolvedValue(value);
+}
+
 export function mockProductFindAll(value: ProductEntity[]) {
   return jest.spyOn(Product, 'findAll').mockResolvedValue(value);
 }

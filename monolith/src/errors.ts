@@ -51,6 +51,18 @@ export class InvalidNameError extends AppError {
   }
 }
 
+export class InvalidSlugError extends AppError {
+  constructor(slug: unknown) {
+    super(`Invalid slug: ${String(slug)}`, 400);
+  }
+}
+
+export class DuplicateSlugError extends AppError {
+  constructor(slug: string) {
+    super(`Duplicate slug: ${slug}`, 409);
+  }
+}
+
 export class InvalidPriceError extends AppError {
   constructor(price: unknown) {
     super(`Invalid price: ${String(price)}`, 400);

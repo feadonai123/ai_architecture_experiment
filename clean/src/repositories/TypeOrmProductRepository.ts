@@ -8,6 +8,7 @@ function toProduct(record: ProductRecord): Product {
   return new Product(
     record.id,
     record.name,
+    record.slug,
     record.description,
     record.price,
     record.stock,
@@ -43,6 +44,16 @@ export class TypeOrmProductRepository implements ProductRepository {
     const record = await DbManager.getManager(this.dataSource)
       .getRepository(ProductRecord)
       .findOne({ where: { id, deletedAt: IsNull() } });
+    if (!record) {
+      return null;
+    }
+    return toProduct(record);
+  }
+
+  async findBySlug(slug: string): Promise<Product | null> {
+    const record = await DbManager.getManager(this.dataSource)
+      .getRepository(ProductRecord)
+      .findOne({ where: { slug } });
     if (!record) {
       return null;
     }

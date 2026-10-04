@@ -1,5 +1,7 @@
+import { DuplicateSlugError } from '../../src/catalog/updateProduct/errors/DuplicateSlugError';
 import { InvalidNameError } from '../../src/catalog/updateProduct/errors/InvalidNameError';
 import { InvalidPriceError } from '../../src/catalog/updateProduct/errors/InvalidPriceError';
+import { InvalidSlugError } from '../../src/catalog/updateProduct/errors/InvalidSlugError';
 import { ProductNotFoundError } from '../../src/catalog/updateProduct/errors/ProductNotFoundError';
 import { UpdateProduct } from '../../src/catalog/updateProduct/usecases/UpdateProduct';
 import { mockProductRepository } from '../mocks/product';
@@ -15,11 +17,12 @@ function updateProduct(products = mockProductRepository({ findById: productMock 
 
 describe('update product', () => {
   describe('success', () => {
-    it('updates name, description and price', async () => {
+    it('updates name, slug, description and price', async () => {
       await expect(
         updateProduct().run({
           productId: productMock.id,
           name: updatedCatalogProductMock.name,
+          slug: updatedCatalogProductMock.slug,
           description: updatedCatalogProductMock.description,
           price: updatedCatalogProductMock.price,
         }),
@@ -30,6 +33,7 @@ describe('update product', () => {
       const result = await updateProduct().run({
         productId: productMock.id,
         name: updatedCatalogProductMock.name,
+        slug: updatedCatalogProductMock.slug,
         description: updatedCatalogProductMock.description,
         price: updatedCatalogProductMock.price,
       });
@@ -44,6 +48,7 @@ describe('update product', () => {
         updateProduct(mockProductRepository({ findById: null })).run({
           productId: missingProductMock.id,
           name: 'Tea',
+          slug: 'tea',
           price: 10,
         }),
       ).rejects.toBeInstanceOf(ProductNotFoundError);
@@ -51,14 +56,37 @@ describe('update product', () => {
 
     it('throws InvalidNameError', async () => {
       await expect(
-        updateProduct().run({ productId: productMock.id, name: '', price: 10 }),
+        updateProduct().run({ productId: productMock.id, name: '', slug: 'tea', price: 10 }),
       ).rejects.toBeInstanceOf(InvalidNameError);
+    });
+
+    it('throws InvalidSlugError', async () => {
+      await expect(
+        updateProduct().run({ productId: productMock.id, name: 'Tea', slug: '', price: 10 }),
+      ).rejects.toBeInstanceOf(InvalidSlugError);
     });
 
     it('throws InvalidPriceError', async () => {
       await expect(
-        updateProduct().run({ productId: productMock.id, name: 'Tea', price: -1 }),
+        updateProduct().run({ productId: productMock.id, name: 'Tea', slug: 'tea', price: -1 }),
       ).rejects.toBeInstanceOf(InvalidPriceError);
+    });
+
+    it('throws DuplicateSlugError', async () => {
+      await expect(
+        updateProduct(
+          mockProductRepository({
+            findById: productMock,
+            findBySlug: missingProductMock,
+          }),
+        ).run({
+          productId: productMock.id,
+          name: updatedCatalogProductMock.name,
+          slug: updatedCatalogProductMock.slug,
+          description: updatedCatalogProductMock.description,
+          price: updatedCatalogProductMock.price,
+        }),
+      ).rejects.toBeInstanceOf(DuplicateSlugError);
     });
   });
 });

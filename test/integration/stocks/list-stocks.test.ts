@@ -29,6 +29,7 @@ describe('GET /stocks', () => {
         {
           id: second.id,
           name: second.name,
+          slug: second.slug,
           description: second.description,
           price: second.price,
           stock: second.stock,
@@ -36,6 +37,7 @@ describe('GET /stocks', () => {
         {
           id: first.id,
           name: first.name,
+          slug: first.slug,
           description: first.description,
           price: first.price,
           stock: first.stock,
@@ -55,6 +57,7 @@ describe('GET /stocks', () => {
         {
           id: tea.id,
           name: tea.name,
+          slug: tea.slug,
           description: tea.description,
           price: tea.price,
           stock: tea.stock,

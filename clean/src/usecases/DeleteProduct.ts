@@ -16,6 +16,7 @@ export class DeleteProduct extends UseCase<[string], Product> {
     const deleted = new Product(
       product.id,
       product.name,
+      product.slug,
       product.description,
       product.price,
       product.stock,

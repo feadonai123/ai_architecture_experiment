@@ -1,13 +1,16 @@
 import { UseCase } from '../../../shared/base/useCase.base';
 import { Product } from '../../../shared/entities/Product';
 import { parseString } from '../../../utils/parser';
+import { DuplicateSlugError } from '../errors/DuplicateSlugError';
 import { InvalidNameError } from '../errors/InvalidNameError';
 import { InvalidPriceError } from '../errors/InvalidPriceError';
+import { InvalidSlugError } from '../errors/InvalidSlugError';
 import { ProductNotFoundError } from '../errors/ProductNotFoundError';
 
 export type UpdateProductInput = {
   productId: string;
   name: unknown;
+  slug: unknown;
   description?: unknown;
   price: unknown;
 };
@@ -16,6 +19,7 @@ export class UpdateProduct extends UseCase<[UpdateProductInput], Product> {
   constructor(
     private readonly products: {
       findById(id: string): Promise<Product | null>;
+      findBySlug(slug: string): Promise<Product | null>;
       save(product: Product): Promise<void>;
     },
   ) {
@@ -26,6 +30,10 @@ export class UpdateProduct extends UseCase<[UpdateProductInput], Product> {
     const name = parseString(input.name);
     if (name === null) {
       throw new InvalidNameError(input.name);
+    }
+    const slug = parseString(input.slug);
+    if (slug === null) {
+      throw new InvalidSlugError(input.slug);
     }
     const price =
       typeof input.price === 'number' && Number.isFinite(input.price) && input.price >= 0
@@ -40,10 +48,16 @@ export class UpdateProduct extends UseCase<[UpdateProductInput], Product> {
       throw new ProductNotFoundError(input.productId);
     }
 
+    const existing = await this.products.findBySlug(slug);
+    if (existing && existing.id !== product.id) {
+      throw new DuplicateSlugError(slug);
+    }
+
     const description = typeof input.description === 'string' ? input.description : '';
     const updated = new Product(
       product.id,
       name,
+      slug,
       description,
       price,
       product.stock,

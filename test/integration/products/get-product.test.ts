@@ -14,6 +14,7 @@ describe('GET /products/:productId', () => {
       expect(response.body).toEqual({
         id: product.id,
         name: product.name,
+        slug: product.slug,
         description: product.description,
         price: product.price,
         stock: product.stock,

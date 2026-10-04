@@ -26,6 +26,7 @@ describe('GET /products', () => {
         {
           id: second.id,
           name: second.name,
+          slug: second.slug,
           description: second.description,
           price: second.price,
           stock: second.stock,
@@ -33,6 +34,7 @@ describe('GET /products', () => {
         {
           id: first.id,
           name: first.name,
+          slug: first.slug,
           description: first.description,
           price: first.price,
           stock: first.stock,
@@ -59,6 +61,7 @@ describe('GET /products', () => {
         {
           id: tea.id,
           name: tea.name,
+          slug: tea.slug,
           description: tea.description,
           price: tea.price,
           stock: tea.stock,
@@ -78,6 +81,7 @@ describe('GET /products', () => {
         {
           id: coffee.id,
           name: coffee.name,
+          slug: coffee.slug,
           description: coffee.description,
           price: coffee.price,
           stock: coffee.stock,
@@ -97,6 +101,7 @@ describe('GET /products', () => {
         {
           id: tea.id,
           name: tea.name,
+          slug: tea.slug,
           description: tea.description,
           price: tea.price,
           stock: tea.stock,
@@ -116,6 +121,7 @@ describe('GET /products', () => {
         {
           id: tea.id,
           name: tea.name,
+          slug: tea.slug,
           description: tea.description,
           price: tea.price,
           stock: tea.stock,
@@ -135,6 +141,7 @@ describe('GET /products', () => {
         {
           id: coffee.id,
           name: coffee.name,
+          slug: coffee.slug,
           description: coffee.description,
           price: coffee.price,
           stock: coffee.stock,
@@ -160,6 +167,7 @@ describe('GET /products', () => {
         {
           id: tea.id,
           name: tea.name,
+          slug: tea.slug,
           description: tea.description,
           price: tea.price,
           stock: tea.stock,
@@ -179,6 +187,7 @@ describe('GET /products', () => {
         {
           id: tea.id,
           name: tea.name,
+          slug: tea.slug,
           description: tea.description,
           price: tea.price,
           stock: tea.stock,

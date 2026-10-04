@@ -8,6 +8,7 @@ Documento canônico da API de catálogo. Todas as quatro implementações devem 
 {
   "id": "0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f",
   "name": "Produto",
+  "slug": "produto",
   "description": "Chá verde",
   "price": 100,
   "stock": 0
@@ -83,12 +84,13 @@ Cria um produto. `stock` inicia em `0`. Body:
 ```json
 {
   "name": "Produto",
+  "slug": "produto",
   "description": "Opcional",
   "price": 10
 }
 ```
 
-`description` omitido vira `""`. Estoque não é aceito neste body.
+`description` omitido vira `""`. `slug` é obrigatório e único. Nome pode se repetir. Estoque não é aceito neste body.
 
 ### Sucesso
 
@@ -96,16 +98,18 @@ Cria um produto. `stock` inicia em `0`. Body:
 
 ### Erros
 
-| Condição                         | Erro               | HTTP |
-| -------------------------------- | ------------------ | ---: |
-| `name` ausente ou vazio          | `InvalidNameError` |  400 |
+| Condição                         | Erro                 | HTTP |
+| -------------------------------- | -------------------- | ---: |
+| `name` ausente ou vazio          | `InvalidNameError`   |  400 |
+| `slug` ausente ou vazio          | `InvalidSlugError`   |  400 |
 | `price` ausente, não número ou < 0 | `InvalidPriceError` |  400 |
+| `slug` já utilizado              | `DuplicateSlugError` |  409 |
 
 ---
 
 ## PUT /products/:productId
 
-Atualiza `name`, `description` e `price`. Não altera `stock`.
+Atualiza `name`, `slug`, `description` e `price`. Não altera `stock`. `slug` permanece único.
 
 ### Sucesso
 
@@ -116,7 +120,9 @@ Atualiza `name`, `description` e `price`. Não altera `stock`.
 | Condição                         | Erro                   | HTTP |
 | -------------------------------- | ---------------------- | ---: |
 | `name` inválido                  | `InvalidNameError`     |  400 |
+| `slug` inválido                  | `InvalidSlugError`     |  400 |
 | `price` inválido                 | `InvalidPriceError`    |  400 |
+| `slug` já utilizado por outro produto | `DuplicateSlugError` |  409 |
 | produto inexistente ou deletado  | `ProductNotFoundError` |  404 |
 
 ---
@@ -146,8 +152,12 @@ Soft delete (`deleted_at`). Não remove `cart_items`.
 | GET /products            | preço/filtro inválido   | InvalidPriceError / InvalidFilterError | 400 |
 | GET /products/:id        | inexistente ou deletado | ProductNotFoundError   |  404 |
 | POST /products           | name inválido           | InvalidNameError       |  400 |
+| POST /products           | slug inválido           | InvalidSlugError       |  400 |
 | POST /products           | price inválido          | InvalidPriceError      |  400 |
+| POST /products           | slug duplicado          | DuplicateSlugError     |  409 |
 | PUT /products/:id        | name inválido           | InvalidNameError       |  400 |
+| PUT /products/:id        | slug inválido           | InvalidSlugError       |  400 |
 | PUT /products/:id        | price inválido          | InvalidPriceError      |  400 |
+| PUT /products/:id        | slug duplicado          | DuplicateSlugError     |  409 |
 | PUT /products/:id        | inexistente ou deletado | ProductNotFoundError   |  404 |
 | DELETE /products/:id     | inexistente ou deletado | ProductNotFoundError   |  404 |

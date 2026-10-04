@@ -1,5 +1,7 @@
+import { DuplicateSlugError } from '../../src/catalog/createProduct/errors/DuplicateSlugError';
 import { InvalidNameError } from '../../src/catalog/createProduct/errors/InvalidNameError';
 import { InvalidPriceError } from '../../src/catalog/createProduct/errors/InvalidPriceError';
+import { InvalidSlugError } from '../../src/catalog/createProduct/errors/InvalidSlugError';
 import { CreateProduct } from '../../src/catalog/createProduct/usecases/CreateProduct';
 import { mockProductRepository } from '../mocks/product';
 import { createdProductMock, productMock } from '../mocks/create-product';
@@ -12,22 +14,42 @@ describe('create product', () => {
   describe('success', () => {
     it('creates a product with stock 0', async () => {
       await expect(
-        createProduct().run({ name: productMock.name, price: productMock.price }),
+        createProduct().run({
+          name: productMock.name,
+          slug: productMock.slug,
+          price: productMock.price,
+        }),
       ).resolves.toEqual(createdProductMock);
     });
   });
 
   describe('errors', () => {
     it('throws InvalidNameError', async () => {
-      await expect(createProduct().run({ name: '  ', price: 10 })).rejects.toBeInstanceOf(
-        InvalidNameError,
-      );
+      await expect(
+        createProduct().run({ name: '  ', slug: 'tea', price: 10 }),
+      ).rejects.toBeInstanceOf(InvalidNameError);
+    });
+
+    it('throws InvalidSlugError', async () => {
+      await expect(
+        createProduct().run({ name: 'Tea', slug: '  ', price: 10 }),
+      ).rejects.toBeInstanceOf(InvalidSlugError);
     });
 
     it('throws InvalidPriceError', async () => {
-      await expect(createProduct().run({ name: 'Tea', price: -1 })).rejects.toBeInstanceOf(
-        InvalidPriceError,
-      );
+      await expect(
+        createProduct().run({ name: 'Tea', slug: 'tea', price: -1 }),
+      ).rejects.toBeInstanceOf(InvalidPriceError);
+    });
+
+    it('throws DuplicateSlugError', async () => {
+      await expect(
+        createProduct(mockProductRepository({ findBySlug: productMock })).run({
+          name: productMock.name,
+          slug: productMock.slug,
+          price: productMock.price,
+        }),
+      ).rejects.toBeInstanceOf(DuplicateSlugError);
     });
   });
 });

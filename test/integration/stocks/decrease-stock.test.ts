@@ -15,6 +15,7 @@ describe('PATCH /stocks/:productId/decrease', () => {
       expect(response.body).toEqual({
         id: product.id,
         name: product.name,
+        slug: product.slug,
         description: product.description,
         price: product.price,
         stock: 6,

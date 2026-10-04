@@ -16,6 +16,7 @@ export class UpdateProductRoute extends RouterBase {
     const result = await this.operation.run({
       productId: request.params.productId,
       name: request.body?.name,
+      slug: request.body?.slug,
       description: request.body?.description,
       price: request.body?.price,
     });

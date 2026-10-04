@@ -30,6 +30,7 @@ export class UpdateStock extends UseCase<[UpdateStockInput], Product> {
     const updated = new Product(
       product.id,
       product.name,
+      product.slug,
       product.description,
       product.price,
       quantity,
