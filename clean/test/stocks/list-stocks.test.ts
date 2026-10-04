@@ -1,19 +1,23 @@
 import { ListStocks } from '../../src/usecases/ListStocks';
+import { mockProductRepository } from '../mocks/product';
+import { productMock, secondProductMock } from '../mocks/stocks';
 
-import { mockStocks, stockProductMock } from '../mocks/stocks';
+function listStocks(
+  products = mockProductRepository({ findAll: [productMock, secondProductMock] }),
+) {
+  return new ListStocks(products);
+}
+
 describe('list stocks', () => {
-  let repo: ReturnType<typeof mockStocks>;
-  beforeEach(() => {
-    repo = mockStocks();
-  });
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      const result = await new ListStocks(repo).run();
-      expect(result).toEqual([stockProductMock]);
+    it('returns all products with their stocks', async () => {
+      const result = await listStocks().run();
+
+      expect(result).toEqual([productMock, secondProductMock]);
     });
-    it('returns an empty list when no products exist', async () => {
-      repo.findAll.mockResolvedValueOnce([]);
-      await expect(new ListStocks(repo).run()).resolves.toEqual([]);
+
+    it('returns an empty list when there are no products', async () => {
+      await expect(listStocks(mockProductRepository({ findAll: [] })).run()).resolves.toEqual([]);
     });
   });
 });

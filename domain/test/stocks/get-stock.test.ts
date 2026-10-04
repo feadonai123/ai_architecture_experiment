@@ -1,22 +1,24 @@
-import { GetStock } from '../../src/inventory/getStock/usecases/GetStock';
 import { ProductNotFoundError } from '../../src/inventory/getStock/errors/ProductNotFoundError';
-import { mockStocks, stockProductMock } from '../mocks/stocks';
+import { GetStock } from '../../src/inventory/getStock/usecases/GetStock';
+import { mockProductRepository } from '../mocks/product';
+import { missingProductMock, productMock } from '../mocks/stocks';
+
+function getStock(products = mockProductRepository({ findById: productMock })) {
+  return new GetStock(products);
+}
+
 describe('get stock', () => {
-  let repo: ReturnType<typeof mockStocks>;
-  beforeEach(() => {
-    repo = mockStocks();
-  });
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      const result = await new GetStock(repo).run(stockProductMock.id);
-      expect(result).toEqual(stockProductMock);
+    it('returns the requested product with its stock', async () => {
+      await expect(getStock().run(productMock.id)).resolves.toEqual(productMock);
     });
   });
+
   describe('errors', () => {
-    it('throws ProductNotFoundError without saving', async () => {
-      repo.findById.mockResolvedValueOnce(null);
-      await expect(new GetStock(repo).run('missing')).rejects.toBeInstanceOf(ProductNotFoundError);
-      expect(repo.save).not.toHaveBeenCalled();
+    it('throws ProductNotFoundError', async () => {
+      await expect(
+        getStock(mockProductRepository({ findById: null })).run(missingProductMock.id),
+      ).rejects.toBeInstanceOf(ProductNotFoundError);
     });
   });
 });

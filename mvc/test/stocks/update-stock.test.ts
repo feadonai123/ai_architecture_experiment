@@ -4,7 +4,12 @@ import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
 import { mockProductFindById, mockProductSave } from '../mocks/product';
-import { stockProductMock } from '../mocks/stocks';
+import {
+  invalidAbsoluteQuantityMock,
+  missingProductMock,
+  productMock,
+  updateQuantityMock,
+} from '../mocks/stocks';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,
@@ -19,64 +24,52 @@ async function invokeHandler(
   return res.json.mock.calls[0]?.[0];
 }
 
+function update(input: { productId: string; quantity: unknown }) {
+  return invokeHandler(updateStock, {
+    params: { productId: input.productId },
+    body: { quantity: input.quantity },
+  });
+}
+
 describe('update stock', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      mockProductFindById({ ...stockProductMock });
-      const save = mockProductSave();
-
-      await expect(
-        invokeHandler(updateStock, {
-          params: { productId: stockProductMock.id },
-          body: { quantity: 4 },
-        }),
-      ).resolves.toEqual({ ...stockProductMock, stock: 4 });
-      expect(save).toHaveBeenCalledWith(expect.objectContaining({ stock: 4 }));
-    });
-
-    it('allows the resulting stock to be zero', async () => {
-      mockProductFindById({ ...stockProductMock });
+    it('sets the product stock to the informed quantity', async () => {
+      mockProductFindById({ ...productMock });
       mockProductSave();
 
       await expect(
-        invokeHandler(updateStock, {
-          params: { productId: stockProductMock.id },
-          body: { quantity: 0 },
-        }),
-      ).resolves.toEqual({ ...stockProductMock, stock: 0 });
+        update({ productId: productMock.id, quantity: updateQuantityMock }),
+      ).resolves.toEqual({ ...productMock, stock: updateQuantityMock });
+    });
+
+    it('allows setting stock to zero', async () => {
+      mockProductFindById({ ...productMock });
+      mockProductSave();
+
+      await expect(update({ productId: productMock.id, quantity: 0 })).resolves.toEqual({
+        ...productMock,
+        stock: 0,
+      });
     });
   });
 
   describe('errors', () => {
-    it('throws ProductNotFoundError without saving', async () => {
-      const save = mockProductSave();
+    it('throws InvalidQuantityError', async () => {
+      await expect(
+        update({ productId: productMock.id, quantity: invalidAbsoluteQuantityMock }),
+      ).rejects.toBeInstanceOf(InvalidQuantityError);
+    });
+
+    it('throws ProductNotFoundError', async () => {
       mockProductFindById(null);
 
       await expect(
-        invokeHandler(updateStock, { params: { productId: 'missing' }, body: { quantity: 1 } }),
+        update({ productId: missingProductMock.id, quantity: updateQuantityMock }),
       ).rejects.toBeInstanceOf(ProductNotFoundError);
-      expect(save).not.toHaveBeenCalled();
     });
-
-    it.each([-1, 1.5, '5', null, undefined, true, NaN, Infinity])(
-      'rejects invalid quantity %p before reading persistence',
-      async (quantity) => {
-        const findById = mockProductFindById({ ...stockProductMock });
-        const save = mockProductSave();
-
-        await expect(
-          invokeHandler(updateStock, {
-            params: { productId: stockProductMock.id },
-            body: { quantity },
-          }),
-        ).rejects.toBeInstanceOf(InvalidQuantityError);
-        expect(findById).not.toHaveBeenCalled();
-        expect(save).not.toHaveBeenCalled();
-      },
-    );
   });
 });

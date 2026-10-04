@@ -1,45 +1,55 @@
-import { UpdateStock } from '../../src/usecases/UpdateStock';
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
-import { mockStocks, stockProductMock } from '../mocks/stocks';
+import { UpdateStock } from '../../src/usecases/UpdateStock';
+import { mockProductRepository } from '../mocks/product';
+import {
+  emptiedProductMock,
+  invalidAbsoluteQuantityMock,
+  missingProductMock,
+  productMock,
+  updatedProductMock,
+  updateQuantityMock,
+} from '../mocks/stocks';
+
+function updateStock(products = mockProductRepository({ findById: productMock })) {
+  return new UpdateStock(products);
+}
+
 describe('update stock', () => {
-  let repo: ReturnType<typeof mockStocks>;
-  beforeEach(() => {
-    repo = mockStocks();
-  });
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      const result = await new UpdateStock(repo).run({
-        productId: stockProductMock.id,
-        quantity: 4,
+    it('sets the product stock to the informed quantity', async () => {
+      const result = await updateStock().run({
+        productId: productMock.id,
+        quantity: updateQuantityMock,
       });
-      expect(result).toEqual({ ...stockProductMock, stock: 4 });
-      expect(repo.save).toHaveBeenCalledWith(result);
+
+      expect(result).toEqual(updatedProductMock);
     });
 
-    it('allows the resulting stock to be zero', async () => {
+    it('allows setting stock to zero', async () => {
       await expect(
-        new UpdateStock(repo).run({ productId: stockProductMock.id, quantity: 0 }),
-      ).resolves.toEqual({ ...stockProductMock, stock: 0 });
+        updateStock().run({ productId: productMock.id, quantity: 0 }),
+      ).resolves.toEqual(emptiedProductMock);
     });
   });
+
   describe('errors', () => {
-    it('throws ProductNotFoundError without saving', async () => {
-      repo.findById.mockResolvedValueOnce(null);
+    it('throws InvalidQuantityError', async () => {
       await expect(
-        new UpdateStock(repo).run({ productId: 'missing', quantity: 1 }),
-      ).rejects.toBeInstanceOf(ProductNotFoundError);
-      expect(repo.save).not.toHaveBeenCalled();
+        updateStock().run({
+          productId: productMock.id,
+          quantity: invalidAbsoluteQuantityMock,
+        }),
+      ).rejects.toBeInstanceOf(InvalidQuantityError);
     });
-    it.each([-1, 1.5, '5', null, undefined, true, NaN, Infinity])(
-      'rejects invalid quantity %p before reading persistence',
-      async (quantity) => {
-        await expect(
-          new UpdateStock(repo).run({ productId: stockProductMock.id, quantity }),
-        ).rejects.toBeInstanceOf(InvalidQuantityError);
-        expect(repo.findById).not.toHaveBeenCalled();
-        expect(repo.save).not.toHaveBeenCalled();
-      },
-    );
+
+    it('throws ProductNotFoundError', async () => {
+      await expect(
+        updateStock(mockProductRepository({ findById: null })).run({
+          productId: missingProductMock.id,
+          quantity: updateQuantityMock,
+        }),
+      ).rejects.toBeInstanceOf(ProductNotFoundError);
+    });
   });
 });

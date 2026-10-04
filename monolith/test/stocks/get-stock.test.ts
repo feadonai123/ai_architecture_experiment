@@ -2,24 +2,24 @@ import { ProductNotFoundError } from '../../src/errors';
 import { getStock } from '../../src/routes/getStock';
 import { mockDataSource } from '../mocks/dataSource';
 import { mockProductRepo } from '../mocks/product';
-import { firstProductMock, missingProductIdMock } from '../mocks/stocks';
+import { missingProductMock, productMock } from '../mocks/stocks';
 
 describe('get stock', () => {
   describe('success', () => {
     it('returns the requested product with its stock', async () => {
       const ds = mockDataSource({
-        product: mockProductRepo({ findOne: firstProductMock }),
+        product: mockProductRepo({ findOne: productMock }),
       });
 
-      await expect(getStock(ds, firstProductMock.id)).resolves.toEqual(firstProductMock);
+      await expect(getStock(ds, productMock.id)).resolves.toEqual(productMock);
     });
   });
 
   describe('errors', () => {
-    it('throws ProductNotFoundError when the product does not exist', async () => {
+    it('throws ProductNotFoundError', async () => {
       const ds = mockDataSource({ product: mockProductRepo({ findOne: null }) });
 
-      await expect(getStock(ds, missingProductIdMock)).rejects.toBeInstanceOf(ProductNotFoundError);
+      await expect(getStock(ds, missingProductMock.id)).rejects.toBeInstanceOf(ProductNotFoundError);
     });
   });
 });

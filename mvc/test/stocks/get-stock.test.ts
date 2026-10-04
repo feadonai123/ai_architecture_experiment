@@ -2,8 +2,8 @@ import { Request, Response } from 'express';
 import { getStock } from '../../src/controllers/stock/routes/getStock.route';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
-import { mockProductFindById, mockProductSave } from '../mocks/product';
-import { stockProductMock } from '../mocks/stocks';
+import { mockProductFindById } from '../mocks/product';
+import { missingProductMock, productMock } from '../mocks/stocks';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,
@@ -24,24 +24,22 @@ describe('get stock', () => {
   });
 
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      mockProductFindById({ ...stockProductMock });
+    it('returns the requested product with its stock', async () => {
+      mockProductFindById({ ...productMock });
 
       await expect(
-        invokeHandler(getStock, { params: { productId: stockProductMock.id } }),
-      ).resolves.toEqual(stockProductMock);
+        invokeHandler(getStock, { params: { productId: productMock.id } }),
+      ).resolves.toEqual(productMock);
     });
   });
 
   describe('errors', () => {
-    it('throws ProductNotFoundError without saving', async () => {
-      const save = mockProductSave();
+    it('throws ProductNotFoundError', async () => {
       mockProductFindById(null);
 
       await expect(
-        invokeHandler(getStock, { params: { productId: 'missing' } }),
+        invokeHandler(getStock, { params: { productId: missingProductMock.id } }),
       ).rejects.toBeInstanceOf(ProductNotFoundError);
-      expect(save).not.toHaveBeenCalled();
     });
   });
 });

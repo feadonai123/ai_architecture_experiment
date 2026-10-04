@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import { listStocks } from '../../src/controllers/stock/routes/listStocks.route';
 import { mockRes } from '../mocks/http';
 import { mockProductFindAll } from '../mocks/product';
-import { stockProductMock } from '../mocks/stocks';
+import { productMock, secondProductMock } from '../mocks/stocks';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,
@@ -23,13 +23,13 @@ describe('list stocks', () => {
   });
 
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      mockProductFindAll([{ ...stockProductMock }]);
+    it('returns all products with their stocks', async () => {
+      mockProductFindAll([productMock, secondProductMock]);
 
-      await expect(invokeHandler(listStocks)).resolves.toEqual([stockProductMock]);
+      await expect(invokeHandler(listStocks)).resolves.toEqual([productMock, secondProductMock]);
     });
 
-    it('returns an empty list when no products exist', async () => {
+    it('returns an empty list when there are no products', async () => {
       mockProductFindAll([]);
 
       await expect(invokeHandler(listStocks)).resolves.toEqual([]);

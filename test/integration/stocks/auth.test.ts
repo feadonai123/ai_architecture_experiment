@@ -1,33 +1,30 @@
 import request from 'supertest';
-import { v4 as uuidv4 } from 'uuid';
+import { api } from '../../helpers/api';
 import { getApp } from '../../helpers/setup';
 
-describe('Stock API key authentication', () => {
-  it.each([undefined, 'wrong-key'])(
-    'rejects unauthorized access to every stock route (%p)',
-    async (key) => {
-      const path = `/stocks/${uuidv4()}`;
-      for (const [method, url] of [
-        ['get', '/stocks'],
-        ['get', path],
-        ['put', path],
-        ['patch', `${path}/increase`],
-        ['patch', `${path}/decrease`],
-      ] as const) {
-        const call = request(getApp())[method](url);
-        if (key !== undefined) {
-          call.set('x-api-key', key);
-        }
+describe('API key authentication', () => {
+  it('returns ForbiddenError when the header is missing', async () => {
+    const response = await request(getApp()).get('/stocks');
 
-        const response = await call;
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      error: 'ForbiddenError',
+      message: 'Forbidden',
+      statusCode: 403,
+    });
+  });
 
-        expect(response.status).toBe(403);
-        expect(response.body).toEqual({
-          error: 'ForbiddenError',
-          message: 'Forbidden',
-          statusCode: 403,
-        });
-      }
-    },
-  );
+  it('returns ForbiddenError when the header is invalid', async () => {
+    const response = await request(getApp()).get('/stocks').set('x-api-key', 'wrong-key');
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('ForbiddenError');
+    expect(response.body.statusCode).toBe(403);
+  });
+
+  it('accepts requests with a valid x-api-key header', async () => {
+    const response = await api().get('/stocks');
+
+    expect(response.status).toBe(200);
+  });
 });

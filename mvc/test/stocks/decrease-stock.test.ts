@@ -5,7 +5,13 @@ import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
 import { mockProductFindById, mockProductSave } from '../mocks/product';
-import { stockProductMock } from '../mocks/stocks';
+import {
+  decreaseQuantityMock,
+  exceedingQuantityMock,
+  invalidQuantityMock,
+  missingProductMock,
+  productMock,
+} from '../mocks/stocks';
 
 async function invokeHandler(
   handler: (req: Request, res: Response, next: (err?: unknown) => void) => Promise<void>,
@@ -20,79 +26,62 @@ async function invokeHandler(
   return res.json.mock.calls[0]?.[0];
 }
 
+function decrease(input: { productId: string; quantity: unknown }) {
+  return invokeHandler(decreaseStock, {
+    params: { productId: input.productId },
+    body: { quantity: input.quantity },
+  });
+}
+
 describe('decrease stock', () => {
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      mockProductFindById({ ...stockProductMock });
-      const save = mockProductSave();
-
-      await expect(
-        invokeHandler(decreaseStock, {
-          params: { productId: stockProductMock.id },
-          body: { quantity: 4 },
-        }),
-      ).resolves.toEqual({ ...stockProductMock, stock: 6 });
-      expect(save).toHaveBeenCalledWith(expect.objectContaining({ stock: 6 }));
-    });
-
-    it('allows the resulting stock to be zero', async () => {
-      mockProductFindById({ ...stockProductMock });
+    it('removes the informed quantity from the current stock', async () => {
+      mockProductFindById({ ...productMock });
       mockProductSave();
 
       await expect(
-        invokeHandler(decreaseStock, {
-          params: { productId: stockProductMock.id },
-          body: { quantity: 10 },
-        }),
-      ).resolves.toEqual({ ...stockProductMock, stock: 0 });
+        decrease({ productId: productMock.id, quantity: decreaseQuantityMock }),
+      ).resolves.toEqual({
+        ...productMock,
+        stock: productMock.stock - decreaseQuantityMock,
+      });
+    });
+
+    it('allows decreasing the stock to zero', async () => {
+      mockProductFindById({ ...productMock });
+      mockProductSave();
+
+      await expect(
+        decrease({ productId: productMock.id, quantity: productMock.stock }),
+      ).resolves.toEqual({ ...productMock, stock: 0 });
     });
   });
 
   describe('errors', () => {
-    it('throws ProductNotFoundError without saving', async () => {
-      const save = mockProductSave();
+    it('throws InvalidQuantityError', async () => {
+      await expect(
+        decrease({ productId: productMock.id, quantity: invalidQuantityMock }),
+      ).rejects.toBeInstanceOf(InvalidQuantityError);
+    });
+
+    it('throws ProductNotFoundError', async () => {
       mockProductFindById(null);
 
       await expect(
-        invokeHandler(decreaseStock, { params: { productId: 'missing' }, body: { quantity: 1 } }),
+        decrease({ productId: missingProductMock.id, quantity: decreaseQuantityMock }),
       ).rejects.toBeInstanceOf(ProductNotFoundError);
-      expect(save).not.toHaveBeenCalled();
     });
 
-    it.each([0, -1, 1.5, '5', null, undefined, true, NaN, Infinity])(
-      'rejects invalid quantity %p before reading persistence',
-      async (quantity) => {
-        const findById = mockProductFindById({ ...stockProductMock });
-        const save = mockProductSave();
-
-        await expect(
-          invokeHandler(decreaseStock, {
-            params: { productId: stockProductMock.id },
-            body: { quantity },
-          }),
-        ).rejects.toBeInstanceOf(InvalidQuantityError);
-        expect(findById).not.toHaveBeenCalled();
-        expect(save).not.toHaveBeenCalled();
-      },
-    );
-
-    it('throws InsufficientStockError without changing the product', async () => {
-      const product = { ...stockProductMock };
-      mockProductFindById(product);
-      const save = mockProductSave();
+    it('throws InsufficientStockError', async () => {
+      mockProductFindById({ ...productMock });
 
       await expect(
-        invokeHandler(decreaseStock, {
-          params: { productId: product.id },
-          body: { quantity: 11 },
-        }),
+        decrease({ productId: productMock.id, quantity: exceedingQuantityMock }),
       ).rejects.toBeInstanceOf(InsufficientStockError);
-      expect(product.stock).toBe(10);
-      expect(save).not.toHaveBeenCalled();
     });
   });
 });

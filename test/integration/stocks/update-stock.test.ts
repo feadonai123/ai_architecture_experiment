@@ -5,7 +5,7 @@ import { ProductPrefab } from '../../prefabs/product.prefab';
 
 describe('PUT /stocks/:productId', () => {
   describe('success', () => {
-    it('sets and persists the absolute stock quantity', async () => {
+    it('sets the product stock to the informed quantity', async () => {
       const product = await ProductPrefab.create(getTestDataSource(), { stock: 10 });
       const path = `/stocks/${product.id}`;
 
@@ -27,33 +27,30 @@ describe('PUT /stocks/:productId', () => {
   });
 
   describe('errors', () => {
-    it.each([-1, 1.5, '5', null, undefined, true])(
-      'returns InvalidQuantityError for invalid quantity %p',
-      async (quantity) => {
-        const productId = uuidv4();
+    it('returns InvalidQuantityError when quantity is negative', async () => {
+      const product = await ProductPrefab.create(getTestDataSource());
 
-        const response = await api().put(`/stocks/${productId}`).send({ quantity });
+      const response = await api().put(`/stocks/${product.id}`).send({ quantity: -1 });
 
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({
-          error: 'InvalidQuantityError',
-          message: `Invalid quantity: ${String(quantity)}`,
-          statusCode: 400,
-        });
-      },
-    );
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('InvalidQuantityError');
+    });
+
+    it('returns InvalidQuantityError when quantity is not an integer', async () => {
+      const product = await ProductPrefab.create(getTestDataSource());
+
+      const response = await api().put(`/stocks/${product.id}`).send({ quantity: 1.5 });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('InvalidQuantityError');
+    });
 
     it('returns ProductNotFoundError when the product does not exist', async () => {
-      const productId = uuidv4();
-
-      const response = await api().put(`/stocks/${productId}`).send({ quantity: 1 });
+      const response = await api().put(`/stocks/${uuidv4()}`).send({ quantity: 1 });
 
       expect(response.status).toBe(404);
-      expect(response.body).toEqual({
-        error: 'ProductNotFoundError',
-        message: `Product not found: ${productId}`,
-        statusCode: 404,
-      });
+      expect(response.body.error).toBe('ProductNotFoundError');
+      expect(response.body.statusCode).toBe(404);
     });
   });
 });

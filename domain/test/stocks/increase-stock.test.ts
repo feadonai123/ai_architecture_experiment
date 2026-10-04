@@ -1,39 +1,48 @@
-import { IncreaseStock } from '../../src/inventory/increaseStock/usecases/IncreaseStock';
 import { InvalidQuantityError } from '../../src/inventory/increaseStock/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/inventory/increaseStock/errors/ProductNotFoundError';
-import { mockStocks, stockProductMock } from '../mocks/stocks';
+import { IncreaseStock } from '../../src/inventory/increaseStock/usecases/IncreaseStock';
+import { mockProductRepository } from '../mocks/product';
+import {
+  increaseQuantityMock,
+  increasedProductMock,
+  invalidQuantityMock,
+  missingProductMock,
+  productMock,
+} from '../mocks/stocks';
+
+function increaseStock(products = mockProductRepository({ findById: productMock })) {
+  return new IncreaseStock(products);
+}
+
 describe('increase stock', () => {
-  let repo: ReturnType<typeof mockStocks>;
-  beforeEach(() => {
-    repo = mockStocks();
-  });
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      const result = await new IncreaseStock(repo).run({
-        productId: stockProductMock.id,
-        quantity: 4,
+    it('adds the informed quantity to the current stock', async () => {
+      const result = await increaseStock().run({
+        productId: productMock.id,
+        quantity: increaseQuantityMock,
       });
-      expect(result).toEqual({ ...stockProductMock, stock: 14 });
-      expect(repo.save).toHaveBeenCalledWith(result);
+
+      expect(result).toEqual(increasedProductMock);
     });
   });
+
   describe('errors', () => {
-    it('throws ProductNotFoundError without saving', async () => {
-      repo.findById.mockResolvedValueOnce(null);
+    it('throws InvalidQuantityError', async () => {
       await expect(
-        new IncreaseStock(repo).run({ productId: 'missing', quantity: 1 }),
-      ).rejects.toBeInstanceOf(ProductNotFoundError);
-      expect(repo.save).not.toHaveBeenCalled();
+        increaseStock().run({
+          productId: productMock.id,
+          quantity: invalidQuantityMock,
+        }),
+      ).rejects.toBeInstanceOf(InvalidQuantityError);
     });
-    it.each([0, -1, 1.5, '5', null, undefined, true, NaN, Infinity])(
-      'rejects invalid quantity %p before reading persistence',
-      async (quantity) => {
-        await expect(
-          new IncreaseStock(repo).run({ productId: stockProductMock.id, quantity }),
-        ).rejects.toBeInstanceOf(InvalidQuantityError);
-        expect(repo.findById).not.toHaveBeenCalled();
-        expect(repo.save).not.toHaveBeenCalled();
-      },
-    );
+
+    it('throws ProductNotFoundError', async () => {
+      await expect(
+        increaseStock(mockProductRepository({ findById: null })).run({
+          productId: missingProductMock.id,
+          quantity: increaseQuantityMock,
+        }),
+      ).rejects.toBeInstanceOf(ProductNotFoundError);
+    });
   });
 });

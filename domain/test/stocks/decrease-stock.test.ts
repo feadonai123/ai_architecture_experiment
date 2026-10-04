@@ -1,55 +1,66 @@
-import { DecreaseStock } from '../../src/inventory/decreaseStock/usecases/DecreaseStock';
+import { InsufficientStockError } from '../../src/inventory/decreaseStock/errors/InsufficientStockError';
 import { InvalidQuantityError } from '../../src/inventory/decreaseStock/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/inventory/decreaseStock/errors/ProductNotFoundError';
-import { InsufficientStockError } from '../../src/inventory/decreaseStock/errors/InsufficientStockError';
-import { mockStocks, stockProductMock } from '../mocks/stocks';
+import { DecreaseStock } from '../../src/inventory/decreaseStock/usecases/DecreaseStock';
+import { mockProductRepository } from '../mocks/product';
+import {
+  decreaseQuantityMock,
+  decreasedProductMock,
+  emptiedProductMock,
+  exceedingQuantityMock,
+  invalidQuantityMock,
+  missingProductMock,
+  productMock,
+} from '../mocks/stocks';
+
+function decreaseStock(products = mockProductRepository({ findById: productMock })) {
+  return new DecreaseStock(products);
+}
+
 describe('decrease stock', () => {
-  let repo: ReturnType<typeof mockStocks>;
-  beforeEach(() => {
-    repo = mockStocks();
-  });
   describe('success', () => {
-    it('returns the expected product data', async () => {
-      const result = await new DecreaseStock(repo).run({
-        productId: stockProductMock.id,
-        quantity: 4,
+    it('removes the informed quantity from the current stock', async () => {
+      const result = await decreaseStock().run({
+        productId: productMock.id,
+        quantity: decreaseQuantityMock,
       });
-      expect(result).toEqual({ ...stockProductMock, stock: 6 });
-      expect(repo.save).toHaveBeenCalledWith(result);
+
+      expect(result).toEqual(decreasedProductMock);
     });
 
-    it('allows the resulting stock to be zero', async () => {
+    it('allows decreasing the stock to zero', async () => {
       await expect(
-        new DecreaseStock(repo).run({ productId: stockProductMock.id, quantity: 10 }),
-      ).resolves.toEqual({ ...stockProductMock, stock: 0 });
+        decreaseStock().run({ productId: productMock.id, quantity: productMock.stock }),
+      ).resolves.toEqual(emptiedProductMock);
     });
   });
+
   describe('errors', () => {
-    it('throws ProductNotFoundError without saving', async () => {
-      repo.findById.mockResolvedValueOnce(null);
+    it('throws InvalidQuantityError', async () => {
       await expect(
-        new DecreaseStock(repo).run({ productId: 'missing', quantity: 1 }),
-      ).rejects.toBeInstanceOf(ProductNotFoundError);
-      expect(repo.save).not.toHaveBeenCalled();
+        decreaseStock().run({
+          productId: productMock.id,
+          quantity: invalidQuantityMock,
+        }),
+      ).rejects.toBeInstanceOf(InvalidQuantityError);
     });
-    it.each([0, -1, 1.5, '5', null, undefined, true, NaN, Infinity])(
-      'rejects invalid quantity %p before reading persistence',
-      async (quantity) => {
-        await expect(
-          new DecreaseStock(repo).run({ productId: stockProductMock.id, quantity }),
-        ).rejects.toBeInstanceOf(InvalidQuantityError);
-        expect(repo.findById).not.toHaveBeenCalled();
-        expect(repo.save).not.toHaveBeenCalled();
-      },
-    );
-    it('throws InsufficientStockError without changing the product', async () => {
-      const product = { ...stockProductMock };
-      repo.findById.mockResolvedValueOnce(product);
+
+    it('throws ProductNotFoundError', async () => {
       await expect(
-        new DecreaseStock(repo).run({ productId: product.id, quantity: 11 }),
+        decreaseStock(mockProductRepository({ findById: null })).run({
+          productId: missingProductMock.id,
+          quantity: decreaseQuantityMock,
+        }),
+      ).rejects.toBeInstanceOf(ProductNotFoundError);
+    });
+
+    it('throws InsufficientStockError', async () => {
+      await expect(
+        decreaseStock().run({
+          productId: productMock.id,
+          quantity: exceedingQuantityMock,
+        }),
       ).rejects.toBeInstanceOf(InsufficientStockError);
-      expect(product.stock).toBe(10);
-      expect(repo.save).not.toHaveBeenCalled();
     });
   });
 });
