@@ -18,3 +18,12 @@ export function getRedis(): Redis {
 export function ping(): Promise<string> {
   return getRedis().ping();
 }
+
+export function addStreamEntry(
+  stream: string,
+  fields: Record<string, string>,
+  redis: Redis = getRedis(),
+): Promise<string | null> {
+  const values = Object.entries(fields).flatMap(([key, value]) => [key, value]);
+  return redis.xadd(stream, '*', ...values);
+}

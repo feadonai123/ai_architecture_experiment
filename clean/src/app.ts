@@ -9,6 +9,7 @@ import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { createCartController } from './controllers/cart/cart.controller';
+import { createOrderController } from './controllers/order/order.controller';
 import { audit } from './middleware/audit';
 import { errorHandler } from './middleware/errorHandler';
 import { mountSwagger } from './infrastructure/swagger';
@@ -19,11 +20,20 @@ import { AddCartItem } from './usecases/AddCartItem';
 import { CreateCart } from './usecases/CreateCart';
 import { GetCart } from './usecases/GetCart';
 import { RemoveCartItem } from './usecases/RemoveCartItem';
+import { TypeOrmUserRepository } from './repositories/TypeOrmUserRepository';
+import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
+import { TypeOrmOrderItemRepository } from './repositories/TypeOrmOrderItemRepository';
+import { EventRedisService } from './services/EventRedisService';
+import { CreateOrder } from './usecases/CreateOrder';
 
-export function createApp(dataSource: DataSource, _redis: Redis): Express {
+export function createApp(dataSource: DataSource, redis: Redis): Express {
   const products = new TypeOrmProductRepository(dataSource);
   const carts = new TypeOrmCartRepository(dataSource);
   const cartItems = new TypeOrmCartItemRepository(dataSource);
+  const users = new TypeOrmUserRepository(dataSource);
+  const orders = new TypeOrmOrderRepository(dataSource);
+  const orderItems = new TypeOrmOrderItemRepository(dataSource);
+  const events = new EventRedisService(redis);
 
   const createCart = new CreateCart(carts);
   const getCart = new GetCart(carts);
@@ -41,6 +51,12 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
       addCartItem,
       removeCartItem,
     }),
+  );
+  app.use(
+    createOrderController(
+      dataSource,
+      new CreateOrder(users, products, orders, orderItems, events, uuidv4, () => new Date()),
+    ),
   );
   app.use(
     createStockController(dataSource, {
