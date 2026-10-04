@@ -5,7 +5,13 @@ import { IEventService } from '../ports/IEventService';
 import { addStreamEntry } from './redis';
 
 export class EventRedisService implements IEventService {
-  constructor(private readonly redis: Redis) { }
+  constructor(private readonly redis: Redis) {}
+
+  async publishNow(stream: string, fields: Record<string, string>): Promise<string> {
+    const entryId = await addStreamEntry(stream, fields, this.redis);
+    if (!entryId) throw new Error(`Failed to publish event to Redis Stream: ${stream}`);
+    return entryId;
+  }
 
   async publishAfterCommit(event: Event<unknown>): Promise<void> {
     const fields = {
@@ -15,8 +21,7 @@ export class EventRedisService implements IEventService {
       payload: JSON.stringify(event.getPayload()),
     };
     DbManager.registerAfterCommit(async () => {
-      const entryId = await addStreamEntry(event.getStream(), fields, this.redis);
-      if (!entryId) throw new Error(`Failed to publish ${event.getType()} to Redis Stream`);
+      await this.publishNow(event.getStream(), fields);
     });
   }
 }

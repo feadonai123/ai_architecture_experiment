@@ -41,6 +41,9 @@ export function mockOrderDependencies() {
       findByOrderId: jest.fn().mockResolvedValue(null),
       create: jest.fn().mockResolvedValue(undefined),
     },
-    events: { publishAfterCommit: jest.fn().mockResolvedValue(undefined) },
+    events: {
+      publishAfterCommit: jest.fn().mockResolvedValue(undefined),
+      publishNow: jest.fn().mockResolvedValue('1-0'),
+    },
   };
 }
