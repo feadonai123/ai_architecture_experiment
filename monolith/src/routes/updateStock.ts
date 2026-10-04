@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { Product } from '../entities/Product';
 import { InvalidQuantityError, ProductNotFoundError } from '../errors';
 import { wrap } from '../helpers';
@@ -17,7 +17,7 @@ export async function updateStock(
   }
 
   const repository = dataSource.getRepository(Product);
-  const product = await repository.findOne({ where: { id: input.productId } });
+  const product = await repository.findOne({ where: { id: input.productId, deletedAt: IsNull() } });
   if (!product) {
     throw new ProductNotFoundError(input.productId);
   }

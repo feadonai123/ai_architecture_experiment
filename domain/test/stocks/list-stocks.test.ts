@@ -1,0 +1,23 @@
+import { ListStocks } from '../../src/inventory/listStocks/usecases/ListStocks';
+import { mockProductRepository } from '../mocks/product';
+import { productMock, secondProductMock } from '../mocks/list-stocks';
+
+function listStocks(
+  products = mockProductRepository({ findAll: [productMock, secondProductMock] }),
+) {
+  return new ListStocks(products);
+}
+
+describe('list stocks', () => {
+  describe('success', () => {
+    it('returns all products with their stocks', async () => {
+      const result = await listStocks().run();
+
+      expect(result).toEqual([productMock, secondProductMock]);
+    });
+
+    it('returns an empty list when there are no products', async () => {
+      await expect(listStocks(mockProductRepository({ findAll: [] })).run()).resolves.toEqual([]);
+    });
+  });
+});

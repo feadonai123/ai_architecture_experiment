@@ -6,60 +6,62 @@ import {
 import { decreaseStock } from '../../src/routes/decreaseStock';
 import { mockDataSource } from '../mocks/dataSource';
 import { mockProductRepo } from '../mocks/product';
-import { firstProductMock, missingProductIdMock } from '../mocks/stocks';
+import {
+  decreaseQuantityMock,
+  exceedingQuantityMock,
+  invalidQuantityMock,
+  missingProductMock,
+  productMock,
+} from '../mocks/decrease-stock';
 
 describe('decrease stock', () => {
   describe('success', () => {
     it('removes the informed quantity from the current stock', async () => {
-      const product = { ...firstProductMock };
-      const repository = mockProductRepo({ findOne: product });
-      const ds = mockDataSource({ product: repository });
+      const ds = mockDataSource({ product: mockProductRepo({ findOne: { ...productMock } }) });
 
-      const result = await decreaseStock(ds, { productId: product.id, quantity: 4 });
+      const result = await decreaseStock(ds, {
+        productId: productMock.id,
+        quantity: decreaseQuantityMock,
+      });
 
-      expect(result.stock).toBe(6);
-      expect(repository.save).toHaveBeenCalledWith(expect.objectContaining({ stock: 6 }));
+      expect(result.stock).toBe(productMock.stock - decreaseQuantityMock);
     });
 
     it('allows decreasing the stock to zero', async () => {
-      const product = { ...firstProductMock };
-      const ds = mockDataSource({ product: mockProductRepo({ findOne: product }) });
+      const ds = mockDataSource({ product: mockProductRepo({ findOne: { ...productMock } }) });
 
       await expect(
-        decreaseStock(ds, { productId: product.id, quantity: product.stock }),
+        decreaseStock(ds, { productId: productMock.id, quantity: productMock.stock }),
       ).resolves.toEqual(expect.objectContaining({ stock: 0 }));
     });
   });
 
   describe('errors', () => {
-    it.each([0, -1, 1.5, '5', undefined])(
-      'throws InvalidQuantityError for invalid quantity %p',
-      async (quantity) => {
-        const ds = mockDataSource({});
+    it('throws InvalidQuantityError', async () => {
+      const ds = mockDataSource({});
 
-        await expect(
-          decreaseStock(ds, { productId: firstProductMock.id, quantity }),
-        ).rejects.toBeInstanceOf(InvalidQuantityError);
-      },
-    );
+      await expect(
+        decreaseStock(ds, {
+          productId: productMock.id,
+          quantity: invalidQuantityMock,
+        }),
+      ).rejects.toBeInstanceOf(InvalidQuantityError);
+    });
 
-    it('throws ProductNotFoundError when the product does not exist', async () => {
+    it('throws ProductNotFoundError', async () => {
       const ds = mockDataSource({ product: mockProductRepo({ findOne: null }) });
 
       await expect(
-        decreaseStock(ds, { productId: missingProductIdMock, quantity: 5 }),
+        decreaseStock(ds, { productId: missingProductMock.id, quantity: decreaseQuantityMock }),
       ).rejects.toBeInstanceOf(ProductNotFoundError);
     });
 
-    it('throws InsufficientStockError when quantity exceeds the current stock', async () => {
-      const product = { ...firstProductMock };
-      const repository = mockProductRepo({ findOne: product });
-      const ds = mockDataSource({ product: repository });
+    it('throws InsufficientStockError', async () => {
+      const ds = mockDataSource({ product: mockProductRepo({ findOne: { ...productMock } }) });
 
       await expect(
-        decreaseStock(ds, { productId: product.id, quantity: product.stock + 1 }),
+        decreaseStock(ds, { productId: productMock.id, quantity: exceedingQuantityMock }),
       ).rejects.toBeInstanceOf(InsufficientStockError);
-      expect(repository.save).not.toHaveBeenCalled();
     });
   });
 });

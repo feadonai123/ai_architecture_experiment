@@ -1,10 +1,16 @@
 import express, { Express } from 'express';
 import { createStockController } from './controllers/stock/stock.controller';
+import { createProductController } from './controllers/product/product.controller';
 import { ListStocks } from './usecases/ListStocks';
 import { GetStock } from './usecases/GetStock';
 import { UpdateStock } from './usecases/UpdateStock';
 import { IncreaseStock } from './usecases/IncreaseStock';
 import { DecreaseStock } from './usecases/DecreaseStock';
+import { ListProducts } from './usecases/ListProducts';
+import { GetProduct } from './usecases/GetProduct';
+import { CreateProduct } from './usecases/CreateProduct';
+import { UpdateProduct } from './usecases/UpdateProduct';
+import { DeleteProduct } from './usecases/DeleteProduct';
 import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
@@ -65,6 +71,15 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
       updateStock: new UpdateStock(products),
       increaseStock: new IncreaseStock(products),
       decreaseStock: new DecreaseStock(products),
+    }),
+  );
+  app.use(
+    createProductController(dataSource, {
+      listProducts: new ListProducts(products),
+      getProduct: new GetProduct(products),
+      createProduct: new CreateProduct(products, uuidv4),
+      updateProduct: new UpdateProduct(products),
+      deleteProduct: new DeleteProduct(products),
     }),
   );
   app.use(errorHandler);

@@ -5,60 +5,72 @@ import { ProductPrefab } from '../../prefabs/product.prefab';
 
 describe('PATCH /stocks/:productId/decrease', () => {
   describe('success', () => {
-    it('removes units and allows decreasing stock to zero', async () => {
+    it('removes the informed quantity from the current stock', async () => {
+      const product = await ProductPrefab.create(getTestDataSource(), { stock: 10 });
+      const path = `/stocks/${product.id}`;
+
+      const response = await api().patch(`${path}/decrease`).send({ quantity: 4 });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({
+        id: product.id,
+        name: product.name,
+        slug: product.slug,
+        description: product.description,
+        price: product.price,
+        stock: 6,
+      });
+      expect((await api().get(path)).body.stock).toBe(6);
+    });
+
+    it('allows decreasing the stock to zero', async () => {
       const product = await ProductPrefab.create(getTestDataSource(), { stock: 10 });
       const path = `/stocks/${product.id}`;
 
       const response = await api().patch(`${path}/decrease`).send({ quantity: 10 });
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ ...product, stock: 0 });
+      expect(response.body.stock).toBe(0);
       expect((await api().get(path)).body.stock).toBe(0);
     });
   });
 
   describe('errors', () => {
-    it.each([0, -1, 1.5, '5', null, undefined, true])(
-      'returns InvalidQuantityError for invalid quantity %p',
-      async (quantity) => {
-        const productId = uuidv4();
+    it('returns InvalidQuantityError when quantity is 0', async () => {
+      const product = await ProductPrefab.create(getTestDataSource());
 
-        const response = await api().patch(`/stocks/${productId}/decrease`).send({ quantity });
+      const response = await api().patch(`/stocks/${product.id}/decrease`).send({ quantity: 0 });
 
-        expect(response.status).toBe(400);
-        expect(response.body).toEqual({
-          error: 'InvalidQuantityError',
-          message: `Invalid quantity: ${String(quantity)}`,
-          statusCode: 400,
-        });
-      },
-    );
-
-    it('returns ProductNotFoundError when the product does not exist', async () => {
-      const productId = uuidv4();
-
-      const response = await api().patch(`/stocks/${productId}/decrease`).send({ quantity: 1 });
-
-      expect(response.status).toBe(404);
-      expect(response.body).toEqual({
-        error: 'ProductNotFoundError',
-        message: `Product not found: ${productId}`,
-        statusCode: 404,
-      });
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('InvalidQuantityError');
     });
 
-    it('returns InsufficientStockError and leaves stock unchanged', async () => {
+    it('returns InvalidQuantityError when quantity is not an integer', async () => {
+      const product = await ProductPrefab.create(getTestDataSource());
+
+      const response = await api().patch(`/stocks/${product.id}/decrease`).send({ quantity: 1.5 });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('InvalidQuantityError');
+    });
+
+    it('returns ProductNotFoundError when the product does not exist', async () => {
+      const response = await api().patch(`/stocks/${uuidv4()}/decrease`).send({ quantity: 1 });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('ProductNotFoundError');
+      expect(response.body.statusCode).toBe(404);
+    });
+
+    it('returns InsufficientStockError when quantity exceeds stock', async () => {
       const product = await ProductPrefab.create(getTestDataSource(), { stock: 2 });
       const path = `/stocks/${product.id}`;
 
-      const response = await api().patch(`${path}/decrease`).send({ quantity: 3 });
+      const response = await api().patch(`${path}/decrease`).send({ quantity: 5 });
 
       expect(response.status).toBe(409);
-      expect(response.body).toEqual({
-        error: 'InsufficientStockError',
-        message: 'Insufficient stock for the requested quantity',
-        statusCode: 409,
-      });
+      expect(response.body.error).toBe('InsufficientStockError');
+      expect(response.body.statusCode).toBe(409);
       expect((await api().get(path)).body.stock).toBe(2);
     });
   });

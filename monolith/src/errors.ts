@@ -84,3 +84,32 @@ export class RetryAttemptsExhaustedError extends Error {
     Object.setPrototypeOf(this, new.target.prototype);
   }
 }
+export class InvalidNameError extends AppError {
+  constructor(name: unknown) {
+    super(`Invalid name: ${String(name)}`, 400);
+  }
+}
+
+export class InvalidSlugError extends AppError {
+  constructor(slug: unknown) {
+    super(`Invalid slug: ${String(slug)}`, 400);
+  }
+}
+
+export class DuplicateSlugError extends AppError {
+  constructor(slug: string) {
+    super(`Duplicate slug: ${slug}`, 409);
+  }
+}
+
+export class InvalidPriceError extends AppError {
+  constructor(price: unknown) {
+    super(`Invalid price: ${String(price)}`, 400);
+  }
+}
+
+export class InvalidFilterError extends AppError {
+  constructor(value: unknown) {
+    super(`Invalid filter: ${String(value)}`, 400);
+  }
+}

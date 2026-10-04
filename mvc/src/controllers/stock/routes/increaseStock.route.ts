@@ -1,38 +1,34 @@
 import { NextFunction, Request, Response } from 'express';
-import { Product as ProductEntity } from '../../../entities/Product';
-import { Product } from '../../../models/Product';
-import { presentProduct } from '../../../presenters/product.presenter';
 import { InvalidQuantityError } from '../../../errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../../errors/ProductNotFoundError';
+import { Product } from '../../../models/Product';
+import { presentProduct } from '../../../presenters/product.presenter';
 
-export async function increaseStock(input: {
-  productId: string;
-  quantity: unknown;
-}): Promise<ProductEntity> {
-  if (
-    typeof input.quantity !== 'number' ||
-    !Number.isInteger(input.quantity) ||
-    input.quantity <= 0
-  ) {
-    throw new InvalidQuantityError(input.quantity);
-  }
-  const product = await Product.findById(input.productId);
-  if (!product) throw new ProductNotFoundError(input.productId);
-  product.stock += input.quantity;
-  return Product.save(product);
+function isValidQuantity(quantity: unknown): quantity is number {
+  return typeof quantity === 'number' && Number.isInteger(quantity) && quantity > 0;
 }
 
-export async function increaseStockRoute(
+export async function increaseStock(
   req: Request,
   res: Response,
   next: NextFunction,
 ): Promise<void> {
   try {
-    const result = await increaseStock({
-      productId: req.params.productId,
-      quantity: req.body?.quantity,
-    });
-    res.status(200).json(presentProduct(result));
+    const { productId } = req.params;
+    const { quantity } = req.body ?? {};
+
+    if (!isValidQuantity(quantity)) {
+      throw new InvalidQuantityError(quantity);
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      throw new ProductNotFoundError(productId);
+    }
+
+    product.stock += quantity;
+    const updated = await Product.save(product);
+    res.status(200).json(presentProduct(updated));
   } catch (error) {
     next(error);
   }

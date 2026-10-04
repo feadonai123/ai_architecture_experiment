@@ -18,7 +18,7 @@ Documento canônico da API de carrinho. Todas as quatro implementações devem r
 }
 ```
 
-`createdAt` é ISO-8601 em UTC. `items` é sempre um array (vazio quando o carrinho não tem itens).
+`createdAt` é ISO-8601 em UTC. `items` é sempre um array (vazio quando o carrinho não tem itens). Itens cujo produto foi soft-deletado não aparecem na leitura do carrinho; a linha em `cart_items` permanece.
 
 ## Representação de erro
 
@@ -100,7 +100,7 @@ Adiciona um produto ao carrinho. Se o item já existir, incrementa a quantidade.
 | Condição                                                    | Erro                      | HTTP |
 | ----------------------------------------------------------- | ------------------------- | ---: |
 | `quantity` ausente, não inteiro ou `<= 0`                   | `InvalidQuantityError`    |  400 |
-| produto inexistente                                         | `ProductNotFoundError`    |  404 |
+| produto inexistente ou deletado                         | `ProductNotFoundError`    |  404 |
 | carrinho inexistente                                        | `CartNotFoundError`       |  404 |
 | `quantidadeAtual + quantity > product.stock`                | `InsufficientStockError`  |  409 |
 

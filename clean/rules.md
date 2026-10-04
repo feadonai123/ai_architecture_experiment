@@ -65,7 +65,7 @@ Pastas de contexto como primeira dimensão (`ordering/`, `catalog/`, `contexts/`
 
 ## Testes desta abordagem
 
-- `test/` contém exclusivamente testes unitários dos use cases (`run`), com ports e repositórios mockados em `test/mocks/`.
-- Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
+- Unitários **somente de use cases** (`run`), com ports mockados em `test/mocks/`.
+- Não criar testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
 - `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.

@@ -1,10 +1,11 @@
-import { DataSource } from 'typeorm';
+import { DataSource, In, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { DbManager } from '../manager/db.manager';
 import { Cart } from '../entities/Cart';
 import { CartItem } from '../entities/CartItem';
 import { CartItemRecord } from '../infrastructure/typeorm/CartItemRecord';
 import { CartRecord } from '../infrastructure/typeorm/CartRecord';
+import { ProductRecord } from '../infrastructure/typeorm/ProductRecord';
 import { CartRepository } from '../ports/CartRepository';
 import { now } from '../utils/time';
 
@@ -39,10 +40,25 @@ export class TypeOrmCartRepository implements CartRepository {
       return null;
     }
     const items = await manager.getRepository(CartItemRecord).find({ where: { cartId: id } });
+    const visible = await this.visibleItems(manager, items);
     return new Cart(
       record.id,
       record.createdAt,
-      items.map((item) => new CartItem(item.id, item.cartId, item.productId, item.quantity)),
+      visible.map((item) => new CartItem(item.id, item.cartId, item.productId, item.quantity)),
     );
+  }
+
+  private async visibleItems(
+    manager: ReturnType<typeof DbManager.getManager>,
+    items: CartItemRecord[],
+  ): Promise<CartItemRecord[]> {
+    if (items.length === 0) {
+      return [];
+    }
+    const active = await manager.getRepository(ProductRecord).find({
+      where: { id: In(items.map((item) => item.productId)), deletedAt: IsNull() },
+    });
+    const activeIds = new Set(active.map((product) => product.id));
+    return items.filter((item) => activeIds.has(item.productId));
   }
 }

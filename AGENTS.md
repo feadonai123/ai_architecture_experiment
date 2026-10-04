@@ -5,6 +5,7 @@
 Experimento de TCC: o **mesmo** recorte de carrinho de e-commerce implementado em quatro organizações de código. Funcionalidade, contrato HTTP, modelo de dados e tecnologias são constantes. A variável é **como as responsabilidades são organizadas**.
 
 Stack comum: Node.js, TypeScript, Express, TypeORM, PostgreSQL, Redis. Contratos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/order.md` e `docs/openapi.yaml`.
+Stack comum: Node.js, TypeScript, Express, TypeORM, PostgreSQL, Redis. Contratos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/product.md` e `docs/openapi.yaml`.
 
 Workspaces: `monolith/`, `mvc/`, `clean/`, `domain/`. Testes de integração compartilhados em `test/integration/`.
 
@@ -13,7 +14,7 @@ Workspaces: `monolith/`, `mvc/`, `clean/`, `domain/`. Testes de integração com
 - **Monólito acoplado** (`monolith/`) — organização mínima. Rotas com regra de negócio e TypeORM no mesmo arquivo.
 - **MVC técnico** (`mvc/`) — primeira dimensão por papel técnico (controller, model, entity, presenter).
 - **Clean Architecture** (`clean/`) — camadas técnicas + Dependency Rule (use cases → ports; entities sem infra).
-- **Domain-Oriented Modular Monolith** (`domain/`) — contexto → operação → responsabilidade técnica. Contextos atuais: `ordering/` (carrinho) e `inventory/` (estoque, RF03).
+- **Domain-Oriented Modular Monolith** (`domain/`) — contexto → operação → responsabilidade técnica. Contextos atuais: `ordering/` (carrinho), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02).
 
 ## Sempre ler e seguir as rules
 
@@ -40,6 +41,7 @@ O mesmo vale para `presenters/`, `middleware/`, `utils/`, `prefabs/`, `manager/`
 - Em `test/integration/<recurso>/`, cada rota/operação possui seu próprio arquivo `*.test.ts`. Cenários transversais, como autenticação, ficam em arquivo próprio. Não agrupar todas as rotas de um recurso em um único teste.
 - Em `test/contracts/`, cada recurso possui seu próprio contrato Markdown. Não misturar o contrato de estoque em `cart.md`; estoque pertence a `stock.md`.
 - `monolith/test/` contém exclusivamente testes unitários das funções de negócio das rotas e dos handlers de consumidores. Não recebe testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
+- Em `test/contracts/`, cada recurso possui seu próprio contrato Markdown. Não misturar o contrato de estoque em `cart.md`; estoque pertence a `stock.md` e catálogo a `product.md`.
 - Prefabs em `test/prefabs/` para dados no Postgres de teste. Header `x-api-key` via `test/helpers/` (não via mocks).
 - Unitários Clean/Domain: **apenas use cases**. MVC/monólito: a unidade de negócio daquela abordagem (handler/rota), com mocks da pasta `test/mocks/`.
 

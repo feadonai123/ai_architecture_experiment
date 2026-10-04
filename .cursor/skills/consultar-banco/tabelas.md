@@ -12,7 +12,7 @@ PostgreSQL via TypeORM. Schema canônico em `db/schema.sql`. Credenciais em `.en
 
 | Tabela | Para que serve |
 | --- | --- |
-| `products` | Produto. Colunas: `id`, `name`, `price`, `stock`. |
+| `products` | Produto. Colunas: `id`, `name`, `slug` (único), `description`, `price`, `stock`, `deleted_at`. |
 
 ## Carrinho
 

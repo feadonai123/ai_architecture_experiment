@@ -21,8 +21,16 @@ export function createCartController(
 ): Router {
   const router = Router();
   router.post('/cart', authenticate, new CreateCartRoute(dataSource, deps.createCart).asHandler());
-  router.get('/cart/:cartId', authenticate, new ShowCartRoute(dataSource, deps.getCart).asHandler());
-  router.post('/cart/items', authenticate, new AddItemRoute(dataSource, deps.addCartItem).asHandler());
+  router.get(
+    '/cart/:cartId',
+    authenticate,
+    new ShowCartRoute(dataSource, deps.getCart).asHandler(),
+  );
+  router.post(
+    '/cart/items',
+    authenticate,
+    new AddItemRoute(dataSource, deps.addCartItem).asHandler(),
+  );
   router.delete(
     '/cart/items/:productId',
     authenticate,

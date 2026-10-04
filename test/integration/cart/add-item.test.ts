@@ -100,6 +100,21 @@ describe('POST /cart/items', () => {
       expect(response.body.error).toBe('ProductNotFoundError');
     });
 
+    it('returns ProductNotFoundError when the product is deleted', async () => {
+      const ds = getTestDataSource();
+      const cart = await CartPrefab.create(ds);
+      const product = await ProductPrefab.create(ds, { deletedAt: new Date() });
+
+      const response = await api().post('/cart/items').send({
+        cartId: cart.id,
+        productId: product.id,
+        quantity: 1,
+      });
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBe('ProductNotFoundError');
+    });
+
     it('returns CartNotFoundError when the cart does not exist', async () => {
       const product = await ProductPrefab.create(getTestDataSource());
 

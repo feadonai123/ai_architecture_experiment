@@ -4,11 +4,11 @@ Estas regras valem para **todas** as abordagens (`monolith/`, `mvc/`, `clean/`, 
 
 ## Experimento
 
-As quatro codebases implementam o **mesmo** recorte de carrinho: mesmo contrato HTTP, mesmos status, mesmos erros, mesma modelagem e a mesma infra (Node, TypeScript, Express, TypeORM, PostgreSQL, Redis).
+As quatro codebases implementam o **mesmo** recorte de catálogo, estoque e carrinho: mesmo contrato HTTP, mesmos status, mesmos erros, mesma modelagem e a mesma infra (Node, TypeScript, Express, TypeORM, PostgreSQL, Redis).
 
 A variável do experimento é **só a organização do código**. Não mude comportamento para “melhorar” uma abordagem.
 
-Contratos canônicos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/order.md` e `docs/openapi.yaml`.
+Contratos canônicos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/product.md`, `test/contracts/order.md` e `docs/openapi.yaml`.
 
 ## Pasta define responsabilidade
 
@@ -53,6 +53,7 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 - Rotas de carrinho pertencem a `test/contracts/cart.md`.
 - Rotas de estoque pertencem a `test/contracts/stock.md`.
 - Rotas de pedidos pertencem a `test/contracts/order.md`.
+- Rotas de catálogo pertencem a `test/contracts/product.md`.
 - Não misturar contratos de recursos diferentes no mesmo arquivo.
 
 ## Testes unitários

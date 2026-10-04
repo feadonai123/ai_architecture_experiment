@@ -8,6 +8,7 @@ import { parse } from 'yaml';
 import { createCartController } from './controllers/cart/cart.controller';
 import { ConsumerFinancial } from './consumers/ConsumerFinancial';
 import { createOrderController } from './controllers/order/order.controller';
+import { createProductController } from './controllers/product/product.controller';
 import { createStockController } from './controllers/stock/stock.controller';
 import { setDataSource } from './database';
 import { audit } from './middleware/audit';
@@ -33,6 +34,7 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
   app.use(createCartController());
   app.use(createStockController());
   app.use(createOrderController());
+  app.use(createProductController());
   app.use(errorHandler);
   return app;
 }
