@@ -3,6 +3,7 @@ import { Event } from '../events/Event';
 import { OrderCreatedEvent } from '../events/OrderCreatedEvent';
 import { DbManager } from '../manager/db.manager';
 import { ProcessOrderCreated } from '../usecases/ProcessOrderCreated';
+import { Logger } from '../utils/Logger';
 import { EventHandler } from './EventHandler';
 
 export class OrderCreatedHandler implements EventHandler {
@@ -20,5 +21,12 @@ export class OrderCreatedHandler implements EventHandler {
       throw new Error(`OrderCreatedHandler cannot process ${event.getType()}`);
     }
     await this.dbManager.startTransaction(() => this.processOrderCreated.run(event));
+    const payload = event.getPayload();
+    Logger.info(`financial consumer handled ${event.getType()}`, {
+      eventId: event.getId(),
+      orderId: payload.orderId,
+      userId: payload.userId,
+      items: payload.items,
+    });
   }
 }

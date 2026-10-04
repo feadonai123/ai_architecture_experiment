@@ -28,6 +28,7 @@ Se uma função não for da pasta, ela não entra nessa pasta. Prefira o arquivo
 
 - Header obrigatório `x-api-key` igual a `X_API_KEY` (sem fallback) nas rotas da API. Ausente ou diferente → `ForbiddenError` (403). O middleware `authenticate` é registrado **em cada rota**, não com `app.use` global. `/docs` (Swagger) fica público.
 - `audit` loga chamada (método, path, params, query, body) e resposta JSON. Não loga a API key.
+- O processamento financeiro de `OrderCreated` registra sucesso via `Logger.info` somente após o commit, com `eventId`, `orderId`, `userId` e `items`, em todas as abordagens.
 - `requireEnv` não tem valor default. Variáveis novas entram em `.env`, `.env.example` e `.env.test`.
 
 ## Testes de integração
