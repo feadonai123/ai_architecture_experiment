@@ -16,6 +16,7 @@ src/
 ├── repositories/
 ├── services/
 ├── consumers/
+├── handler/
 ├── presenters/
 ├── middleware/
 ├── errors/
@@ -34,13 +35,14 @@ src/
 - `ports/` — interfaces de persistência e de publicação usadas pelos use cases.
 - `repositories/` — implementações TypeORM das ports. Sem records TypeORM nesta pasta.
 - `presenters/` — domínio → payload HTTP.
-- `consumers/` — `Consumer` define o ciclo de vida (`start`/`stop`), leitura e despacho; `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter. `FinancialConsumer` compõe um `Consumer` abstrato e registra os handlers financeiros no `EventDispatcher`, sem herdar nem depender de `RedisConsumer`. O ponto de entrada monta as implementações concretas e inicia o consumidor após as conexões. Handlers validam e extraem o payload dos eventos, abrem a transação e passam somente os dados de negócio necessários aos use cases; estes não recebem instâncias de eventos como entrada. Handlers não contêm regras de negócio. A falha de `XACK` é tratada separadamente da falha do handler.
+- `consumers/` — `Consumer` define o ciclo de vida (`start`/`stop`), leitura e despacho. `FinancialConsumer` compõe um `Consumer` abstrato e registra os handlers financeiros no `EventDispatcher`, sem herdar nem depender de `RedisConsumer`. O ponto de entrada monta as implementações concretas e inicia o consumidor após as conexões. Todos os arquivos desta pasta começam com letra minúscula.
+- `handler/` — handlers concretos de eventos. Eles validam e extraem o payload, abrem a transação e passam somente os dados de negócio necessários aos use cases; estes não recebem instâncias de eventos como entrada. Handlers concretos não importam nem acionam `Logger` e não contêm regras de negócio.
 - `IConsumerSettings` define a configuração; `ConsumerSettings` lê e valida o ambiente antes da inicialização. Streams, tipos, tempos e limites são obrigatórios e não têm fallback.
 - `middleware/` — `errorHandler`, `authenticate` (por rota da API, não `app.use` global) e `audit`.
 - `utils/` — `env`, `Logger`, `format`, `parser`, `time`.
-- `base/` — `UseCase` e `RouterBase`. Use cases não importam `router.base`.
+- `base/` — `UseCase`, `RouterBase` e a classe abstrata `EventHandler`, em arquivos com o padrão `<nome>.base.ts`. `EventHandler.handle` executa o método protegido do handler concreto e registra o sucesso somente após seu término, com `eventId` e o payload validado. Use cases não importam `router.base`.
 - `manager/` — `DbManager`: QueryRunner, commit/rollback e ações registradas para depois do commit. Repos usam `DbManager.getManager(dataSource)`.
-- `infrastructure/` — records TypeORM em `typeorm/`, DataSource, Swagger. Sem Redis, sem `requireEnv`, sem implementações de repository.
+- `infrastructure/` — records TypeORM em `typeorm/`, DataSource, Swagger e `RedisConsumer` em `redis/`. `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; a falha de `XACK` é tratada separadamente da falha do handler. Sem `requireEnv` e sem implementações de repository.
 
 ## Dependency Rule
 
@@ -50,7 +52,9 @@ usecases → ports, entities e events (não TypeORM, Express, infrastructure, re
 controllers → usecases, presenters, base/router
 repositories → ports + infrastructure/typeorm + manager
 services → ports + Redis + manager
-consumers → events + ports + services + manager + usecases (sem regra de negócio nos handlers)
+consumers → base/eventHandler + events + ports
+handler → base/eventHandler + events + manager + usecases
+infrastructure/redis → consumers + events + ports + services
 ```
 
 ## Transação

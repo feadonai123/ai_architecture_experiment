@@ -2,6 +2,50 @@
 
 Esta documentação define como um consumer de Redis Streams deve receber, validar, processar e confirmar eventos no projeto. Ela reúne as configurações e as regras de funcionamento comuns a qualquer consumer, independentemente do evento ou da regra de negócio executada. O foco é o comportamento observável do consumo, sem determinar a organização do código. São descritos o processo principal, responsável pelas entradas novas, e o processo de retry, responsável por recuperar entradas pendentes.
 
+## Política de logs dos consumers
+
+Os consumers emitem logs somente nos três momentos definidos nesta seção. Falhas operacionais auxiliares — por exemplo, falha de leitura, `XACK`, agendamento, reconciliação, publicação na Dead Letter Stream ou execução do ciclo de retry — não geram logs adicionais. Assim, cada tentativa de processamento produz no máximo um dos registros abaixo.
+
+### Sucesso do handler
+
+Depois que o handler termina com sucesso — e somente depois do commit, quando houver transação — registra-se o tipo do evento, seu identificador e o payload validado:
+
+```ts
+Logger.info(`${this.consumerName} consumer handled ${event.getType()}`, {
+  eventId: event.getId(),
+  ...(typeof payload === 'object' && payload !== null ? payload : { payload }),
+});
+```
+
+Esse formato é usado tanto no processamento inicial quanto em um retry bem-sucedido.
+
+### Primeira falha do evento
+
+Quando o handler falha durante a entrega inicial, registra-se uma única vez:
+
+```ts
+Logger.error(`${this.consumerName} failed to handle event`, {
+  entryId: message.id,
+  error,
+});
+```
+
+Esse é o único log da primeira falha, independentemente de o evento ser enviado à Dead Letter Stream ou ter um retry agendado.
+
+### Falha durante retry
+
+Quando o handler falha em uma tentativa de retry, registra-se uma única vez, incluindo o número da tentativa:
+
+```ts
+Logger.error(`${this.consumerName} failed to retry event`, {
+  entryId: message.id,
+  deliveryCount,
+  error,
+});
+```
+
+Esse é o único log da tentativa de retry que falhou, inclusive quando ela esgota o limite e encaminha o evento para a Dead Letter Stream.
+
 ## Processo principal: consumo de entradas novas
 
 Enquanto estiver ativo, o consumer repete o mesmo ciclo: prepara seus grupos de consumo, aguarda entradas novas nos streams configurados, percorre as entradas recebidas e tenta processar cada uma. Quando termina um lote, começa outra leitura. Cada consumer define quais streams observa, quais tipos de evento aceita e os limites da leitura.
@@ -36,22 +80,22 @@ Quando uma entrada sofre uma falha que pode ser tentada novamente, o processo pr
 4. **Tratar uma leitura vazia.** Se nenhuma entrada chegar durante a espera, o Redis retorna uma resposta vazia. O consumer não confirma nem processa nada e inicia outra volta do loop. A espera configurada evita consultas contínuas enquanto não há eventos novos.
 5. **Percorrer o resultado.** A resposta contém os streams que tiveram entradas e, em cada um, suas entradas. O consumer percorre os streams e processa as entradas do lote uma por vez, aguardando o resultado de cada processamento antes de seguir. A falha de uma entrada não impede a tentativa de processar as demais entradas do mesmo lote.
 6. **Interpretar os campos da entrada.** Os pares recebidos são convertidos em campos acessíveis pelo processamento. `event` decide qual tipo foi recebido; `payload` contém os dados que serão validados. Se `eventId` estiver ausente, o ID da entrada no Redis é usado como identificador do evento. `timestamp` informa quando ocorreu a publicação, mas não é usado para escolher o processamento neste fluxo.
-7. **Verificar se o tipo é aceito.** Se `event` estiver ausente ou não constar entre os tipos aceitos por esse consumer, ele registra um aviso e executa `XACK`, sem chamar uma regra de negócio. A entrada deixa de estar pendente para esse grupo.
+7. **Verificar se o tipo é aceito.** Se `event` estiver ausente ou não constar entre os tipos aceitos por esse consumer, ele executa `XACK`, sem chamar uma regra de negócio. A entrada deixa de estar pendente para esse grupo.
 8. **Validar e processar um tipo aceito.** O consumer interpreta o `payload` conforme o contrato do tipo identificado. Um JSON inválido ou campos incompatíveis devem gerar um erro específico desse evento, derivado de `InvalidPayloadError`. Com o payload válido, o processamento correspondente executa sua regra de negócio. Se essa regra alterar dados relacionados no banco, as alterações devem ser concluídas em uma única transação. Uma entrega duplicada deve ser tratada de forma idempotente quando o efeito esperado já estiver presente.
-9. **Confirmar o sucesso.** Depois que o processamento termina com sucesso — e depois do commit, se houve transação no banco — o consumer executa `XACK`. Esse comando remove a entrada da lista de pendências do grupo; ele **não** apaga a mensagem do Redis Stream.
-10. **Tratar um payload inválido.** Se ocorrer `InvalidPayloadError`, o consumer envia a entrada à Dead Letter Stream, incluindo stream e ID de origem, grupo consumidor, campos originais, tipo e ID do evento, payload, nome e mensagem do erro e horário da falha. Somente após a gravação da Dead Letter Stream ele executa `XACK` na entrada original. Esse erro não é agendado para retry. Se a publicação na Dead Letter Stream falhar, o consumer registra essa falha, não executa `XACK` e mantém a entrada pendente para recuperação.
-11. **Tratar outras falhas da entrada.** Se o processamento lançar outro erro, essa primeira entrega conta como tentativa `1`. Quando o limite configurado é maior que `1`, o consumer não executa `XACK`, registra o erro e tenta agendar a primeira retentativa. Mesmo que o agendamento falhe, a entrada permanece pendente; a falha também deve ser registrada. Se o limite for `1`, publica a falha na Dead Letter Stream e só então executa `XACK`. Se essa publicação falhar, mantém a entrada pendente. Em seguida, passa à próxima entrada do lote.
-12. **Continuar o loop ou recuperar uma falha de leitura.** Após o lote, o consumer volta a preparar os grupos e consultar os streams. Se a preparação do grupo ou `XREADGROUP` falhar, ele registra o erro, espera `<PREFIXO>_READ_ERROR_DELAY_MS` e tenta novamente. Esse atraso se aplica à falha do ciclo de leitura, não à falha isolada de uma entrada.
+9. **Confirmar o sucesso.** Depois que o processamento termina com sucesso — e depois do commit, se houve transação no banco — o consumer emite o log de sucesso definido na política de logs e executa `XACK`. Esse comando remove a entrada da lista de pendências do grupo; ele **não** apaga a mensagem do Redis Stream.
+10. **Tratar um payload inválido.** Se ocorrer `InvalidPayloadError`, o consumer emite o log da primeira falha definido na política de logs e envia a entrada à Dead Letter Stream, incluindo stream e ID de origem, grupo consumidor, campos originais, tipo e ID do evento, payload, nome e mensagem do erro e horário da falha. Somente após a gravação da Dead Letter Stream ele executa `XACK` na entrada original. Esse erro não é agendado para retry. Se a publicação na Dead Letter Stream falhar, o consumer não executa `XACK` e mantém a entrada pendente para recuperação, sem emitir outro log.
+11. **Tratar outras falhas da entrada.** Se o processamento lançar outro erro, essa primeira entrega conta como tentativa `1` e emite o log da primeira falha definido na política de logs. Quando o limite configurado é maior que `1`, o consumer não executa `XACK` e tenta agendar a primeira retentativa. Mesmo que o agendamento falhe, a entrada permanece pendente, sem outro log. Se o limite for `1`, publica a falha na Dead Letter Stream e só então executa `XACK`. Se essa publicação falhar, mantém a entrada pendente. Em seguida, passa à próxima entrada do lote.
+12. **Continuar o loop ou recuperar uma falha de leitura.** Após o lote, o consumer volta a preparar os grupos e consultar os streams. Se a preparação do grupo ou `XREADGROUP` falhar, ele espera `<PREFIXO>_READ_ERROR_DELAY_MS` e tenta novamente, sem emitir log. Esse atraso se aplica à falha do ciclo de leitura, não à falha isolada de uma entrada.
 
 ### Resultado possível para uma entrada
 
 | Situação | Ação do consumer | Permanece pendente no grupo? |
 | --- | --- | --- |
-| Tipo ausente ou não aceito | Registra aviso e executa `XACK`. | Não. |
+| Tipo ausente ou não aceito | Executa `XACK`, sem chamar o handler. | Não. |
 | Tipo aceito e processamento concluído | Executa `XACK` após o processamento e, quando aplicável, após o commit. | Não. |
 | Payload inválido (`InvalidPayloadError`) | Grava na Dead Letter Stream e, depois, executa `XACK`; não agenda retry. | Não, se a gravação e o `XACK` funcionarem. |
-| Falha ao gravar na Dead Letter Stream | Registra o erro e não executa `XACK`. | Sim. |
-| Outra falha de processamento, com tentativas disponíveis | Registra o erro e tenta agendar retry, sem executar `XACK`. | Sim. |
+| Falha ao gravar na Dead Letter Stream | Não executa `XACK`; não emite um log adicional. | Sim. |
+| Outra falha de processamento, com tentativas disponíveis | Emite o log da primeira falha e tenta agendar retry, sem executar `XACK`. | Sim. |
 | Outra falha de processamento, com limite de uma tentativa | Grava na Dead Letter Stream e, depois, executa `XACK`. | Não, se a gravação e o `XACK` funcionarem. |
 
 O registro da Dead Letter Stream guarda os campos `sourceStream`, `sourceEntryId`, `consumerGroup`, `event`, `eventId`, `payload`, `originalFields`, `errorName`, `errorMessage` e `failedAt`. Como a publicação e o `XACK` são comandos separados, uma falha após a publicação e antes da confirmação pode deixar a entrada original pendente e gerar uma segunda entrada na Dead Letter Stream em uma nova tentativa. A combinação de stream de origem, grupo e ID da entrada permite reconhecer essa duplicação.
@@ -132,10 +176,10 @@ Essa verificação cobre, por exemplo, uma interrupção após a entrega inicial
 5. **Resolver uma tentativa de claim sem resultado.** Consulta `XPENDING` para aquele ID. Se a entrada não está mais pendente, remove seu membro da agenda e seu Hash, pois o retry não é mais necessário. Se ainda está pendente, mantém o estado como está e deixa a próxima volta tentar novamente; não incrementa `deliveryCount`.
 6. **Verificar o limite e reservar tempo.** Se o Hash já informa `deliveryCount >= <PREFIXO>_RETRY_MAX_ATTEMPTS`, o consumer reserva uma lease na agenda, envia a entrada à Dead Letter pelo esgotamento anterior e não chama o handler nem incrementa o contador. Caso contrário, incrementa `deliveryCount`, registra o início da tentativa em `lastAttemptAt` e move temporariamente `nextAttemptAt` para `agora + <PREFIXO>_RETRY_PROCESSING_LEASE_MS`. Atualiza Hash e Sorted Set juntos com `MULTI`/`EXEC`. Durante a lease, o membro não aparece na busca de retries vencidos.
 7. **Executar o processamento do evento quando ainda há tentativa disponível.** Usa a mesma validação, distinção de tipos e regra de negócio do processo principal. Um resultado idempotente também é sucesso. O resultado decide se a entrada é confirmada, enviada à Dead Letter Stream ou reagendada.
-8. **Concluir um sucesso.** Depois do processamento e, se houver banco de dados, depois do commit, executa `XACK`, remove o membro da Sorted Set e exclui o Hash na mesma transação Redis. A entrada sai da PEL; seu registro de retry deixa de existir.
-9. **Tratar um payload inválido.** Se ocorrer `InvalidPayloadError`, publica a entrada e o motivo na Dead Letter Stream. Após a publicação, executa `XACK` e remove o membro da agenda e seu Hash. Não calcula outro backoff. Se a publicação falhar, não executa `XACK`; a entrada permanece pendente, e o registro da tentativa permanece na agenda para recuperação posterior.
-10. **Tratar outra falha conforme o limite.** Se `deliveryCount` ainda é menor que o máximo, não executa `XACK`: atualiza o Hash com o erro e os horários calculados para essa tentativa e reposiciona o membro na Sorted Set. Se `deliveryCount` alcançou o máximo, registra o último erro no Hash, publica o evento na Dead Letter com `RetryAttemptsExhaustedError` e o último motivo da falha e, após a publicação, executa `XACK` e remove agenda e Hash. Se a publicação falhar, não executa `XACK`; a entrada permanece pendente e a lease permite nova tentativa de publicação, sem reexecutar o handler.
-11. **Aguardar a próxima volta.** Quando termina o lote, ou quando ocorre uma falha do próprio ciclo, registra o erro do ciclo quando aplicável e espera `<PREFIXO>_RETRY_INTERVAL_MS` antes de consultar novamente. O processo principal continua independente dessa espera.
+8. **Concluir um sucesso.** Depois do processamento e, se houver banco de dados, depois do commit, emite o log de sucesso definido na política de logs. Em seguida, executa `XACK`, remove o membro da Sorted Set e exclui o Hash na mesma transação Redis. A entrada sai da PEL; seu registro de retry deixa de existir.
+9. **Tratar um payload inválido.** Se ocorrer `InvalidPayloadError`, emite o log de falha durante retry definido na política de logs e publica a entrada e o motivo na Dead Letter Stream. Após a publicação, executa `XACK` e remove o membro da agenda e seu Hash. Não calcula outro backoff. Se a publicação falhar, não executa `XACK`; a entrada permanece pendente, e o registro da tentativa permanece na agenda para recuperação posterior, sem outro log.
+10. **Tratar outra falha conforme o limite.** Emite uma única vez o log de falha durante retry definido na política de logs. Se `deliveryCount` ainda é menor que o máximo, não executa `XACK`: atualiza o Hash com o erro e os horários calculados para essa tentativa e reposiciona o membro na Sorted Set. Se `deliveryCount` alcançou o máximo, registra o último erro no Hash, publica o evento na Dead Letter com `RetryAttemptsExhaustedError` e o último motivo da falha e, após a publicação, executa `XACK` e remove agenda e Hash. Se a publicação falhar, não executa `XACK`; a entrada permanece pendente e a lease permite nova tentativa de publicação, sem reexecutar o handler e sem outro log.
+11. **Aguardar a próxima volta.** Quando termina o lote, ou quando ocorre uma falha do próprio ciclo, espera `<PREFIXO>_RETRY_INTERVAL_MS` antes de consultar novamente, sem emitir log do ciclo. O processo principal continua independente dessa espera.
 
 ### Lease e processamento demorado
 
