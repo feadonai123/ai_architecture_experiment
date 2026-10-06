@@ -579,7 +579,7 @@ Responsável pelos erros semânticos identificáveis utilizados pelos Use Cases 
 Responsável por:
 
 - entidades TypeORM (`infrastructure/typeorm/`);
-- `RedisConsumer` em `infrastructure/redis/`, responsável pela leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter;
+- `RedisConsumer` em `infrastructure/redis/`, responsável pela leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; utiliza `utils/parser` para interpretar datas e números recebidos do Redis e erros técnicos específicos para seus estados inválidos, sem lançar `Error` genérico;
 - TypeORM DataSource;
 - PostgreSQL (conexão);
 - clientes de integrações externas;

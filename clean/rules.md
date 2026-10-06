@@ -42,7 +42,7 @@ src/
 - `utils/` — `env`, `Logger`, `format`, `parser`, `time`.
 - `base/` — `UseCase`, `RouterBase` e a classe abstrata `EventHandler`, em arquivos com o padrão `<nome>.base.ts`. `EventHandler.handle` executa o método protegido do handler concreto e registra o sucesso somente após seu término, com `eventId` e o payload validado. Use cases não importam `router.base`.
 - `manager/` — `DbManager`: QueryRunner, commit/rollback e ações registradas para depois do commit. Repos usam `DbManager.getManager(dataSource)`.
-- `infrastructure/` — records TypeORM em `typeorm/`, DataSource, Swagger e `RedisConsumer` em `redis/`. `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; a falha de `XACK` é tratada separadamente da falha do handler. Sem `requireEnv` e sem implementações de repository.
+- `infrastructure/` — records TypeORM em `typeorm/`, DataSource, Swagger e `RedisConsumer` em `redis/`. `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; usa `utils/parser` para datas e valores numéricos recebidos do Redis e lança erros técnicos específicos, nunca `Error` genérico, para estados inválidos próprios do consumer. A falha de `XACK` é tratada separadamente da falha do handler. Sem `requireEnv` e sem implementações de repository.
 
 ## Dependency Rule
 

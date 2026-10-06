@@ -5,8 +5,12 @@ import { ConsumerMessage } from '../../consumers/consumerMessage';
 import { EventDispatcher } from '../../consumers/eventDispatcher';
 import { IConsumerSettings } from '../../consumers/iConsumerSettings';
 import { RetryState } from '../../consumers/retryState';
+import { EventFactoryNotFoundError } from '../../errors/eventFactoryNotFoundError';
+import { EventProcessorNotConfiguredError } from '../../errors/eventProcessorNotConfiguredError';
 import { InvalidPayloadError } from '../../errors/InvalidPayloadError';
+import { RedisConsumerNotInitializedError } from '../../errors/redisConsumerNotInitializedError';
 import { RetryAttemptsExhaustedError } from '../../errors/RetryAttemptsExhaustedError';
+import { RetryDelayOutOfRangeError } from '../../errors/retryDelayOutOfRangeError';
 import { Event } from '../../events/Event';
 import { EventStream } from '../../events/EventStream';
 import { EventType } from '../../events/EventType';
@@ -28,6 +32,11 @@ import {
   setHash,
   StreamMessage,
 } from '../../services/redis';
+import {
+  parseDate,
+  parseNonNegativeSafeInteger,
+  parsePositiveSafeInteger,
+} from '../../utils/parser';
 
 export type EventFactory = (
   eventId: string,
@@ -67,12 +76,12 @@ export class RedisConsumer extends Consumer {
   }
 
   private primary(): Redis {
-    if (!this.primaryRedis) throw new Error('RedisConsumer is not initialized');
+    if (!this.primaryRedis) throw new RedisConsumerNotInitializedError('primary');
     return this.primaryRedis;
   }
 
   private retryClient(): Redis {
-    if (!this.retryRedis) throw new Error('RedisConsumer is not initialized');
+    if (!this.retryRedis) throw new RedisConsumerNotInitializedError('retry');
     return this.retryRedis;
   }
 
@@ -82,7 +91,7 @@ export class RedisConsumer extends Consumer {
     if (this.primaryRedis || this.retryRedis) return;
     for (const type of this.settings.supportedEvents) {
       if (!this.factories.has(type) || !this.dispatcher.hasHandlers(type)) {
-        throw new Error(`No event factory or handler registered for ${type}`);
+        throw new EventProcessorNotConfiguredError(type);
       }
     }
     const primary = duplicate(this.redis);
@@ -169,10 +178,8 @@ export class RedisConsumer extends Consumer {
     const type = message.fields.event as EventType;
     if (!this.settings.supportedEvents.includes(type)) return null;
     const factory = this.factories.get(type);
-    if (!factory) throw new Error(`No event factory registered for ${type}`);
-    const rawTimestamp = message.fields.timestamp;
-    const date = rawTimestamp ? new Date(rawTimestamp) : undefined;
-    const timestamp = date && !Number.isNaN(date.getTime()) ? date : undefined;
+    if (!factory) throw new EventFactoryNotFoundError(type);
+    const timestamp = parseDate(message.fields.timestamp) ?? undefined;
     return factory(message.fields.eventId || message.id, message.fields.payload, timestamp);
   }
 
@@ -206,16 +213,16 @@ export class RedisConsumer extends Consumer {
   private retryDelay(deliveryCount: number): number {
     const random = Math.floor(Math.random() * 30);
     const delay = ((deliveryCount - 1) ** 4 + 15 + random * deliveryCount) * 1000;
-    if (!Number.isSafeInteger(delay))
-      throw new Error(`Retry delay exceeds safe integer range: ${deliveryCount}`);
-    return delay;
+    const parsedDelay = parseNonNegativeSafeInteger(delay);
+    if (parsedDelay === null) throw new RetryDelayOutOfRangeError(deliveryCount);
+    return parsedDelay;
   }
 
   private parseState(values: Record<string, string>): RetryState | null {
-    const deliveryCount = Number(values.deliveryCount);
-    const lastAttemptAt = Number(values.lastAttemptAt);
-    const nextAttemptAt = Number(values.nextAttemptAt);
-    const idleTimeMs = Number(values.idleTimeMs);
+    const deliveryCount = parsePositiveSafeInteger(values.deliveryCount);
+    const lastAttemptAt = parseNonNegativeSafeInteger(values.lastAttemptAt);
+    const nextAttemptAt = parseNonNegativeSafeInteger(values.nextAttemptAt);
+    const idleTimeMs = parseNonNegativeSafeInteger(values.idleTimeMs);
     if (
       !values.eventId ||
       !values.entryId ||
@@ -224,14 +231,10 @@ export class RedisConsumer extends Consumer {
       values.idleTimeMs === undefined ||
       values.lastError === undefined ||
       !this.settings.streams.includes(values.stream as EventStream) ||
-      !Number.isSafeInteger(deliveryCount) ||
-      deliveryCount < 1 ||
-      !Number.isSafeInteger(lastAttemptAt) ||
-      lastAttemptAt < 0 ||
-      !Number.isSafeInteger(nextAttemptAt) ||
-      nextAttemptAt < 0 ||
-      !Number.isSafeInteger(idleTimeMs) ||
-      idleTimeMs < 0
+      deliveryCount === null ||
+      lastAttemptAt === null ||
+      nextAttemptAt === null ||
+      idleTimeMs === null
     )
       return null;
     return {
@@ -339,7 +342,7 @@ export class RedisConsumer extends Consumer {
             await this.scheduleRetry(
               message,
               Math.max(1, deliveryCount),
-              'Recovered pending event without retry metadata',
+              null,
               redis,
               Date.now() - idleTime,
             );
