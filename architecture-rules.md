@@ -532,9 +532,7 @@ Implementações concretas das ports (TypeORM). Não contém entidades TypeORM.
 
 Responsável por operações técnicas ou de domínio compartilhadas que não sejam adequadamente representadas por Entity ou Use Case.
 
-Redis: todas as ações (`createRedis`, `getRedis`, `ping` e futuras) ficam no service.
-
-`EventRedisService` implementa `IEventService`, registrando a publicação de eventos da aplicação para depois do commit via `DbManager` e publicando Dead Letter imediatamente quando solicitado. A serialização e o `XADD` ficam nesta camada. Os comandos Redis de leitura, PEL, retry e confirmação ficam em `services/redis.ts`.
+Integrações externas e comandos Redis não são services: pertencem a `infrastructure/`.
 
 ### `consumers/`
 
@@ -579,13 +577,14 @@ Responsável pelos erros semânticos identificáveis utilizados pelos Use Cases 
 Responsável por:
 
 - entidades TypeORM (`infrastructure/typeorm/`);
-- `RedisConsumer` em `infrastructure/redis/`, responsável pela leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; utiliza `utils/parser` para interpretar datas e números recebidos do Redis e erros técnicos específicos para seus estados inválidos, sem lançar `Error` genérico;
+- adaptadores Redis em `infrastructure/redis/`, separados entre factory/conexão, comandos de Streams, armazenamento do estado de retry, implementação de `IEventService` e `RedisConsumer`;
+- `RedisConsumer`, responsável pela leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; utiliza `utils/parser` para interpretar datas e números recebidos do Redis e erros técnicos específicos para seus estados inválidos, sem lançar `Error` genérico;
 - TypeORM DataSource;
 - PostgreSQL (conexão);
 - clientes de integrações externas;
 - detalhes de framework (Swagger).
 
-Implementações de repository, comandos Redis compartilhados e `requireEnv` não pertencem a `infrastructure/`. A implementação concreta `RedisConsumer` é a exceção explícita e permanece em `infrastructure/redis/`. `XACK` só ocorre após o commit do processamento, e suas falhas não são classificadas como falhas do handler.
+Implementações de repository não pertencem a `infrastructure/`. Em `infrastructure/redis/`, cada comando recebe a conexão Redis explicitamente; não há cliente global, `getRedis` nem parâmetros com conexão implícita. `requireEnv` é permitido somente no factory que cria a conexão. `EventRedisService` implementa `IEventService`, registra publicações da aplicação para depois do commit via `DbManager` e publica Dead Letter imediatamente. Falhas técnicas próprias dessa infraestrutura usam erros específicos, sem `Error` genérico. `XACK` só ocorre após o commit do processamento, e suas falhas não são classificadas como falhas do handler.
 
 ## 5.4 Regra de dependência
 
@@ -629,7 +628,7 @@ handler
     pode depender de base/eventHandler, events, manager e usecases
 
 infrastructure/redis
-    pode depender de consumers, events, ports e services
+    pode depender de consumers, errors, events, manager, ports, utils e Redis
 ```
 
 ## 5.5 Estruturas proibidas
@@ -824,7 +823,7 @@ Também não devem ser criados contextos artificiais apenas para aumentar a modu
 | Presenter | pasta `presenters/` | pasta `presenters/` | pasta `presenters/` | `shared/presenters/` |
 | Middleware | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` |
 | Repository abstraction | não | não | `ports/` | implementação por operação |
-| Services | factory Redis + publicação em Streams | Redis centralizado | Redis centralizado | Redis centralizado |
+| Services | factory Redis + publicação em Streams | Redis centralizado | serviços compartilhados; Redis em `infrastructure/` | Redis centralizado |
 | Errors | arquivo único | global | global | por operação |
 | Env (`requireEnv`) | `helpers.ts` | `utils/` | `utils/` | `utils/` |
 | Infrastructure | mínima (`database.ts`) | `database.ts` | explícita | compartilhada + específica quando necessária |

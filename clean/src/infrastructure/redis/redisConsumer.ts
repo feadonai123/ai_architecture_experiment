@@ -9,29 +9,30 @@ import { EventFactoryNotFoundError } from '../../errors/eventFactoryNotFoundErro
 import { EventProcessorNotConfiguredError } from '../../errors/eventProcessorNotConfiguredError';
 import { InvalidPayloadError } from '../../errors/InvalidPayloadError';
 import { RedisConsumerNotInitializedError } from '../../errors/redisConsumerNotInitializedError';
-import { RetryAttemptsExhaustedError } from '../../errors/RetryAttemptsExhaustedError';
+import { RetryAttemptsExhaustedError } from '../../errors/retryAttemptsExhaustedError';
 import { RetryDelayOutOfRangeError } from '../../errors/retryDelayOutOfRangeError';
 import { Event } from '../../events/Event';
 import { EventStream } from '../../events/EventStream';
 import { EventType } from '../../events/EventType';
 import { IEventService } from '../../ports/IEventService';
+import { disconnect, duplicate } from './redisClient';
 import {
   acknowledge,
-  acknowledgeAndRemoveHashAndSchedule,
   claimPendingEntry,
   createConsumerGroup,
-  disconnect,
-  duplicate,
-  getHash,
   listPending,
-  listSortedSetByScore,
   readConsumerGroup,
+  StreamMessage,
+} from './redisStreams';
+import {
+  acknowledgeAndRemoveHashAndSchedule,
+  getHash,
+  listSortedSetByScore,
   removeHashAndSchedule,
   removeSortedSetMember,
   saveHashAndSchedule,
   setHash,
-  StreamMessage,
-} from '../../services/redis';
+} from './redisRetryStore';
 import {
   parseDate,
   parseNonNegativeSafeInteger,
@@ -84,7 +85,6 @@ export class RedisConsumer extends Consumer {
     if (!this.retryRedis) throw new RedisConsumerNotInitializedError('retry');
     return this.retryRedis;
   }
-
 
   // Analisar
   async initialize(): Promise<void> {
@@ -151,7 +151,7 @@ export class RedisConsumer extends Consumer {
   private async ensureGroups(redis: Redis): Promise<void> {
     for (const stream of this.settings.streams) {
       try {
-        await createConsumerGroup(stream, this.settings.group, redis);
+        await createConsumerGroup(redis, stream, this.settings.group);
       } catch (error) {
         if (!(error instanceof Error) || !error.message.includes('BUSYGROUP')) throw error;
       }
@@ -162,12 +162,12 @@ export class RedisConsumer extends Consumer {
     const redis = this.primary();
     await this.ensureGroups(redis);
     const response = await readConsumerGroup(
+      redis,
       this.settings.group,
       this.consumerName,
       this.settings.streams,
       this.settings.batchSize,
       this.settings.readBlockMs,
-      redis,
     );
     return (response ?? []).flatMap(([stream, messages]) =>
       messages.map((message) => messageFromRedis(stream as EventStream, message)),
@@ -184,17 +184,14 @@ export class RedisConsumer extends Consumer {
   }
 
   protected async ack(message: ConsumerMessage): Promise<void> {
-    await acknowledge(message.stream, this.settings.group, message.id, this.primary());
+    await acknowledge(this.primary(), message.stream, this.settings.group, message.id);
   }
 
   protected async ackUnsupported(message: ConsumerMessage): Promise<void> {
     await this.ack(message);
   }
 
-  protected async handleAckFailure(
-    _message: ConsumerMessage,
-    _error: unknown,
-  ): Promise<void> {
+  protected async handleAckFailure(_message: ConsumerMessage, _error: unknown): Promise<void> {
     return Promise.resolve();
   }
 
@@ -284,6 +281,7 @@ export class RedisConsumer extends Consumer {
     const idleTimeMs = exhausted ? 0 : this.retryDelay(deliveryCount);
     const nextAttemptAt = exhausted ? Date.now() : lastAttemptAt + idleTimeMs;
     await saveHashAndSchedule(
+      redis,
       this.metadataKey(message),
       {
         eventId: message.fields.eventId || message.id,
@@ -298,7 +296,6 @@ export class RedisConsumer extends Consumer {
       this.settings.retryScheduleKey,
       nextAttemptAt,
       this.member(message),
-      redis,
     );
   }
 
@@ -328,17 +325,17 @@ export class RedisConsumer extends Consumer {
       let hasMore = true;
       while (hasMore) {
         const pending = await listPending(
+          redis,
           stream,
           this.settings.group,
           startId,
           '+',
           this.settings.retryReconcileBatchSize,
-          redis,
         );
         if (pending.length === 0) break;
         for (const [entryId, , idleTime, deliveryCount] of pending) {
           const message: ConsumerMessage = { id: entryId, stream, fields: {}, rawFields: [] };
-          if (Object.keys(await getHash(this.metadataKey(message), redis)).length === 0) {
+          if (Object.keys(await getHash(redis, this.metadataKey(message))).length === 0) {
             await this.scheduleRetry(
               message,
               Math.max(1, deliveryCount),
@@ -356,34 +353,34 @@ export class RedisConsumer extends Consumer {
 
   private async removeRetry(message: ConsumerMessage, redis: Redis): Promise<void> {
     await removeHashAndSchedule(
+      redis,
       this.metadataKey(message),
       this.settings.retryScheduleKey,
       this.member(message),
-      redis,
     );
   }
 
   protected async confirmRetry(message: ConsumerMessage): Promise<void> {
     const redis = this.retryClient();
     await acknowledgeAndRemoveHashAndSchedule(
+      redis,
       message.stream,
       this.settings.group,
       message.id,
       this.metadataKey(message),
       this.settings.retryScheduleKey,
       this.member(message),
-      redis,
     );
   }
 
   async retryPendingEvents(redis: Redis = this.retryClient()): Promise<void> {
     const due = await listSortedSetByScore(
+      redis,
       this.settings.retryScheduleKey,
       '-inf',
       Date.now(),
       0,
       this.settings.batchSize,
-      redis,
     );
     for (const member of due) {
       try {
@@ -397,32 +394,32 @@ export class RedisConsumer extends Consumer {
   private async retryMember(member: string, redis: Redis): Promise<void> {
     const separator = member.indexOf(':');
     if (separator < 1 || separator === member.length - 1) {
-      await removeSortedSetMember(this.settings.retryScheduleKey, member, redis);
+      await removeSortedSetMember(redis, this.settings.retryScheduleKey, member);
       return;
     }
     const stream = member.slice(0, separator) as EventStream;
     const entryId = member.slice(separator + 1);
     if (!this.settings.streams.includes(stream)) {
-      await removeSortedSetMember(this.settings.retryScheduleKey, member, redis);
+      await removeSortedSetMember(redis, this.settings.retryScheduleKey, member);
       return;
     }
     const reference: ConsumerMessage = { id: entryId, stream, fields: {}, rawFields: [] };
-    const state = this.parseState(await getHash(this.metadataKey(reference), redis));
+    const state = this.parseState(await getHash(redis, this.metadataKey(reference)));
     if (!state || state.stream !== stream || state.entryId !== entryId) {
       await this.removeRetry(reference, redis);
       return;
     }
 
     const claimed = await claimPendingEntry(
+      redis,
       stream,
       this.settings.group,
       `${this.consumerName}-retry`,
       state.idleTimeMs,
       entryId,
-      redis,
     );
     if (claimed.length === 0) {
-      const pending = await listPending(stream, this.settings.group, entryId, entryId, 1, redis);
+      const pending = await listPending(redis, stream, this.settings.group, entryId, entryId, 1);
       if (pending.length === 0) await this.removeRetry(reference, redis);
       return;
     }
@@ -437,12 +434,12 @@ export class RedisConsumer extends Consumer {
     if (state.deliveryCount >= this.settings.retryMaxAttempts) {
       const nextAttemptAt = Date.now() + this.settings.retryProcessingLeaseMs;
       await saveHashAndSchedule(
+        redis,
         this.metadataKey(message),
         { nextAttemptAt },
         this.settings.retryScheduleKey,
         nextAttemptAt,
         this.member(message),
-        redis,
       );
       try {
         await this.deadLetterThenConfirm(
@@ -460,6 +457,7 @@ export class RedisConsumer extends Consumer {
     const lastAttemptAt = Date.now();
     const nextAttemptAt = lastAttemptAt + this.settings.retryProcessingLeaseMs;
     await saveHashAndSchedule(
+      redis,
       this.metadataKey(message),
       {
         eventId: message.fields.eventId || state.eventId,
@@ -470,7 +468,6 @@ export class RedisConsumer extends Consumer {
       this.settings.retryScheduleKey,
       nextAttemptAt,
       this.member(message),
-      redis,
     );
     await this.retry(message, deliveryCount);
   }
@@ -483,7 +480,7 @@ export class RedisConsumer extends Consumer {
     const redis = this.retryClient();
     if (error instanceof InvalidPayloadError || deliveryCount >= this.settings.retryMaxAttempts) {
       if (!(error instanceof InvalidPayloadError)) {
-        await setHash(this.metadataKey(message), { lastError: errorMessage(error) }, redis);
+        await setHash(redis, this.metadataKey(message), { lastError: errorMessage(error) });
       }
       const reason =
         error instanceof InvalidPayloadError
@@ -504,7 +501,6 @@ export class RedisConsumer extends Consumer {
     await this.ensureGroups(redis);
     while (this.running) {
       try {
-
         if (Date.now() - this.lastReconciliationAt >= this.settings.retryReconcileIntervalMs) {
           await this.reconcilePendingEvents(redis);
           this.lastReconciliationAt = Date.now();

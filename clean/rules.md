@@ -42,7 +42,7 @@ src/
 - `utils/` — `env`, `Logger`, `format`, `parser`, `time`.
 - `base/` — `UseCase`, `RouterBase` e a classe abstrata `EventHandler`, em arquivos com o padrão `<nome>.base.ts`. `EventHandler.handle` executa o método protegido do handler concreto e registra o sucesso somente após seu término, com `eventId` e o payload validado. Use cases não importam `router.base`.
 - `manager/` — `DbManager`: QueryRunner, commit/rollback e ações registradas para depois do commit. Repos usam `DbManager.getManager(dataSource)`.
-- `infrastructure/` — records TypeORM em `typeorm/`, DataSource, Swagger e `RedisConsumer` em `redis/`. `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; usa `utils/parser` para datas e valores numéricos recebidos do Redis e lança erros técnicos específicos, nunca `Error` genérico, para estados inválidos próprios do consumer. A falha de `XACK` é tratada separadamente da falha do handler. Sem `requireEnv` e sem implementações de repository.
+- `infrastructure/` — records TypeORM em `typeorm/`, DataSource, Swagger e todos os adaptadores Redis em `redis/`. Nessa pasta, conexão, comandos de Streams, persistência do estado de retry, implementação de `IEventService` e `RedisConsumer` ficam separados por responsabilidade. O cliente Redis é sempre recebido explicitamente pelos comandos; não existe cliente global, `getRedis` nem parâmetro com conexão implícita. `RedisConsumer` implementa Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; usa `utils/parser` para datas e valores numéricos recebidos do Redis e lança erros técnicos específicos, nunca `Error` genérico, para estados inválidos próprios do consumer. A falha de `XACK` é tratada separadamente da falha do handler. `requireEnv` é permitido apenas no factory de conexão Redis; implementações de repository não pertencem à pasta.
 
 ## Dependency Rule
 
@@ -51,10 +51,10 @@ entities → nada externo
 usecases → ports, entities e events (não TypeORM, Express, infrastructure, repositories, manager, router.base)
 controllers → usecases, presenters, base/router
 repositories → ports + infrastructure/typeorm + manager
-services → ports + Redis + manager
+services → entities + events + ports
 consumers → base/eventHandler + events + ports
 handler → base/eventHandler + events + manager + usecases
-infrastructure/redis → consumers + events + ports + services
+infrastructure/redis → consumers + errors + events + manager + ports + utils + Redis
 ```
 
 ## Transação

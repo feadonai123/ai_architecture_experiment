@@ -29,7 +29,7 @@ import { RemoveCartItem } from './usecases/RemoveCartItem';
 import { TypeOrmUserRepository } from './repositories/TypeOrmUserRepository';
 import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
 import { TypeOrmOrderItemRepository } from './repositories/TypeOrmOrderItemRepository';
-import { EventRedisService } from './services/EventRedisService';
+import { EventRedisService } from './infrastructure/redis/eventRedisService';
 import { CreateOrder } from './usecases/CreateOrder';
 
 export function createApp(dataSource: DataSource, redis: Redis): Express {

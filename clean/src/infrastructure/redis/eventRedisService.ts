@@ -1,15 +1,16 @@
 import type Redis from 'ioredis';
-import { Event } from '../events/Event';
-import { DbManager } from '../manager/db.manager';
-import { IEventService } from '../ports/IEventService';
-import { addStreamEntry } from './redis';
+import { RedisEventPublicationError } from '../../errors/redisEventPublicationError';
+import { Event } from '../../events/Event';
+import { DbManager } from '../../manager/db.manager';
+import { IEventService } from '../../ports/IEventService';
+import { addStreamEntry } from './redisStreams';
 
 export class EventRedisService implements IEventService {
   constructor(private readonly redis: Redis) {}
 
   async publishNow(stream: string, fields: Record<string, string>): Promise<string> {
-    const entryId = await addStreamEntry(stream, fields, this.redis);
-    if (!entryId) throw new Error(`Failed to publish event to Redis Stream: ${stream}`);
+    const entryId = await addStreamEntry(this.redis, stream, fields);
+    if (!entryId) throw new RedisEventPublicationError(stream);
     return entryId;
   }
 

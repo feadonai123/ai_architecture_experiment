@@ -8,10 +8,10 @@ import { OrderCreatedHandler } from './handler/orderCreated.handler';
 import { createApp } from './app';
 import { applySchema, createDataSource } from './infrastructure/createDataSource';
 import { EventFactory, RedisConsumer } from './infrastructure/redis/redisConsumer';
+import { EventRedisService } from './infrastructure/redis/eventRedisService';
+import { createRedis, ping } from './infrastructure/redis/redisClient';
 import { TypeOrmOrderPaymentRepository } from './repositories/TypeOrmOrderPaymentRepository';
 import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
-import { EventRedisService } from './services/EventRedisService';
-import { createRedis, ping } from './services/redis';
 import { ProcessOrderCreated } from './usecases/ProcessOrderCreated';
 import { loadAppEnv, requireEnv } from './utils/env';
 
@@ -23,7 +23,7 @@ async function start(): Promise<void> {
   await applySchema(dataSource);
 
   const redis = createRedis();
-  await ping();
+  await ping(redis);
 
   const dispatcher = new EventDispatcher();
   const eventFactories = new Map<EventType, EventFactory>([
