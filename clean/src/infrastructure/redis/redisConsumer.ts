@@ -497,10 +497,10 @@ export class RedisConsumer extends Consumer {
   }
 
   private async retryLoop(): Promise<void> {
-    const redis = this.retryClient();
-    await this.ensureGroups(redis);
     while (this.running) {
       try {
+        const redis = this.retryClient();
+        await this.ensureGroups(redis);
         if (Date.now() - this.lastReconciliationAt >= this.settings.retryReconcileIntervalMs) {
           await this.reconcilePendingEvents(redis);
           this.lastReconciliationAt = Date.now();
