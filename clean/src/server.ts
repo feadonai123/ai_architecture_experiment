@@ -1,13 +1,13 @@
 import 'reflect-metadata';
-import { EventDispatcher } from './consumers/EventDispatcher';
-import { ConsumerSettings } from './consumers/ConsumerSettings';
-import { FinancialConsumer } from './consumers/FinancialConsumer';
-import { OrderCreatedHandler } from './consumers/OrderCreatedHandler';
-import { EventFactory, RedisConsumer } from './consumers/RedisConsumer';
+import { ConsumerSettings } from './consumers/consumerSettings';
+import { EventDispatcher } from './consumers/eventDispatcher';
+import { FinancialConsumer } from './consumers/financialConsumer';
 import { OrderCreatedEvent } from './events/OrderCreatedEvent';
 import { EventType } from './events/EventType';
+import { OrderCreatedHandler } from './handler/orderCreated.handler';
 import { createApp } from './app';
 import { applySchema, createDataSource } from './infrastructure/createDataSource';
+import { EventFactory, RedisConsumer } from './infrastructure/redis/redisConsumer';
 import { TypeOrmOrderPaymentRepository } from './repositories/TypeOrmOrderPaymentRepository';
 import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
 import { EventRedisService } from './services/EventRedisService';

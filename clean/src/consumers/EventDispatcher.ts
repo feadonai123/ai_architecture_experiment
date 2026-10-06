@@ -1,6 +1,6 @@
 import { Event } from '../events/Event';
 import { EventType } from '../events/EventType';
-import { EventHandler } from './EventHandler';
+import { EventHandler } from '../base/eventHandler.base';
 
 export class EventDispatcher {
   private readonly handlers = new Map<EventType, EventHandler[]>();

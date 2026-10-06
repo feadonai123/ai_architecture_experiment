@@ -1,11 +1,16 @@
 import type Redis from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
-import { InvalidPayloadError } from '../errors/InvalidPayloadError';
-import { RetryAttemptsExhaustedError } from '../errors/RetryAttemptsExhaustedError';
-import { Event } from '../events/Event';
-import { EventStream } from '../events/EventStream';
-import { EventType } from '../events/EventType';
-import { IEventService } from '../ports/IEventService';
+import { Consumer } from '../../consumers/consumer';
+import { ConsumerMessage } from '../../consumers/consumerMessage';
+import { EventDispatcher } from '../../consumers/eventDispatcher';
+import { IConsumerSettings } from '../../consumers/iConsumerSettings';
+import { RetryState } from '../../consumers/retryState';
+import { InvalidPayloadError } from '../../errors/InvalidPayloadError';
+import { RetryAttemptsExhaustedError } from '../../errors/RetryAttemptsExhaustedError';
+import { Event } from '../../events/Event';
+import { EventStream } from '../../events/EventStream';
+import { EventType } from '../../events/EventType';
+import { IEventService } from '../../ports/IEventService';
 import {
   acknowledge,
   acknowledgeAndRemoveHashAndSchedule,
@@ -22,13 +27,7 @@ import {
   saveHashAndSchedule,
   setHash,
   StreamMessage,
-} from '../services/redis';
-import { Logger } from '../utils/Logger';
-import { Consumer } from './Consumer';
-import { ConsumerMessage } from './ConsumerMessage';
-import { EventDispatcher } from './EventDispatcher';
-import { IConsumerSettings } from './IConsumerSettings';
-import { RetryState } from './RetryState';
+} from '../../services/redis';
 
 export type EventFactory = (
   eventId: string,
@@ -51,7 +50,6 @@ function errorMessage(error: unknown): string {
 export class RedisConsumer extends Consumer {
   private primaryRedis?: Redis;
   private retryRedis?: Redis;
-  private readonly consumerName: string;
   private primaryDone?: Promise<void>;
   private retryDone?: Promise<void>;
   private lastReconciliationAt = 0;
@@ -65,8 +63,7 @@ export class RedisConsumer extends Consumer {
     private readonly factories: ReadonlyMap<EventType, EventFactory>,
     name: string,
   ) {
-    super(eventService, dispatcher, settings);
-    this.consumerName = `${name}-${process.pid}-${uuidv4()}`;
+    super(eventService, dispatcher, settings, `${name}-${process.pid}-${uuidv4()}`);
   }
 
   private primary(): Redis {
@@ -74,11 +71,13 @@ export class RedisConsumer extends Consumer {
     return this.primaryRedis;
   }
 
-  private retry(): Redis {
+  private retryClient(): Redis {
     if (!this.retryRedis) throw new Error('RedisConsumer is not initialized');
     return this.retryRedis;
   }
 
+
+  // Analisar
   async initialize(): Promise<void> {
     if (this.primaryRedis || this.retryRedis) return;
     for (const type of this.settings.supportedEvents) {
@@ -182,19 +181,17 @@ export class RedisConsumer extends Consumer {
   }
 
   protected async ackUnsupported(message: ConsumerMessage): Promise<void> {
-    Logger.warn('consumer ignored unsupported event', {
-      entryId: message.id,
-      event: message.fields.event,
-    });
     await this.ack(message);
   }
 
-  protected async handleAckFailure(message: ConsumerMessage, error: unknown): Promise<void> {
-    Logger.error('consumer failed to acknowledge processed event', { entryId: message.id, error });
+  protected async handleAckFailure(
+    _message: ConsumerMessage,
+    _error: unknown,
+  ): Promise<void> {
+    return Promise.resolve();
   }
 
-  protected async handleReadFailure(error: unknown): Promise<void> {
-    Logger.error('consumer failed to read Redis Stream', error);
+  protected async handleReadFailure(_error: unknown): Promise<void> {
     await this.wait(this.settings.readErrorDelayMs);
   }
 
@@ -310,23 +307,19 @@ export class RedisConsumer extends Consumer {
           : new RetryAttemptsExhaustedError(this.settings.retryMaxAttempts, errorMessage(error));
       try {
         await this.deadLetterThenConfirm(message, reason, () => this.ack(message));
-      } catch (failure) {
-        Logger.error('consumer failed to move event to dead letter', {
-          entryId: message.id,
-          failure,
-        });
+      } catch {
+        // A entrada permanece pendente para recuperação, sem log adicional.
       }
     } else {
       try {
         await this.scheduleRetry(message, 1, error, this.primary());
-      } catch (failure) {
-        Logger.error('consumer failed to schedule event retry', { entryId: message.id, failure });
+      } catch {
+        // A entrada permanece na PEL para reconciliação, sem log adicional.
       }
     }
-    Logger.error('consumer failed to handle event', { entryId: message.id, error });
   }
 
-  async reconcilePendingEvents(redis: Redis = this.retry()): Promise<void> {
+  async reconcilePendingEvents(redis: Redis = this.retryClient()): Promise<void> {
     for (const stream of this.settings.streams) {
       let startId = '-';
       let hasMore = true;
@@ -367,7 +360,8 @@ export class RedisConsumer extends Consumer {
     );
   }
 
-  private async confirmRetry(message: ConsumerMessage, redis: Redis): Promise<void> {
+  protected async confirmRetry(message: ConsumerMessage): Promise<void> {
+    const redis = this.retryClient();
     await acknowledgeAndRemoveHashAndSchedule(
       message.stream,
       this.settings.group,
@@ -379,7 +373,7 @@ export class RedisConsumer extends Consumer {
     );
   }
 
-  async retryPendingEvents(redis: Redis = this.retry()): Promise<void> {
+  async retryPendingEvents(redis: Redis = this.retryClient()): Promise<void> {
     const due = await listSortedSetByScore(
       this.settings.retryScheduleKey,
       '-inf',
@@ -391,8 +385,8 @@ export class RedisConsumer extends Consumer {
     for (const member of due) {
       try {
         await this.retryMember(member, redis);
-      } catch (error) {
-        Logger.error('consumer failed to retry scheduled event', { member, error });
+      } catch {
+        // O próximo ciclo pode recuperar a pendência, sem log operacional adicional.
       }
     }
   }
@@ -437,7 +431,6 @@ export class RedisConsumer extends Consumer {
     state: RetryState,
     redis: Redis,
   ): Promise<void> {
-    const confirm = () => this.confirmRetry(message, redis);
     if (state.deliveryCount >= this.settings.retryMaxAttempts) {
       const nextAttemptAt = Date.now() + this.settings.retryProcessingLeaseMs;
       await saveHashAndSchedule(
@@ -452,13 +445,10 @@ export class RedisConsumer extends Consumer {
         await this.deadLetterThenConfirm(
           message,
           new RetryAttemptsExhaustedError(this.settings.retryMaxAttempts, state.lastError),
-          confirm,
+          () => this.confirmRetry(message),
         );
-      } catch (error) {
-        Logger.error('consumer failed to move exhausted event to dead letter', {
-          entryId: message.id,
-          error,
-        });
+      } catch {
+        // A lease mantém a entrada disponível para uma nova recuperação silenciosa.
       }
       return;
     }
@@ -479,32 +469,15 @@ export class RedisConsumer extends Consumer {
       this.member(message),
       redis,
     );
-    try {
-      const handled = await this.dispatchMessage(message);
-      if (!handled) {
-        Logger.warn('consumer ignored unsupported retried event', {
-          entryId: message.id,
-          event: message.fields.event,
-        });
-      }
-    } catch (error) {
-      await this.handleRetryFailure(message, error, deliveryCount, redis, confirm);
-      return;
-    }
-    try {
-      await confirm();
-    } catch (error) {
-      await this.handleAckFailure(message, error);
-    }
+    await this.retry(message, deliveryCount);
   }
 
-  private async handleRetryFailure(
+  protected async handleRetryFailure(
     message: ConsumerMessage,
     error: unknown,
     deliveryCount: number,
-    redis: Redis,
-    confirm: () => Promise<void>,
   ): Promise<void> {
+    const redis = this.retryClient();
     if (error instanceof InvalidPayloadError || deliveryCount >= this.settings.retryMaxAttempts) {
       if (!(error instanceof InvalidPayloadError)) {
         await setHash(this.metadataKey(message), { lastError: errorMessage(error) }, redis);
@@ -514,32 +487,28 @@ export class RedisConsumer extends Consumer {
           ? error
           : new RetryAttemptsExhaustedError(this.settings.retryMaxAttempts, errorMessage(error));
       try {
-        await this.deadLetterThenConfirm(message, reason, confirm);
-      } catch (failure) {
-        Logger.error('consumer failed to move retried event to dead letter', {
-          entryId: message.id,
-          failure,
-        });
+        await this.deadLetterThenConfirm(message, reason, () => this.confirmRetry(message));
+      } catch {
+        // A entrada e seu estado de retry permanecem para recuperação, sem outro log.
       }
     } else {
       await this.scheduleRetry(message, deliveryCount, error, redis);
     }
-    Logger.error('consumer failed to retry event', { entryId: message.id, deliveryCount, error });
   }
 
   private async retryLoop(): Promise<void> {
+    const redis = this.retryClient();
+    await this.ensureGroups(redis);
     while (this.running) {
       try {
-        const redis = this.retry();
-        await this.ensureGroups(redis);
+
         if (Date.now() - this.lastReconciliationAt >= this.settings.retryReconcileIntervalMs) {
           await this.reconcilePendingEvents(redis);
           this.lastReconciliationAt = Date.now();
         }
         await this.retryPendingEvents(redis);
-      } catch (error) {
+      } catch {
         if (!this.running) break;
-        Logger.error('consumer failed to run retry cycle', error);
       }
       if (this.running) await this.wait(this.settings.retryIntervalMs);
     }

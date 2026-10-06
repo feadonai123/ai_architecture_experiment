@@ -538,7 +538,7 @@ Redis: todas as ações (`createRedis`, `getRedis`, `ping` e futuras) ficam no s
 
 ### `consumers/`
 
-`Consumer` organiza o ciclo de vida (`start`/`stop`), leitura, desserialização, despacho e confirmação. `FinancialConsumer` compõe um `Consumer` abstrato e registra handlers financeiros, sem herdar nem depender de `RedisConsumer`; o ponto de entrada monta as implementações e inicia o consumidor após as conexões. `IConsumerSettings` descreve os parâmetros e `ConsumerSettings` lê e valida o ambiente. `EventDispatcher` chama handlers registrados por tipo. Todos os arquivos desta pasta começam com letra minúscula.
+`Consumer` organiza o ciclo de vida (`start`/`stop`), o algoritmo de consumo e o algoritmo comum de uma tentativa de retry, além de possuir o `consumerName`. A classe registra a primeira falha antes de delegar ao `handleFailure` concreto e registra a falha de retry antes de delegar ao `handleRetryFailure` concreto. `FinancialConsumer` compõe um `Consumer` abstrato e registra handlers financeiros, sem herdar nem depender de `RedisConsumer`; o ponto de entrada monta as implementações e inicia o consumidor após as conexões. `IConsumerSettings` descreve os parâmetros e `ConsumerSettings` lê e valida o ambiente. `EventDispatcher` chama handlers registrados por tipo. Todos os arquivos desta pasta começam com letra minúscula.
 
 ### `handler/`
 

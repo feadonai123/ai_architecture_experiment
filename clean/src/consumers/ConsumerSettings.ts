@@ -1,7 +1,7 @@
 import { EventStream } from '../events/EventStream';
 import { EventType } from '../events/EventType';
 import { requireEnv } from '../utils/env';
-import { IConsumerSettings } from './IConsumerSettings';
+import { IConsumerSettings } from './iConsumerSettings';
 
 function positiveInteger(name: string): number {
   const value = Number(requireEnv(name));

@@ -1,9 +1,9 @@
 import { Event } from '../events/Event';
 import { IEventService } from '../ports/IEventService';
 import { Logger } from '../utils/Logger';
-import { ConsumerMessage } from './ConsumerMessage';
-import { EventDispatcher } from './EventDispatcher';
-import { IConsumerSettings } from './IConsumerSettings';
+import { ConsumerMessage } from './consumerMessage';
+import { EventDispatcher } from './eventDispatcher';
+import { IConsumerSettings } from './iConsumerSettings';
 
 export abstract class Consumer {
   protected running = false;
@@ -12,6 +12,7 @@ export abstract class Consumer {
     protected readonly eventService: IEventService,
     protected readonly dispatcher: EventDispatcher,
     protected readonly settings: IConsumerSettings,
+    protected readonly consumerName: string,
   ) {}
 
   abstract start(): Promise<void>;
@@ -22,6 +23,12 @@ export abstract class Consumer {
   protected abstract ack(message: ConsumerMessage): Promise<void>;
   protected abstract ackUnsupported(message: ConsumerMessage): Promise<void>;
   protected abstract handleFailure(message: ConsumerMessage, error: unknown): Promise<void>;
+  protected abstract confirmRetry(message: ConsumerMessage): Promise<void>;
+  protected abstract handleRetryFailure(
+    message: ConsumerMessage,
+    error: unknown,
+    deliveryCount: number,
+  ): Promise<void>;
   protected abstract handleAckFailure(message: ConsumerMessage, error: unknown): Promise<void>;
   protected abstract handleReadFailure(error: unknown): Promise<void>;
 
@@ -30,6 +37,24 @@ export abstract class Consumer {
     if (!event) return false;
     event.getPayload();
     return this.dispatcher.dispatch(event);
+  }
+
+  private async processFailure(message: ConsumerMessage, error: unknown): Promise<void> {
+    Logger.error(`${this.consumerName} failed to handle event`, { entryId: message.id, error });
+    await this.handleFailure(message, error);
+  }
+
+  private async processRetryFailure(
+    message: ConsumerMessage,
+    error: unknown,
+    deliveryCount: number,
+  ): Promise<void> {
+    Logger.error(`${this.consumerName} failed to retry event`, {
+      entryId: message.id,
+      deliveryCount,
+      error,
+    });
+    await this.handleRetryFailure(message, error, deliveryCount);
   }
 
   async consume(): Promise<void> {
@@ -50,9 +75,9 @@ export abstract class Consumer {
           handled = await this.dispatchMessage(message);
         } catch (error) {
           try {
-            await this.handleFailure(message, error);
-          } catch (failureError) {
-            Logger.error('consumer failed to handle processing failure', { message, failureError });
+            await this.processFailure(message, error);
+          } catch {
+            // A falha auxiliar permanece silenciosa conforme a política de logs do consumer.
           }
           continue;
         }
@@ -64,6 +89,25 @@ export abstract class Consumer {
           await this.handleAckFailure(message, error);
         }
       }
+    }
+  }
+
+  async retry(message: ConsumerMessage, deliveryCount: number): Promise<void> {
+    try {
+      await this.dispatchMessage(message);
+    } catch (error) {
+      try {
+        await this.processRetryFailure(message, error, deliveryCount);
+      } catch {
+        // A falha auxiliar permanece silenciosa conforme a política de logs do consumer.
+      }
+      return;
+    }
+
+    try {
+      await this.confirmRetry(message);
+    } catch (error) {
+      await this.handleAckFailure(message, error);
     }
   }
 }
