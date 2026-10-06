@@ -22,24 +22,32 @@ const products = [
   {
     id: '00000000-0000-4000-8000-000000000201',
     name: 'Teclado mecânico',
+    slug: 'teclado-mecanico',
+    description: 'Teclado mecânico para jogos e produtividade',
     price: 250,
     stock: 10,
   },
   {
     id: '00000000-0000-4000-8000-000000000202',
     name: 'Mouse sem fio',
+    slug: 'mouse-sem-fio',
+    description: 'Mouse sem fio ergonômico',
     price: 120.5,
     stock: 20,
   },
   {
     id: '00000000-0000-4000-8000-000000000203',
     name: 'Monitor 24 polegadas',
+    slug: 'monitor-24-polegadas',
+    description: 'Monitor Full HD de 24 polegadas',
     price: 899.9,
     stock: 5,
   },
   {
     id: '00000000-0000-4000-8000-000000000204',
     name: 'Produto sem estoque',
+    slug: 'produto-sem-estoque',
+    description: 'Produto para testar cenários sem estoque',
     price: 50,
     stock: 0,
   },
@@ -79,13 +87,23 @@ async function seed(): Promise<void> {
 
       for (const product of products) {
         await manager.query(
-          `INSERT INTO products (id, name, price, stock)
-           VALUES ($1, $2, $3, $4)
+          `INSERT INTO products (id, name, slug, description, price, stock, deleted_at)
+           VALUES ($1, $2, $3, $4, $5, $6, NULL)
            ON CONFLICT (id) DO UPDATE
            SET name = EXCLUDED.name,
+               slug = EXCLUDED.slug,
+               description = EXCLUDED.description,
                price = EXCLUDED.price,
-               stock = EXCLUDED.stock`,
-          [product.id, product.name, product.price, product.stock],
+               stock = EXCLUDED.stock,
+               deleted_at = EXCLUDED.deleted_at`,
+          [
+            product.id,
+            product.name,
+            product.slug,
+            product.description,
+            product.price,
+            product.stock,
+          ],
         );
       }
     });
