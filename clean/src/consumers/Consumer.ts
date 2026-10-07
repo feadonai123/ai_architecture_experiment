@@ -15,7 +15,7 @@ export abstract class Consumer {
     protected readonly dispatcher: EventDispatcher,
     protected readonly settings: IConsumerSettings,
     protected readonly consumerName: string,
-  ) {}
+  ) { }
 
   protected abstract initialize(): Promise<void>;
   protected abstract retryLoop(): Promise<void>;
