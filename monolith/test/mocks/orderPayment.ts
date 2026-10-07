@@ -1,4 +1,4 @@
-export function mockOrderRepo(
+export function mockOrderPaymentRepo(
   overrides: { create?: jest.Mock; findOne?: unknown; save?: unknown } = {},
 ) {
   return {
@@ -6,6 +6,8 @@ export function mockOrderRepo(
     findOne: jest.fn().mockResolvedValue('findOne' in overrides ? overrides.findOne : null),
     save: jest
       .fn()
-      .mockImplementation((order) => Promise.resolve('save' in overrides ? overrides.save : order)),
+      .mockImplementation((payment) =>
+        Promise.resolve('save' in overrides ? overrides.save : payment),
+      ),
   };
 }

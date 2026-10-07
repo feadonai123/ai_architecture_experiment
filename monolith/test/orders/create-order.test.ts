@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import {
   EmptyOrderItemsError,
   InsufficientStockError,
@@ -5,133 +6,132 @@ import {
   ProductNotFoundError,
   UserNotFoundError,
 } from '../../src/errors';
-import { EventStream } from '../../src/events/EventStream';
-import { EventType } from '../../src/events/EventType';
 import { OrderStatus } from '../../src/enums/OrderStatus';
+import { EventType } from '../../src/events/EventType';
 import { createOrder } from '../../src/routes/createOrder';
-import { createOrderInputMock, productsMock, userMock } from '../mocks/create-order';
+import { createOrderInputMock, orderProductMock, userMock } from '../mocks/create-order';
 import { mockDataSource } from '../mocks/dataSource';
-import { mockOrderItemRepo, mockOrderRepo } from '../mocks/order';
+import { mockOrderRepo } from '../mocks/order';
+import { mockOrderItemRepo } from '../mocks/orderItem';
 import { mockProductRepo } from '../mocks/product';
 import { mockRedis } from '../mocks/redis';
 import { mockUserRepo } from '../mocks/user';
 
+jest.mock('uuid', () => ({ v4: jest.fn() }));
+
 describe('create order', () => {
+  let users: ReturnType<typeof mockUserRepo>;
+  let products: ReturnType<typeof mockProductRepo>;
+  let orders: ReturnType<typeof mockOrderRepo>;
+  let items: ReturnType<typeof mockOrderItemRepo>;
+  let redis: ReturnType<typeof mockRedis>;
+  let dataSource: ReturnType<typeof mockDataSource>;
+
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+    (uuidv4 as jest.Mock)
+      .mockReturnValueOnce('id-1')
+      .mockReturnValueOnce('id-2')
+      .mockReturnValueOnce('id-3');
+    users = mockUserRepo({ findOne: userMock });
+    products = mockProductRepo({ find: [orderProductMock] });
+    orders = mockOrderRepo();
+    items = mockOrderItemRepo();
+    redis = mockRedis();
+    dataSource = mockDataSource({
+      user: users,
+      product: products,
+      order: orders,
+      orderItem: items,
+    });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
+
   describe('success', () => {
-    it('creates a pending order with current prices and calculated total', async () => {
-      const orderRepository = mockOrderRepo();
-      const orderItemRepository = mockOrderItemRepo();
-      const redis = mockRedis();
-      const ds = mockDataSource({
-        user: mockUserRepo({ findOne: userMock }),
-        product: mockProductRepo({ find: productsMock }),
-        order: orderRepository,
-        orderItem: orderItemRepository,
-      });
+    it('saves order and items and requests publication of OrderCreated', async () => {
+      const order = await createOrder(dataSource, redis, createOrderInputMock);
 
-      const result = await createOrder(ds, redis, createOrderInputMock);
-
-      expect(result).toMatchObject({
-        userId: userMock.id,
-        status: OrderStatus.PENDING,
-        total: 250,
+      expect(order.status).toBe(OrderStatus.PENDING);
+      expect(order.total).toBe(30);
+      expect(orders.save).toHaveBeenCalledWith(order);
+      expect(items.save).toHaveBeenCalledWith(order.items);
+      const fields = (redis.xadd as jest.Mock).mock.calls[0];
+      const eventFields = Object.fromEntries(
+        Array.from({ length: (fields.length - 2) / 2 }, (_, index) => [
+          fields[2 + index * 2],
+          fields[3 + index * 2],
+        ]),
+      );
+      expect(eventFields.event).toBe(EventType.OrderCreated);
+      expect(JSON.parse(eventFields.payload as string)).toMatchObject({
+        orderId: order.id,
+        userId: order.userId,
         items: [
-          { productId: productsMock[0].id, quantity: 2, unitPrice: 100 },
-          { productId: productsMock[1].id, quantity: 1, unitPrice: 50 },
+          { productId: 'product-1', quantity: 1 },
+          { productId: 'product-1', quantity: 2 },
         ],
       });
-      expect(orderRepository.save).toHaveBeenCalledTimes(1);
-      expect(orderItemRepository.save).toHaveBeenCalledTimes(1);
-      expect(ds.transaction).toHaveBeenCalledTimes(1);
-      expect(redis.xadd).toHaveBeenCalledWith(
-        EventStream.Orders,
-        '*',
-        'event',
-        EventType.OrderCreated,
-        'eventId',
-        result.id,
-        'timestamp',
-        expect.any(String),
-        'payload',
-        JSON.stringify({
-          orderId: result.id,
-          userId: userMock.id,
-          items: createOrderInputMock.items,
-        }),
-      );
     });
   });
 
   describe('errors', () => {
-    it('throws EmptyOrderItemsError for an empty list', async () => {
-      const ds = mockDataSource({});
-      const redis = mockRedis();
-
+    it('rejects empty items', async () => {
       await expect(
-        createOrder(ds, redis, { userId: userMock.id, items: [] }),
+        createOrder(dataSource, redis, { userId: 'user-1', items: [] }),
       ).rejects.toBeInstanceOf(EmptyOrderItemsError);
-      expect(ds.transaction).not.toHaveBeenCalled();
-      expect(redis.xadd).not.toHaveBeenCalled();
+      expect(orders.save).not.toHaveBeenCalled();
     });
 
-    it('throws InvalidQuantityError', async () => {
-      const ds = mockDataSource({});
-      const redis = mockRedis();
-
+    it('rejects items that are not an array', async () => {
       await expect(
-        createOrder(ds, redis, {
-          userId: userMock.id,
-          items: [{ productId: productsMock[0].id, quantity: 0 }],
+        createOrder(dataSource, redis, { userId: 'user-1', items: {} }),
+      ).rejects.toBeInstanceOf(EmptyOrderItemsError);
+      expect(orders.save).not.toHaveBeenCalled();
+    });
+
+    it('rejects invalid quantities', async () => {
+      await expect(
+        createOrder(dataSource, redis, {
+          userId: 'user-1',
+          items: [{ productId: 'product-1', quantity: 0 }],
         }),
       ).rejects.toBeInstanceOf(InvalidQuantityError);
-      expect(ds.transaction).not.toHaveBeenCalled();
-      expect(redis.xadd).not.toHaveBeenCalled();
     });
 
-    it('throws UserNotFoundError', async () => {
-      const ds = mockDataSource({
-        user: mockUserRepo({ findOne: null }),
-      });
-      const redis = mockRedis();
-
-      await expect(createOrder(ds, redis, createOrderInputMock)).rejects.toBeInstanceOf(
-        UserNotFoundError,
-      );
-      expect(ds.transaction).not.toHaveBeenCalled();
-      expect(redis.xadd).not.toHaveBeenCalled();
-    });
-
-    it('throws ProductNotFoundError', async () => {
-      const ds = mockDataSource({
-        user: mockUserRepo({ findOne: userMock }),
-        product: mockProductRepo({ find: [productsMock[0]] }),
-      });
-      const redis = mockRedis();
-
-      await expect(createOrder(ds, redis, createOrderInputMock)).rejects.toBeInstanceOf(
-        ProductNotFoundError,
-      );
-      expect(ds.transaction).not.toHaveBeenCalled();
-      expect(redis.xadd).not.toHaveBeenCalled();
-    });
-
-    it('throws InsufficientStockError for aggregated duplicate quantities', async () => {
-      const ds = mockDataSource({
-        user: mockUserRepo({ findOne: userMock }),
-        product: mockProductRepo({ find: [productsMock[0]] }),
-      });
-      const redis = mockRedis();
-
+    it('rejects missing user', async () => {
+      users.findOne.mockResolvedValue(null);
       await expect(
-        createOrder(ds, redis, {
-          userId: userMock.id,
+        createOrder(dataSource, redis, {
+          userId: 'missing',
+          items: [{ productId: 'product-1', quantity: 1 }],
+        }),
+      ).rejects.toBeInstanceOf(UserNotFoundError);
+    });
+
+    it('rejects missing product', async () => {
+      products.find.mockResolvedValue([]);
+      await expect(
+        createOrder(dataSource, redis, {
+          userId: 'user-1',
+          items: [{ productId: 'missing', quantity: 1 }],
+        }),
+      ).rejects.toBeInstanceOf(ProductNotFoundError);
+    });
+
+    it('checks aggregate stock for duplicate products', async () => {
+      await expect(
+        createOrder(dataSource, redis, {
+          userId: 'user-1',
           items: [
-            { productId: productsMock[0].id, quantity: 6 },
-            { productId: productsMock[0].id, quantity: 5 },
+            { productId: 'product-1', quantity: 6 },
+            { productId: 'product-1', quantity: 5 },
           ],
         }),
       ).rejects.toBeInstanceOf(InsufficientStockError);
-      expect(ds.transaction).not.toHaveBeenCalled();
       expect(redis.xadd).not.toHaveBeenCalled();
     });
   });

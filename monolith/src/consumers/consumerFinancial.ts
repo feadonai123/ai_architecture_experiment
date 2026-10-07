@@ -99,6 +99,9 @@ export async function handleOrderCreated(
   eventId: string,
   payload: OrderCreatedPayload,
 ): Promise<void> {
+  if (payload.orderId.trim().length === 0) {
+    throw new OrderNotFoundError(payload.orderId);
+  }
   await dataSource.transaction(async (manager) => {
     const orderRepository = manager.getRepository(Order);
     const orderPaymentRepository = manager.getRepository(OrderPayment);

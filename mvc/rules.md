@@ -61,6 +61,7 @@ Não organizar primeiro por domínio (`products/`, `orders/`).
 - `test/` contém exclusivamente testes unitários das funções de negócio das rotas e dos consumers, com Redis, TypeORM e models mockados em `test/mocks/`.
 - Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Unitários dos handlers de rota, com models mockados em `test/mocks/`.
+- Mocks de persistência ficam separados por Model, um arquivo por classe; mocks de Redis ficam em arquivo próprio. Dados de cenário ficam em um arquivo dedicado por rota ou handler de consumer testado.
 - `invokeHandler` (ou equivalente) fica no arquivo de teste, nunca em `test/mocks/`.
 - Não criar testes com `createApp`, `supertest` ou end-to-end nesta pasta.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.

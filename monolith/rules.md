@@ -59,6 +59,7 @@ Se a responsabilidade cabe na rota ou em `app.ts` sem tornar o código impratic�
 ## Testes desta abordagem
 
 - `test/` contém exclusivamente testes unitários das funções de negócio das rotas e dos handlers de consumidores, com TypeORM e Redis mockados em `test/mocks/`.
+- Mocks dos repositórios TypeORM ficam separados por classe de entidade, um arquivo por classe; mocks de Redis ficam em arquivo próprio. Dados de cenário ficam em um arquivo dedicado por rota ou handler de consumer testado.
 - Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
 - `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.

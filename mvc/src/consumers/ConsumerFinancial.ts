@@ -35,6 +35,9 @@ export class ConsumerFinancial extends Consumer {
 
   private async handleOrderCreated(event: OrderCreatedEvent): Promise<void> {
     const payload = event.getPayload();
+    if (payload.orderId.trim().length === 0) {
+      throw new OrderNotFoundError(payload.orderId);
+    }
     await getDataSource().transaction(async (manager) => {
       const order = await Order.findByIdForUpdate(payload.orderId, manager);
       if (!order) {

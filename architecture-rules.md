@@ -218,6 +218,10 @@ Se uma nova responsabilidade puder ser implementada diretamente em uma rota ou e
 
 A existência de um arquivo adicional deve ser justificada por necessidade técnica concreta, e não por organização arquitetural.
 
+## 3.7 Testes unitários
+
+No monólito, `test/mocks/` separa os mocks dos repositórios TypeORM por classe de entidade, mantém mocks de Redis em arquivo próprio e usa um arquivo de dados de cenário por rota ou handler de consumer testado.
+
 ---
 
 # 4. MVC Técnico
@@ -418,6 +422,10 @@ Regras mínimas:
 - Domínios diferentes podem compartilhar Models e Services.
 
 ---
+
+## 4.7 Testes unitários
+
+No MVC, `test/mocks/` separa mocks de persistência por Model, um arquivo por classe, mantém mocks de Redis em arquivo próprio e usa um arquivo de dados de cenário por rota ou handler de consumer testado.
 
 # 5. Clean Architecture
 
