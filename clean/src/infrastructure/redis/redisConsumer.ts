@@ -1,6 +1,6 @@
 import type Redis from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
-import { Consumer } from '../../consumers/consumer';
+import { Consumer } from '../../consumers/Consumer';
 import { ConsumerMessage } from '../../consumers/consumerMessage';
 import { EventDispatcher } from '../../consumers/eventDispatcher';
 import { IConsumerSettings } from '../../consumers/iConsumerSettings';
@@ -113,6 +113,9 @@ export class RedisConsumer extends Consumer {
     for (const cancel of this.cancelWaits) cancel();
     if (this.primaryRedis) disconnect(this.primaryRedis);
     if (this.retryRedis) disconnect(this.retryRedis);
+  }
+
+  protected resetInfrastructure(): void {
     this.primaryRedis = undefined;
     this.retryRedis = undefined;
     this.lastReconciliationAt = 0;

@@ -1,18 +1,8 @@
 import 'reflect-metadata';
-import { ConsumerSettings } from './consumers/consumerSettings';
-import { EventDispatcher } from './consumers/eventDispatcher';
-import { FinancialConsumer } from './consumers/financialConsumer';
-import { OrderCreatedEvent } from './events/OrderCreatedEvent';
-import { EventType } from './events/EventType';
-import { OrderCreatedHandler } from './handler/orderCreated.handler';
 import { createApp } from './app';
+import { createFinancialConsumer } from './financialConsumerApp';
 import { applySchema, createDataSource } from './infrastructure/createDataSource';
-import { EventFactory, RedisConsumer } from './infrastructure/redis/redisConsumer';
-import { EventRedisService } from './infrastructure/redis/eventRedisService';
 import { createRedis, ping } from './infrastructure/redis/redisClient';
-import { TypeOrmOrderPaymentRepository } from './repositories/TypeOrmOrderPaymentRepository';
-import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
-import { ProcessOrderCreated } from './usecases/ProcessOrderCreated';
 import { loadAppEnv, requireEnv } from './utils/env';
 
 loadAppEnv();
@@ -25,30 +15,7 @@ async function start(): Promise<void> {
   const redis = createRedis();
   await ping(redis);
 
-  const dispatcher = new EventDispatcher();
-  const eventFactories = new Map<EventType, EventFactory>([
-    [EventType.OrderCreated, (id, payload, timestamp) => new OrderCreatedEvent(id, payload, timestamp)],
-  ]);
-  const consumer = new RedisConsumer(
-    new EventRedisService(redis),
-    dispatcher,
-    new ConsumerSettings('FINANCIAL_CONSUMER'),
-    redis,
-    eventFactories,
-    'financial',
-  );
-  const financialConsumer = new FinancialConsumer(
-    consumer,
-    dispatcher,
-    new OrderCreatedHandler(
-      dataSource,
-      new ProcessOrderCreated(
-        new TypeOrmOrderRepository(dataSource),
-        new TypeOrmOrderPaymentRepository(dataSource),
-        () => new Date(),
-      ),
-    ),
-  );
+  const financialConsumer = createFinancialConsumer(dataSource, redis);
   await financialConsumer.start();
 
   const app = createApp(dataSource, redis);

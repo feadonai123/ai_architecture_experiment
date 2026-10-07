@@ -28,6 +28,7 @@ src/
 
 ## Responsabilidades
 
+- `app.ts` e `financialConsumerApp.ts` são composition roots: o primeiro monta a aplicação HTTP e o segundo monta o consumer financeiro e suas implementações concretas. `server.ts` abre as conexões, chama essas factories e controla inicialização e encerramento.
 - `controllers/` — por recurso, igual ao MVC (`cart.controller.ts` + `routes/*.route.ts`). Rotas são classes que estendem `RouterBase` e expõem `asHandler()`. Sem pasta `src/routes/`.
 - `usecases/` — regra de aplicação. Estendem `UseCase`; API pública é `run`. `execute` é protegido. Não abrem transação.
 - `entities/` — domínio puro: sem Express, TypeORM, Redis ou infrastructure.
@@ -35,7 +36,7 @@ src/
 - `ports/` — interfaces de persistência e de publicação usadas pelos use cases.
 - `repositories/` — implementações TypeORM das ports. Sem records TypeORM nesta pasta.
 - `presenters/` — domínio → payload HTTP.
-- `consumers/` — `Consumer` define o ciclo de vida (`start`/`stop`), o algoritmo de consumo e o algoritmo comum de uma tentativa de retry, além de possuir o `consumerName`. A classe registra a primeira falha antes de delegar ao `handleFailure` concreto e registra a falha de retry antes de delegar ao `handleRetryFailure` concreto. `FinancialConsumer` compõe um `Consumer` abstrato e registra os handlers financeiros no `EventDispatcher`, sem herdar nem depender de `RedisConsumer`. O ponto de entrada monta as implementações concretas e inicia o consumidor após as conexões. Todos os arquivos desta pasta começam com letra minúscula.
+- `consumers/` — `Consumer` define o ciclo de vida (`start`/`stop`), o algoritmo de consumo e o algoritmo comum de uma tentativa de retry, além de possuir o `consumerName`. A classe registra a primeira falha antes de delegar ao `handleFailure` concreto e registra a falha de retry antes de delegar ao `handleRetryFailure` concreto. `FinancialConsumer` compõe um `Consumer` abstrato e registra os handlers financeiros no `EventDispatcher`, sem herdar nem depender de `RedisConsumer`. `financialConsumerApp.ts` monta as implementações concretas; `server.ts` inicia o consumer após as conexões. Todos os arquivos desta pasta começam com letra minúscula.
 - `handler/` — handlers concretos de eventos. Eles validam e extraem o payload, abrem a transação e passam somente os dados de negócio necessários aos use cases; estes não recebem instâncias de eventos como entrada. Handlers concretos não importam nem acionam `Logger` e não contêm regras de negócio.
 - `IConsumerSettings` define a configuração; `ConsumerSettings` lê e valida o ambiente antes da inicialização. Streams, tipos, tempos e limites são obrigatórios e não têm fallback.
 - `middleware/` — `errorHandler`, `authenticate` (por rota da API, não `app.use` global) e `audit`.
