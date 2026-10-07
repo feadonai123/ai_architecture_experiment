@@ -60,8 +60,6 @@ function errorMessage(error: unknown): string {
 export class RedisConsumer extends Consumer {
   private primaryRedis?: Redis;
   private retryRedis?: Redis;
-  private primaryDone?: Promise<void>;
-  private retryDone?: Promise<void>;
   private lastReconciliationAt = 0;
   private readonly cancelWaits = new Set<() => void>();
 
@@ -86,8 +84,7 @@ export class RedisConsumer extends Consumer {
     return this.retryRedis;
   }
 
-  // Analisar
-  async initialize(): Promise<void> {
+  protected async initialize(): Promise<void> {
     if (this.primaryRedis || this.retryRedis) return;
     for (const type of this.settings.supportedEvents) {
       if (!this.factories.has(type) || !this.dispatcher.hasHandlers(type)) {
@@ -112,24 +109,12 @@ export class RedisConsumer extends Consumer {
     }
   }
 
-  async start(): Promise<void> {
-    if (this.running) return;
-    await this.initialize();
-    this.running = true;
-    this.primaryDone = this.consume();
-    this.retryDone = this.retryLoop();
-  }
-
-  async stop(): Promise<void> {
-    this.running = false;
+  protected stopInfrastructure(): void {
     for (const cancel of this.cancelWaits) cancel();
     if (this.primaryRedis) disconnect(this.primaryRedis);
     if (this.retryRedis) disconnect(this.retryRedis);
-    await Promise.allSettled([this.primaryDone, this.retryDone]);
     this.primaryRedis = undefined;
     this.retryRedis = undefined;
-    this.primaryDone = undefined;
-    this.retryDone = undefined;
     this.lastReconciliationAt = 0;
   }
 
@@ -496,7 +481,7 @@ export class RedisConsumer extends Consumer {
     }
   }
 
-  private async retryLoop(): Promise<void> {
+  protected async retryLoop(): Promise<void> {
     while (this.running) {
       try {
         const redis = this.retryClient();

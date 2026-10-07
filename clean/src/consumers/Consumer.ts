@@ -7,6 +7,8 @@ import { IConsumerSettings } from './iConsumerSettings';
 
 export abstract class Consumer {
   protected running = false;
+  private consumeDone?: Promise<void>;
+  private retryDone?: Promise<void>;
 
   protected constructor(
     protected readonly eventService: IEventService,
@@ -15,9 +17,9 @@ export abstract class Consumer {
     protected readonly consumerName: string,
   ) {}
 
-  abstract start(): Promise<void>;
-  abstract stop(): Promise<void>;
-  abstract initialize(): Promise<void>;
+  protected abstract initialize(): Promise<void>;
+  protected abstract retryLoop(): Promise<void>;
+  protected abstract stopInfrastructure(): void;
   protected abstract readMessages(): Promise<ConsumerMessage[]>;
   protected abstract deserialize(message: ConsumerMessage): Event<unknown> | null;
   protected abstract ack(message: ConsumerMessage): Promise<void>;
@@ -31,6 +33,22 @@ export abstract class Consumer {
   ): Promise<void>;
   protected abstract handleAckFailure(message: ConsumerMessage, error: unknown): Promise<void>;
   protected abstract handleReadFailure(error: unknown): Promise<void>;
+
+  async start(): Promise<void> {
+    if (this.running) return;
+    await this.initialize();
+    this.running = true;
+    this.consumeDone = this.consume();
+    this.retryDone = this.retryLoop();
+  }
+
+  async stop(): Promise<void> {
+    this.running = false;
+    this.stopInfrastructure();
+    await Promise.allSettled([this.consumeDone, this.retryDone]);
+    this.consumeDone = undefined;
+    this.retryDone = undefined;
+  }
 
   protected async dispatchMessage(message: ConsumerMessage): Promise<boolean> {
     const event = this.deserialize(message);
