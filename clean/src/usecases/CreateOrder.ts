@@ -9,7 +9,7 @@ import { InvalidQuantityError } from '../errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../errors/ProductNotFoundError';
 import { UserNotFoundError } from '../errors/UserNotFoundError';
 import { OrderCreatedEvent, OrderCreatedPayload } from '../events/OrderCreatedEvent';
-import { IEventService } from '../ports/IEventService';
+import { IEventService } from '../ports/EventService';
 import { OrderItemRepository } from '../ports/OrderItemRepository';
 import { OrderRepository } from '../ports/OrderRepository';
 import { ProductRepository } from '../ports/ProductRepository';

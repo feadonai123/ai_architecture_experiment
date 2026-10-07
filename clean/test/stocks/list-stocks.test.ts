@@ -1,6 +1,6 @@
 import { ListStocks } from '../../src/usecases/ListStocks';
-import { mockProductRepository } from '../mocks/product';
-import { productMock, secondProductMock } from '../mocks/list-stocks';
+import { mockProductRepository } from '../mocks/productRepository';
+import { productMock, secondProductMock } from '../data/list-stocks';
 
 function listStocks(
   products = mockProductRepository({ findAll: [productMock, secondProductMock] }),

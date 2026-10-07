@@ -1,6 +1,6 @@
 import type Redis from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
-import { Consumer } from '../../consumers/Consumer';
+import { Consumer } from '../../consumers/consumer';
 import { ConsumerMessage } from '../../consumers/consumerMessage';
 import { EventDispatcher } from '../../consumers/eventDispatcher';
 import { IConsumerSettings } from '../../consumers/iConsumerSettings';
@@ -9,12 +9,12 @@ import { EventFactoryNotFoundError } from '../../errors/eventFactoryNotFoundErro
 import { EventProcessorNotConfiguredError } from '../../errors/eventProcessorNotConfiguredError';
 import { InvalidPayloadError } from '../../errors/InvalidPayloadError';
 import { RedisConsumerNotInitializedError } from '../../errors/redisConsumerNotInitializedError';
-import { RetryAttemptsExhaustedError } from '../../errors/retryAttemptsExhaustedError';
+import { RetryAttemptsExhaustedError } from '../../errors/RetryAttemptsExhaustedError';
 import { RetryDelayOutOfRangeError } from '../../errors/retryDelayOutOfRangeError';
 import { Event } from '../../events/Event';
 import { EventStream } from '../../events/EventStream';
 import { EventType } from '../../events/EventType';
-import { IEventService } from '../../ports/IEventService';
+import { IEventService } from '../../ports/EventService';
 import { disconnect, duplicate } from './redisClient';
 import {
   acknowledge,

@@ -6,22 +6,36 @@ import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { UserNotFoundError } from '../../src/errors/UserNotFoundError';
 import { EventType } from '../../src/events/EventType';
 import { CreateOrder } from '../../src/usecases/CreateOrder';
-import { mockOrderDependencies } from '../mocks/order';
+import { orderProductMock } from '../data/create-order';
+import { mockClock } from '../mocks/clock';
+import { mockEventService } from '../mocks/eventService';
+import { mockSequentialIdentifier } from '../mocks/identifier';
+import { mockOrderItemRepository } from '../mocks/orderItemRepository';
+import { mockOrderRepository } from '../mocks/orderRepository';
+import { mockProductRepository } from '../mocks/productRepository';
+import { mockUserRepository } from '../mocks/userRepository';
 
 describe('create order', () => {
-  let deps: ReturnType<typeof mockOrderDependencies>;
+  let users: ReturnType<typeof mockUserRepository>;
+  let products: ReturnType<typeof mockProductRepository>;
+  let orders: ReturnType<typeof mockOrderRepository>;
+  let items: ReturnType<typeof mockOrderItemRepository>;
+  let events: ReturnType<typeof mockEventService>;
   let useCase: CreateOrder;
   beforeEach(() => {
-    deps = mockOrderDependencies();
-    let id = 0;
+    users = mockUserRepository();
+    products = mockProductRepository({ findById: orderProductMock });
+    orders = mockOrderRepository();
+    items = mockOrderItemRepository();
+    events = mockEventService();
     useCase = new CreateOrder(
-      deps.users,
-      deps.products,
-      deps.orders,
-      deps.items,
-      deps.events,
-      () => `id-${++id}`,
-      () => new Date('2026-01-01T00:00:00.000Z'),
+      users,
+      products,
+      orders,
+      items,
+      events,
+      mockSequentialIdentifier('id-'),
+      mockClock('2026-01-01T00:00:00.000Z'),
     );
   });
 
@@ -36,9 +50,9 @@ describe('create order', () => {
       });
       expect(order.status).toBe(OrderStatus.PENDING);
       expect(order.total).toBe(30);
-      expect(deps.orders.create).toHaveBeenCalledWith(order);
-      expect(deps.items.create).toHaveBeenCalledWith(order.items);
-      const event = deps.events.publishAfterCommit.mock.calls[0][0];
+      expect(orders.create).toHaveBeenCalledWith(order);
+      expect(items.create).toHaveBeenCalledWith(order.items);
+      const event = events.publishAfterCommit.mock.calls[0][0];
       expect(event.getType()).toBe(EventType.OrderCreated);
       expect(event.getPayload()).toMatchObject({
         orderId: order.id,
@@ -56,13 +70,13 @@ describe('create order', () => {
       await expect(useCase.run({ userId: 'user-1', items: [] })).rejects.toBeInstanceOf(
         EmptyOrderItemsError,
       );
-      expect(deps.orders.create).not.toHaveBeenCalled();
+      expect(orders.create).not.toHaveBeenCalled();
     });
     it('rejects items that are not an array', async () => {
       await expect(useCase.run({ userId: 'user-1', items: {} })).rejects.toBeInstanceOf(
         EmptyOrderItemsError,
       );
-      expect(deps.orders.create).not.toHaveBeenCalled();
+      expect(orders.create).not.toHaveBeenCalled();
     });
     it('rejects invalid quantities', async () => {
       await expect(
@@ -70,13 +84,13 @@ describe('create order', () => {
       ).rejects.toBeInstanceOf(InvalidQuantityError);
     });
     it('rejects missing user', async () => {
-      deps.users.exists.mockResolvedValue(false);
+      users.exists.mockResolvedValue(false);
       await expect(
         useCase.run({ userId: 'missing', items: [{ productId: 'product-1', quantity: 1 }] }),
       ).rejects.toBeInstanceOf(UserNotFoundError);
     });
     it('rejects missing product', async () => {
-      deps.products.findById.mockResolvedValue(null);
+      products.findById.mockResolvedValue(null);
       await expect(
         useCase.run({ userId: 'user-1', items: [{ productId: 'missing', quantity: 1 }] }),
       ).rejects.toBeInstanceOf(ProductNotFoundError);
@@ -91,7 +105,7 @@ describe('create order', () => {
           ],
         }),
       ).rejects.toBeInstanceOf(InsufficientStockError);
-      expect(deps.events.publishAfterCommit).not.toHaveBeenCalled();
+      expect(events.publishAfterCommit).not.toHaveBeenCalled();
     });
   });
 });

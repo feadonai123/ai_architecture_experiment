@@ -1,7 +1,7 @@
 import { CartNotFoundError } from '../../src/errors/CartNotFoundError';
 import { GetCart } from '../../src/usecases/GetCart';
-import { mockCartRepository } from '../mocks/cart';
-import { cartMock, cartWithItemsMock, missingCartMock } from '../mocks/get-cart';
+import { mockCartRepository } from '../mocks/cartRepository';
+import { cartMock, cartWithItemsMock, missingCartMock } from '../data/get-cart';
 
 describe('get cart', () => {
   describe('success', () => {

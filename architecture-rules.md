@@ -656,6 +656,10 @@ orchestrators/
 
 quando utilizadas apenas como camadas intermediárias genéricas.
 
+## 5.6 Testes unitários
+
+Na Clean, `test/mocks/` contém apenas mocks de dependências separados por repository, event service ou outra dependência. Dados de cenário pertencem a `test/data/`, em um arquivo por use case testado.
+
 ---
 
 # 6. Domain-Oriented Modular Monolith

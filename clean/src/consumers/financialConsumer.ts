@@ -1,6 +1,6 @@
 import { EventHandler } from '../base/eventHandler.base';
 import { EventType } from '../events/EventType';
-import { Consumer } from './Consumer';
+import { Consumer } from './consumer';
 import { EventDispatcher } from './eventDispatcher';
 
 export class FinancialConsumer {

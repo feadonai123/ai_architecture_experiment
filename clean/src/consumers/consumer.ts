@@ -1,5 +1,5 @@
 import { Event } from '../events/Event';
-import { IEventService } from '../ports/IEventService';
+import { IEventService } from '../ports/EventService';
 import { Logger } from '../utils/Logger';
 import { ConsumerMessage } from './consumerMessage';
 import { EventDispatcher } from './eventDispatcher';

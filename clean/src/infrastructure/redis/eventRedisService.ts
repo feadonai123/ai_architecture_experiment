@@ -2,7 +2,7 @@ import type Redis from 'ioredis';
 import { RedisEventPublicationError } from '../../errors/redisEventPublicationError';
 import { Event } from '../../events/Event';
 import { DbManager } from '../../manager/db.manager';
-import { IEventService } from '../../ports/IEventService';
+import { IEventService } from '../../ports/EventService';
 import { addStreamEntry } from './redisStreams';
 
 export class EventRedisService implements IEventService {

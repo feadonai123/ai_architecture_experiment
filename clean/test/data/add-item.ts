@@ -28,4 +28,3 @@ export const missingProductMock = new Product('missing-product', 'Missing', 'mis
 export const invalidQuantityMock = 0;
 export const incrementQuantityMock = 3;
 export const exceedingQuantityMock = 5;
-export const createItemIdMock = () => itemMock.id;

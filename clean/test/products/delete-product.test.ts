@@ -1,7 +1,7 @@
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { DeleteProduct } from '../../src/usecases/DeleteProduct';
-import { mockProductRepository } from '../mocks/product';
-import { missingProductMock, productMock } from '../mocks/delete-product';
+import { mockProductRepository } from '../mocks/productRepository';
+import { missingProductMock, productMock } from '../data/delete-product';
 
 describe('delete product', () => {
   describe('success', () => {

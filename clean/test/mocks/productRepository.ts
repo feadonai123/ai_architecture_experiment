@@ -8,7 +8,7 @@ export function mockProductRepository(
     findAll?: Product[];
     findByFilters?: Product[];
   } = {},
-): ProductRepository {
+): jest.Mocked<ProductRepository> {
   return {
     findAll: jest.fn().mockResolvedValue('findAll' in overrides ? overrides.findAll : []),
     save: jest.fn().mockResolvedValue(undefined),
