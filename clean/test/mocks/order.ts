@@ -10,7 +10,7 @@ export const orderMock = new Order(
   new Date('2026-01-01T00:00:00.000Z'),
   [],
 );
-export const orderProductMock = new Product('product-1', 'Tea', 10, 10);
+export const orderProductMock = new Product('product-1', 'Tea', 'tea', '', 10, 10);
 
 export function mockOrderDependencies() {
   return {
@@ -19,6 +19,10 @@ export function mockOrderDependencies() {
       findAll: jest.fn(),
       save: jest.fn(),
       findById: jest.fn().mockResolvedValue(orderProductMock),
+      findBySlug: jest.fn(),
+      findByFilters: jest.fn(),
+      create: jest.fn(),
+      softDelete: jest.fn(),
     },
     orders: {
       create: jest.fn().mockResolvedValue(undefined),

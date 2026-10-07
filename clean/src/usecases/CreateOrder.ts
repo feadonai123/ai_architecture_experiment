@@ -14,7 +14,7 @@ import { OrderItemRepository } from '../ports/OrderItemRepository';
 import { OrderRepository } from '../ports/OrderRepository';
 import { ProductRepository } from '../ports/ProductRepository';
 import { UserRepository } from '../ports/UserRepository';
-import { parsePositiveInteger } from '../utils/parser';
+import { parseNonEmptyArray, parsePositiveInteger } from '../utils/parser';
 
 export type CreateOrderInput = { userId: string; items: unknown };
 type ItemInput = { productId: string; quantity: unknown };
@@ -33,8 +33,8 @@ export class CreateOrder extends UseCase<[CreateOrderInput], Order> {
   }
 
   protected async execute(input: CreateOrderInput): Promise<Order> {
-    if (!Array.isArray(input.items) || input.items.length === 0) throw new EmptyOrderItemsError();
-    const items = input.items as ItemInput[];
+    const items = parseNonEmptyArray(input.items) as ItemInput[] | null;
+    if (!items) throw new EmptyOrderItemsError();
     for (const item of items) {
       if (parsePositiveInteger(item?.quantity) === null)
         throw new InvalidQuantityError(item?.quantity);

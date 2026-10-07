@@ -10,7 +10,7 @@ import { EventFactory, RedisConsumer } from './infrastructure/redis/redisConsume
 import { EventRedisService } from './infrastructure/redis/eventRedisService';
 import { TypeOrmOrderPaymentRepository } from './repositories/TypeOrmOrderPaymentRepository';
 import { TypeOrmOrderRepository } from './repositories/TypeOrmOrderRepository';
-import { ProcessOrderCreated } from './usecases/ProcessOrderCreated';
+import { CreateOrderPayment } from './usecases/CreateOrderPayment';
 
 export function createFinancialConsumer(dataSource: DataSource, redis: Redis): FinancialConsumer {
   const dispatcher = new EventDispatcher();
@@ -31,7 +31,7 @@ export function createFinancialConsumer(dataSource: DataSource, redis: Redis): F
     dispatcher,
     new OrderCreatedHandler(
       dataSource,
-      new ProcessOrderCreated(
+      new CreateOrderPayment(
         new TypeOrmOrderRepository(dataSource),
         new TypeOrmOrderPaymentRepository(dataSource),
         () => new Date(),

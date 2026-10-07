@@ -5,8 +5,9 @@ import { OrderStatus } from '../entities/OrderStatus';
 import { OrderNotFoundError } from '../errors/OrderNotFoundError';
 import { OrderPaymentRepository } from '../ports/OrderPaymentRepository';
 import { OrderRepository } from '../ports/OrderRepository';
+import { parseString } from '../utils/parser';
 
-export class ProcessOrderCreated extends UseCase<[orderId: string], void> {
+export class CreateOrderPayment extends UseCase<[orderId: string], void> {
   constructor(
     private readonly orders: OrderRepository,
     private readonly payments: OrderPaymentRepository,
@@ -16,6 +17,7 @@ export class ProcessOrderCreated extends UseCase<[orderId: string], void> {
   }
 
   protected async execute(orderId: string): Promise<void> {
+    if (parseString(orderId) === null) throw new OrderNotFoundError(orderId);
     const order = await this.orders.findByIdForUpdate(orderId);
     if (!order) throw new OrderNotFoundError(orderId);
     if (await this.payments.findByOrderId(order.id)) return;

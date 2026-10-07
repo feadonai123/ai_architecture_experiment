@@ -58,6 +58,12 @@ describe('create order', () => {
       );
       expect(deps.orders.create).not.toHaveBeenCalled();
     });
+    it('rejects items that are not an array', async () => {
+      await expect(useCase.run({ userId: 'user-1', items: {} })).rejects.toBeInstanceOf(
+        EmptyOrderItemsError,
+      );
+      expect(deps.orders.create).not.toHaveBeenCalled();
+    });
     it('rejects invalid quantities', async () => {
       await expect(
         useCase.run({ userId: 'user-1', items: [{ productId: 'product-1', quantity: 0 }] }),

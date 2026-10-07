@@ -1,4 +1,5 @@
 import { InvalidOrderCreatedPayloadError } from '../errors/InvalidOrderCreatedPayloadError';
+import { parseNonEmptyArray, parsePositiveInteger, parseRecord, parseString } from '../utils/parser';
 import { Event } from './Event';
 import { EventStream } from './EventStream';
 import { EventType } from './EventType';
@@ -11,34 +12,26 @@ export class OrderCreatedPayload {
   readonly items: OrderCreatedItem[];
 
   constructor(value: unknown) {
+    const payload = parseRecord(value);
+    const items = parseNonEmptyArray(payload?.items);
     if (
-      typeof value !== 'object' ||
-      value === null ||
-      !('orderId' in value) ||
-      typeof value.orderId !== 'string' ||
-      !('userId' in value) ||
-      typeof value.userId !== 'string' ||
-      !('items' in value) ||
-      !Array.isArray(value.items) ||
-      !value.items.every(
-        (item) =>
-          typeof item === 'object' &&
-          item !== null &&
-          'productId' in item &&
-          typeof item.productId === 'string' &&
-          'quantity' in item &&
-          typeof item.quantity === 'number' &&
-          Number.isInteger(item.quantity) &&
-          item.quantity > 0,
-      )
-    )
+      !payload ||
+      parseString(payload.orderId) === null ||
+      parseString(payload.userId) === null ||
+      !items ||
+      !items.every((item) => {
+        const entry = parseRecord(item);
+        return entry && parseString(entry.productId) !== null && parsePositiveInteger(entry.quantity) !== null;
+      })
+    ) {
       throw new InvalidOrderCreatedPayloadError();
-    this.orderId = value.orderId;
-    this.userId = value.userId;
-    this.items = value.items.map((item) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-    }));
+    }
+    this.orderId = payload.orderId as string;
+    this.userId = payload.userId as string;
+    this.items = items.map((item) => {
+      const entry = item as OrderCreatedItem;
+      return { productId: entry.productId, quantity: entry.quantity };
+    });
   }
 }
 
