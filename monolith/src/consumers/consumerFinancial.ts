@@ -34,11 +34,17 @@ const SUPPORTED_EVENTS = requireEnv('FINANCIAL_CONSUMER_SUPPORTED_EVENTS')
   .split(',')
   .map((value) => value.trim())
   .map((value) => {
-    if (!Object.values(EventType).includes(value as EventType)) {
+    if (value !== EventType.OrderCreated) {
       throw new Error(`Invalid FINANCIAL_CONSUMER_SUPPORTED_EVENTS value: ${value}`);
     }
     return value as EventType;
   });
+if (
+  SUPPORTED_EVENTS.length !== 1 ||
+  SUPPORTED_EVENTS[0] !== EventType.OrderCreated
+) {
+  throw new Error('FINANCIAL_CONSUMER_SUPPORTED_EVENTS must match the handled events');
+}
 const BATCH_SIZE = positiveIntegerEnv('FINANCIAL_CONSUMER_BATCH_SIZE');
 const READ_BLOCK_MS = positiveIntegerEnv('FINANCIAL_CONSUMER_READ_BLOCK_MS');
 const READ_ERROR_DELAY_MS = positiveIntegerEnv('FINANCIAL_CONSUMER_READ_ERROR_DELAY_MS');
@@ -178,10 +184,6 @@ export async function processEvents(
   const fields = toFieldRecord(rawFields);
 
   if (!isSupportedEvent(fields.event)) {
-    Logger.warn('financial consumer ignored unsupported event', {
-      entryId,
-      event: fields.event,
-    });
     if (acknowledge) {
       await acknowledge();
     } else {
@@ -505,11 +507,8 @@ export async function retryPendingEvents(
           new RetryAttemptsExhaustedError(RETRY_MAX_ATTEMPTS, state.lastError),
           acknowledge,
         );
-      } catch (deadLetterError) {
-        Logger.error('financial consumer failed to move exhausted event to dead letter', {
-          entryId: claimedEntryId,
-          error: deadLetterError,
-        });
+      } catch {
+        // A falha auxiliar mantém a entrada pendente e não gera log.
       }
       continue;
     }
@@ -531,14 +530,16 @@ export async function retryPendingEvents(
     try {
       await processEvents(dataSource, redis, eventStream, claimedEntryId, fields, acknowledge);
     } catch (error) {
+      Logger.error('financial failed to retry event', {
+        entryId: claimedEntryId,
+        deliveryCount,
+        error,
+      });
       if (error instanceof InvalidPayloadError) {
         try {
           await sendToDeadLetter(redis, eventStream, claimedEntryId, fields, error, acknowledge);
-        } catch (deadLetterError) {
-          Logger.error('financial consumer failed to move retried event to dead letter', {
-            entryId: claimedEntryId,
-            error: deadLetterError,
-          });
+        } catch {
+          // A falha auxiliar mantém a entrada pendente e não gera outro log.
         }
       } else if (deliveryCount >= RETRY_MAX_ATTEMPTS) {
         await redis.hset(metadataKey, { lastError: errorMessage(error) });
@@ -551,20 +552,16 @@ export async function retryPendingEvents(
             new RetryAttemptsExhaustedError(RETRY_MAX_ATTEMPTS, errorMessage(error)),
             acknowledge,
           );
-        } catch (deadLetterError) {
-          Logger.error('financial consumer failed to move exhausted event to dead letter', {
-            entryId: claimedEntryId,
-            error: deadLetterError,
-          });
+        } catch {
+          // A falha auxiliar mantém a entrada pendente e não gera outro log.
         }
       } else {
-        await scheduleRetry(redis, eventStream, claimedEntryId, fields, deliveryCount, error);
+        try {
+          await scheduleRetry(redis, eventStream, claimedEntryId, fields, deliveryCount, error);
+        } catch {
+          // A falha auxiliar mantém a entrada pendente e não gera outro log.
+        }
       }
-      Logger.error('financial consumer failed to retry pending event', {
-        entryId: claimedEntryId,
-        deliveryCount,
-        error,
-      });
     }
   }
 }
@@ -579,16 +576,17 @@ export async function processNewEvent(
   try {
     await processEvents(dataSource, redis, stream, entryId, fields);
   } catch (error) {
+    Logger.error('financial failed to handle event', {
+      entryId,
+      error,
+    });
     if (error instanceof InvalidPayloadError) {
       try {
         await sendToDeadLetter(redis, stream, entryId, fields, error, async () => {
           await redis.xack(stream, GROUP, entryId);
         });
-      } catch (deadLetterError) {
-        Logger.error('financial consumer failed to move event to dead letter', {
-          entryId,
-          error: deadLetterError,
-        });
+      } catch {
+        // A falha auxiliar mantém a entrada pendente e não gera outro log.
       }
     } else if (RETRY_MAX_ATTEMPTS === 1) {
       try {
@@ -602,26 +600,16 @@ export async function processNewEvent(
             await redis.xack(stream, GROUP, entryId);
           },
         );
-      } catch (deadLetterError) {
-        Logger.error('financial consumer failed to move exhausted event to dead letter', {
-          entryId,
-          error: deadLetterError,
-        });
+      } catch {
+        // A falha auxiliar mantém a entrada pendente e não gera outro log.
       }
     } else {
       try {
         await scheduleRetry(redis, stream, entryId, fields, 1, error);
-      } catch (scheduleError) {
-        Logger.error('financial consumer failed to schedule event retry', {
-          entryId,
-          error: scheduleError,
-        });
+      } catch {
+        // A falha auxiliar mantém a entrada pendente e não gera outro log.
       }
     }
-    Logger.error('financial consumer failed to handle event', {
-      entryId,
-      error,
-    });
   }
 }
 
@@ -649,11 +637,10 @@ export function startFinancialConsumer(dataSource: DataSource, redis: Redis): Fi
             await processNewEvent(dataSource, consumerRedis, stream, entryId, fields);
           }
         }
-      } catch (error) {
+      } catch {
         if (!running) {
           break;
         }
-        Logger.error('financial consumer failed to read Redis Stream', error);
         await wait(READ_ERROR_DELAY_MS);
       }
     }
@@ -668,11 +655,10 @@ export function startFinancialConsumer(dataSource: DataSource, redis: Redis): Fi
           lastRetryReconciliationAt = Date.now();
         }
         await retryPendingEvents(dataSource, retryRedis, retryConsumerName);
-      } catch (error) {
+      } catch {
         if (!running) {
           break;
         }
-        Logger.error('financial consumer failed to retry pending events', error);
       }
 
       if (running) {

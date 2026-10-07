@@ -46,6 +46,12 @@ export class ConfigConsumer {
         }
         return event as EventType;
       });
+    if (
+      this.supportedEvents.length !== handledEvents.length ||
+      handledEvents.some((event) => !this.supportedEvents.includes(event))
+    ) {
+      throw new Error(`${prefix}_SUPPORTED_EVENTS must match the handled events`);
+    }
     this.batchSize = positiveInteger(`${prefix}_BATCH_SIZE`);
     this.readBlockMs = positiveInteger(`${prefix}_READ_BLOCK_MS`);
     this.readErrorDelayMs = positiveInteger(`${prefix}_READ_ERROR_DELAY_MS`);

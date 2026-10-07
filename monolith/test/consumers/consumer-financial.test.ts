@@ -87,6 +87,7 @@ describe('financial consumer', () => {
       const dataSource = mockDataSource({});
       const info = jest.spyOn(Logger, 'info').mockImplementation();
       const warn = jest.spyOn(Logger, 'warn').mockImplementation();
+      const error = jest.spyOn(Logger, 'error').mockImplementation();
 
       await processEvents(dataSource, redis, EventStream.Orders, 'stream-entry-2', [
         'event',
@@ -98,14 +99,13 @@ describe('financial consumer', () => {
       ]);
 
       expect(info).not.toHaveBeenCalled();
-      expect(warn).toHaveBeenCalledWith('financial consumer ignored unsupported event', {
-        entryId: 'stream-entry-2',
-        event: 'OrderPaid',
-      });
+      expect(warn).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
       expect(redis.xack).toHaveBeenCalledWith(EventStream.Orders, 'financial', 'stream-entry-2');
       expect(dataSource.transaction).not.toHaveBeenCalled();
       info.mockRestore();
       warn.mockRestore();
+      error.mockRestore();
     });
 
     it('acknowledges an OrderCreated event when its payment already exists', async () => {
@@ -415,9 +415,13 @@ describe('financial consumer', () => {
       expect(redis.xack).not.toHaveBeenCalled();
       expect(redis.multi).not.toHaveBeenCalled();
       expect(log).toHaveBeenCalledWith(
-        'financial consumer failed to move event to dead letter',
-        expect.objectContaining({ entryId: 'entry-invalid' }),
+        'financial failed to handle event',
+        {
+          entryId: 'entry-invalid',
+          error: expect.any(InvalidOrderCreatedPayloadError),
+        },
       );
+      expect(log).toHaveBeenCalledTimes(1);
       log.mockRestore();
     });
 
@@ -550,11 +554,12 @@ describe('financial consumer', () => {
 
       await retryPendingEvents(dataSource, redis, 'financial-retry-1');
 
-      expect(log).toHaveBeenCalledWith('financial consumer failed to retry pending event', {
+      expect(log).toHaveBeenCalledWith('financial failed to retry event', {
         entryId: 'pending-entry-error',
         deliveryCount: 2,
         error: expect.any(InvalidOrderCreatedPayloadError),
       });
+      expect(log).toHaveBeenCalledTimes(1);
       expect(redis.xadd).toHaveBeenCalledTimes(1);
       expect((redis.xadd as jest.Mock).mock.calls[0][0]).toBe('financial:dead-letter');
       const transaction = (redis.multi as jest.Mock).mock.results[0].value;
@@ -609,9 +614,14 @@ describe('financial consumer', () => {
       expect(transaction.zrem).not.toHaveBeenCalled();
       expect(transaction.del).not.toHaveBeenCalled();
       expect(log).toHaveBeenCalledWith(
-        'financial consumer failed to move retried event to dead letter',
-        expect.objectContaining({ entryId: 'pending-entry-error' }),
+        'financial failed to retry event',
+        {
+          entryId: 'pending-entry-error',
+          deliveryCount: 2,
+          error: expect.any(InvalidOrderCreatedPayloadError),
+        },
       );
+      expect(log).toHaveBeenCalledTimes(1);
       log.mockRestore();
     });
 
@@ -783,10 +793,7 @@ describe('financial consumer', () => {
       expect(transaction.xack).not.toHaveBeenCalled();
       expect(transaction.zrem).not.toHaveBeenCalled();
       expect(transaction.del).not.toHaveBeenCalled();
-      expect(log).toHaveBeenCalledWith(
-        'financial consumer failed to move exhausted event to dead letter',
-        expect.objectContaining({ entryId: 'pending-entry-exhausted' }),
-      );
+      expect(log).not.toHaveBeenCalled();
       log.mockRestore();
     });
   });

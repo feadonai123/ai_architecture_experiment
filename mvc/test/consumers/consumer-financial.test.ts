@@ -3,9 +3,11 @@ import { setDataSource } from '../../src/database';
 import { Order as OrderEntity } from '../../src/entities/Order';
 import { OrderPaymentStatus } from '../../src/enums/OrderPaymentStatus';
 import { OrderStatus } from '../../src/enums/OrderStatus';
+import { InvalidOrderCreatedPayloadError } from '../../src/errors/InvalidOrderCreatedPayloadError';
 import { EventStream } from '../../src/events/EventStream';
 import { Order } from '../../src/models/Order';
 import { OrderPayment } from '../../src/models/OrderPayment';
+import { Logger } from '../../src/utils/Logger';
 import { mockConsumerConfig, mockConsumerRedis } from '../mocks/consumer';
 
 const fields = [
@@ -121,12 +123,18 @@ describe('financial consumer', () => {
     it('acknowledges an unsupported event without calling the handler', async () => {
       const redis = mockConsumerRedis();
       const handle = jest.spyOn(OrderPayment, 'create');
+      const info = jest.spyOn(Logger, 'info').mockImplementation();
+      const warn = jest.spyOn(Logger, 'warn').mockImplementation();
+      const error = jest.spyOn(Logger, 'error').mockImplementation();
       const consumer = new ConsumerFinancial(redis, mockConsumerConfig());
 
       await consumer.processNewEvent(EventStream.Orders, 'stream-2', ['event', 'Unknown'], redis);
 
       expect(handle).not.toHaveBeenCalled();
       expect(redis.xack).toHaveBeenCalledWith('orders', 'financial', 'stream-2');
+      expect(info).not.toHaveBeenCalled();
+      expect(warn).not.toHaveBeenCalled();
+      expect(error).not.toHaveBeenCalled();
     });
   });
 
@@ -135,6 +143,7 @@ describe('financial consumer', () => {
       const redis = mockConsumerRedis();
       setDataSource({ transaction: jest.fn(async (run) => run({})) } as never);
       jest.spyOn(Order, 'findByIdForUpdate').mockResolvedValue(null);
+      const log = jest.spyOn(Logger, 'error').mockImplementation();
       const findPayment = jest.spyOn(OrderPayment, 'findByOrderId');
       const createPayment = jest.spyOn(OrderPayment, 'create');
       const consumer = new ConsumerFinancial(redis, mockConsumerConfig());
@@ -145,6 +154,11 @@ describe('financial consumer', () => {
       expect(createPayment).not.toHaveBeenCalled();
       expect(redis.xack).not.toHaveBeenCalled();
       expect(redis.multi).toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith('financial failed to handle event', {
+        entryId: 'stream-missing',
+        error: expect.any(Error),
+      });
+      expect(log).toHaveBeenCalledTimes(1);
     });
 
     it('reconciles a pending entry without retry metadata', async () => {
@@ -252,6 +266,7 @@ describe('financial consumer', () => {
     it('keeps the entry pending when dead letter publication fails', async () => {
       const redis = mockConsumerRedis();
       (redis.xadd as jest.Mock).mockRejectedValue(new Error('Redis unavailable'));
+      const log = jest.spyOn(Logger, 'error').mockImplementation();
       const consumer = new ConsumerFinancial(redis, mockConsumerConfig());
 
       await consumer.processNewEvent(
@@ -262,6 +277,11 @@ describe('financial consumer', () => {
       );
 
       expect(redis.xack).not.toHaveBeenCalled();
+      expect(log).toHaveBeenCalledWith('financial failed to handle event', {
+        entryId: 'stream-5',
+        error: expect.any(InvalidOrderCreatedPayloadError),
+      });
+      expect(log).toHaveBeenCalledTimes(1);
     });
   });
 });

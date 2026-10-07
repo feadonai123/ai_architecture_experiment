@@ -51,6 +51,7 @@ function errorMessage(error: unknown): string {
 export abstract class Consumer {
   private readonly primaryRedis: Redis;
   private readonly retryRedis: Redis;
+  private readonly name: string;
   private readonly consumerName: string;
   private running = false;
   private primaryDone?: Promise<void>;
@@ -65,6 +66,7 @@ export abstract class Consumer {
   ) {
     this.primaryRedis = duplicate(redis);
     this.retryRedis = duplicate(redis);
+    this.name = name;
     this.consumerName = `${name}-${process.pid}-${uuidv4()}`;
   }
 
@@ -158,7 +160,6 @@ export abstract class Consumer {
   ): Promise<void> {
     const fields = fieldRecord(rawFields);
     if (!this.config.supportedEvents.includes(fields.event as EventType)) {
-      Logger.warn('consumer ignored unsupported event', { entryId, event: fields.event });
       await confirm();
       return;
     }
@@ -247,6 +248,7 @@ export abstract class Consumer {
     try {
       await this.process(redis, stream, entryId, fields, confirm);
     } catch (error) {
+      Logger.error(`${this.name} failed to handle event`, { entryId, error });
       if (error instanceof InvalidPayloadError || this.config.retryMaxAttempts === 1) {
         const reason =
           error instanceof InvalidPayloadError
@@ -254,23 +256,16 @@ export abstract class Consumer {
             : new RetryAttemptsExhaustedError(this.config.retryMaxAttempts, errorMessage(error));
         try {
           await this.deadLetter(redis, stream, entryId, fields, reason, confirm);
-        } catch (deadLetterError) {
-          Logger.error('consumer failed to move event to dead letter', {
-            entryId,
-            error: deadLetterError,
-          });
+        } catch {
+          // A falha auxiliar mantém a entrada pendente e não gera outro log.
         }
       } else {
         try {
           await this.scheduleRetry(redis, stream, entryId, fields, 1, error);
-        } catch (scheduleError) {
-          Logger.error('consumer failed to schedule event retry', {
-            entryId,
-            error: scheduleError,
-          });
+        } catch {
+          // A falha auxiliar mantém a entrada pendente e não gera outro log.
         }
       }
-      Logger.error('consumer failed to handle event', { entryId, error });
     }
   }
 
@@ -398,8 +393,8 @@ export abstract class Consumer {
           new RetryAttemptsExhaustedError(this.config.retryMaxAttempts, state.lastError),
           confirm,
         );
-      } catch (error) {
-        Logger.error('consumer failed to move exhausted event to dead letter', { entryId, error });
+      } catch {
+        // A falha auxiliar mantém a entrada pendente e não gera log.
       }
       return;
     }
@@ -422,6 +417,7 @@ export abstract class Consumer {
     try {
       await this.process(redis, stream, entryId, fields, confirm);
     } catch (error) {
+      Logger.error(`${this.name} failed to retry event`, { entryId, deliveryCount, error });
       if (error instanceof InvalidPayloadError || deliveryCount >= this.config.retryMaxAttempts) {
         if (!(error instanceof InvalidPayloadError)) {
           await setHash(metadataKey, { lastError: errorMessage(error) }, redis);
@@ -432,16 +428,16 @@ export abstract class Consumer {
             : new RetryAttemptsExhaustedError(this.config.retryMaxAttempts, errorMessage(error));
         try {
           await this.deadLetter(redis, stream, entryId, fields, reason, confirm);
-        } catch (deadLetterError) {
-          Logger.error('consumer failed to move retried event to dead letter', {
-            entryId,
-            error: deadLetterError,
-          });
+        } catch {
+          // A falha auxiliar mantém a entrada pendente e não gera outro log.
         }
       } else {
-        await this.scheduleRetry(redis, stream, entryId, fields, deliveryCount, error);
+        try {
+          await this.scheduleRetry(redis, stream, entryId, fields, deliveryCount, error);
+        } catch {
+          // A falha auxiliar mantém a entrada pendente e não gera outro log.
+        }
       }
-      Logger.error('consumer failed to retry pending event', { entryId, deliveryCount, error });
     }
   }
 
@@ -463,9 +459,8 @@ export abstract class Consumer {
             await this.processNewEvent(stream as EventStreamName, entryId, fields);
           }
         }
-      } catch (error) {
+      } catch {
         if (!this.running) break;
-        Logger.error('consumer failed to read Redis Stream', error);
         await new Promise((resolve) => setTimeout(resolve, this.config.readErrorDelayMs));
       }
     }
@@ -480,9 +475,8 @@ export abstract class Consumer {
           this.lastReconciliationAt = Date.now();
         }
         await this.retryPendingEvents();
-      } catch (error) {
+      } catch {
         if (!this.running) break;
-        Logger.error('consumer failed to retry pending events', error);
       }
       if (this.running) {
         await new Promise<void>((resolve) => {
