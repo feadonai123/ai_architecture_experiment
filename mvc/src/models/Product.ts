@@ -1,4 +1,4 @@
-import { IsNull } from 'typeorm';
+import { In, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { getDataSource } from '../database';
 import { Product as ProductEntity } from '../entities/Product';
@@ -81,5 +81,9 @@ export class Product {
   static async softDelete(product: ProductEntity): Promise<ProductEntity> {
     product.deletedAt = new Date();
     return Product.save(product);
+  }
+
+  static findByIds(ids: string[]): Promise<ProductEntity[]> {
+    return getDataSource().getRepository(ProductEntity).find({ where: { id: In(ids) } });
   }
 }

@@ -2,7 +2,7 @@ import { InsufficientStockError } from '../../src/errors/InsufficientStockError'
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { DecreaseStock } from '../../src/usecases/DecreaseStock';
-import { mockProductRepository } from '../mocks/product';
+import { mockProductRepository } from '../mocks/productRepository';
 import {
   decreaseQuantityMock,
   decreasedProductMock,
@@ -11,7 +11,7 @@ import {
   invalidQuantityMock,
   missingProductMock,
   productMock,
-} from '../mocks/decrease-stock';
+} from '../data/decrease-stock';
 
 function decreaseStock(products = mockProductRepository({ findById: productMock })) {
   return new DecreaseStock(products);

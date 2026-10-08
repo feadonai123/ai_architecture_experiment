@@ -8,7 +8,7 @@ As quatro codebases implementam o **mesmo** recorte de catálogo, estoque e carr
 
 A variável do experimento é **só a organização do código**. Não mude comportamento para “melhorar” uma abordagem.
 
-Contratos canônicos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/product.md` e `docs/openapi.yaml`.
+Contratos canônicos: `test/contracts/cart.md`, `test/contracts/stock.md`, `test/contracts/product.md`, `test/contracts/order.md` e `docs/openapi.yaml`.
 
 ## Pasta define responsabilidade
 
@@ -28,7 +28,10 @@ Se uma função não for da pasta, ela não entra nessa pasta. Prefira o arquivo
 
 - Header obrigatório `x-api-key` igual a `X_API_KEY` (sem fallback) nas rotas da API. Ausente ou diferente → `ForbiddenError` (403). O middleware `authenticate` é registrado **em cada rota**, não com `app.use` global. `/docs` (Swagger) fica público.
 - `audit` loga chamada (método, path, params, query, body) e resposta JSON. Não loga a API key.
+- O processamento financeiro de `OrderCreated` registra sucesso via `Logger.info` somente após o commit, com `eventId`, `orderId`, `userId` e `items`, em todas as abordagens.
+- Consumers emitem logs somente no sucesso do handler, na primeira falha do evento e na falha de uma tentativa de retry, usando exatamente as estruturas definidas em `flows/RedisConsumer.md`. Falhas auxiliares de leitura, confirmação, agendamento, reconciliação, Dead Letter ou do ciclo não geram logs adicionais.
 - `requireEnv` não tem valor default. Variáveis novas entram em `.env`, `.env.example` e `.env.test`.
+- `createApp` monta somente a aplicação HTTP e não cria nem inicia consumers. Nos projetos que possuem consumers, `financialConsumerApp.ts` cria o consumer financeiro e `server.ts` controla sua inicialização e encerramento separadamente.
 
 ## Testes de integração
 
@@ -44,20 +47,24 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 - Não testar timeouts de rede, SQL cru, stack de framework, nem mensagens genéricas que a aplicação não emite.
 - Dados de persistência via `test/prefabs/`. HTTP autenticado via `test/helpers/api.ts` (não via `mocks/`).
 - Novo endpoint, status ou classe de erro no contrato → novo teste de integração compartilhado.
+- Testes de integração de consumers sem endpoint HTTP iniciam o consumer pela respectiva composition root, publicam o evento real no Redis e aguardam os efeitos observáveis no PostgreSQL e no Redis.
+- O setup compartilhado expõe as conexões de teste necessárias e limpa, antes de cada caso, tanto as tabelas do PostgreSQL quanto streams, agenda, metadados de retry e Dead Letter conhecidos do Redis.
 
 ## Contratos HTTP
 
+- Campos de status e outros campos com um conjunto limitado de valores são representados por `enum` na aplicação. O contrato HTTP define se o valor serializado é texto ou número.
 - Cada recurso possui seu próprio arquivo Markdown em `test/contracts/`.
 - Rotas de carrinho pertencem a `test/contracts/cart.md`.
 - Rotas de estoque pertencem a `test/contracts/stock.md`.
+- Rotas de pedidos pertencem a `test/contracts/order.md`.
 - Rotas de catálogo pertencem a `test/contracts/product.md`.
 - Não misturar contratos de recursos diferentes no mesmo arquivo.
 
 ## Testes unitários
 
 - Clean e Domain: unitários **somente de use cases** (`run`), com ports/repositórios mockados.
-- MVC: unitários dos handlers de rota, com models mockados. `invokeHandler` vive no arquivo de teste, não em `mocks/`.
-- Monólito: unitários das rotas, com TypeORM mockado.
+- MVC: unitários dos handlers de rota, com models mockados, e dos consumers, com Redis e models mockados. `invokeHandler` vive no arquivo de teste, não em `mocks/`.
+- Monólito: unitários das rotas e dos handlers de consumidores, com TypeORM e Redis mockados.
 - Mocks em `test/mocks/` de cada abordagem: só funções/objetos mock.
 
 ## O que não fazer

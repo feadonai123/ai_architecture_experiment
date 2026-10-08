@@ -1,7 +1,7 @@
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { GetStock } from '../../src/usecases/GetStock';
-import { mockProductRepository } from '../mocks/product';
-import { missingProductMock, productMock } from '../mocks/get-stock';
+import { mockProductRepository } from '../mocks/productRepository';
+import { missingProductMock, productMock } from '../data/get-stock';
 
 function getStock(products = mockProductRepository({ findById: productMock })) {
   return new GetStock(products);

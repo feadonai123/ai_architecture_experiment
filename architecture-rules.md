@@ -61,6 +61,8 @@ PostgreSQL e Redis são infraestrutura externa comum a todas as implementações
 
 A utilização dessas dependências pode ser encapsulada de maneiras diferentes conforme a arquitetura, mas não deve ser criada uma infraestrutura tecnicamente diferente para uma implementação.
 
+`createApp` monta somente a aplicação HTTP. Nos projetos que possuem consumers, um composition root `financialConsumerApp.ts` cria o consumer financeiro e `server.ts` controla sua inicialização e encerramento separadamente.
+
 ## 2.5 Pastas por responsabilidade
 
 O nome da pasta define o conteúdo permitido. Uma pasta `mocks/` só pode conter mocks. Funções de teste que não são mocks (por exemplo `invokeHandler`) devem viver no próprio arquivo de teste ou em `helpers/`.
@@ -93,27 +95,36 @@ src/
 ├── helpers.ts
 ├── routes/
 ├── entities/
+├── enums/
 ├── presenters/
 ├── middleware/
+├── events/
+├── consumers/
 ├── services/
 └── utils/
 ```
 
 A pasta `entities/` é permitida exclusivamente para representar as entidades necessárias ao TypeORM.
 
+A pasta `enums/` define status e outros conjuntos limitados de valores usados pela aplicação.
+
 A pasta `presenters/` transforma o modelo persistido no payload HTTP.
 
 A pasta `middleware/` contém middlewares HTTP compartilhados: `errorHandler`, `authenticate` e `audit`.
 
+A pasta `events/` contém a representação dos eventos destinados a Redis Streams: a classe abstrata comum, que exige um método de conversão, os eventos concretos com suas classes de payload, a classe que centraliza os nomes dos streams e o enum que centraliza os tipos de evento. Ela não encapsula o cliente Redis nem a publicação; no monólito, a rota continua responsável por chamar o serviço Redis.
+
+A pasta `consumers/` contém os processos consumidores de Redis Streams organizados por setor do e-commerce. No monólito, cada consumidor declara as listas de streams observados e eventos suportados, lê lotes de até dez mensagens e concentra o despacho e os handlers dos eventos daquele setor.
+
 A pasta `utils/` contém somente `Logger`. `requireEnv` / `loadAppEnv` permanecem em `helpers.ts`.
 
-A pasta `services/` existe para expor o cliente Redis (`createRedis`). O monólito não centraliza operações Redis no service: rotas e `server.ts` chamam o cliente diretamente (`redis.ping()`, futuros get/set).
+A pasta `services/` expõe o cliente Redis (`createRedis`) e a publicação de eventos em Redis Streams (`publish`). O `server.ts` chama o cliente diretamente para verificação de saúde (`redis.ping()`).
 
 ## 3.3 Responsabilidade das estruturas
 
 ### `app.ts`
 
-Responsável por montar a aplicação Express: registrar rotas, Swagger e o tratamento de erros HTTP.
+Responsável por montar a aplicação Express, registrar rotas, Swagger e o tratamento de erros HTTP. Não cria nem inicia consumers Redis; `financialConsumerApp.ts` cria o consumer e `server.ts` controla seu ciclo de vida.
 
 ### `database.ts`
 
@@ -122,6 +133,8 @@ Responsável exclusivamente pela configuração/conexão do banco de dados.
 ### `errors.ts`
 
 Arquivo único com todas as classes de erro da aplicação.
+
+Erros específicos de payload de eventos herdam de `InvalidPayloadError`.
 
 Não deve existir uma pasta `errors/`.
 
@@ -133,7 +146,7 @@ Não deve existir uma pasta `helpers/`. `utils/` existe somente para `Logger`.
 
 ### `routes/`
 
-Um arquivo por rota/operação HTTP. Cada arquivo contém a leitura da requisição, a regra de negócio, o acesso direto ao TypeORM e, quando houver Redis de negócio, a chamada direta ao cliente Redis.
+Um arquivo por rota/operação HTTP. Cada arquivo contém a leitura da requisição, a regra de negócio, o acesso direto ao TypeORM e, quando houver publicação de evento, a chamada ao `publish` do serviço Redis.
 
 A resposta HTTP é produzida via `presenters/`.
 
@@ -154,7 +167,17 @@ Responsável exclusivamente por representar as entidades persistidas necessária
 
 ### `services/`
 
-Contém o factory do cliente Redis. Não deve encapsular a lógica de uso do Redis; isso permanece nas rotas/`server.ts`.
+Contém o factory do cliente Redis e a operação técnica comum de publicação em Redis Streams. A criação do evento e a decisão de publicá-lo permanecem na rota; o `server.ts` usa o cliente diretamente para `ping`.
+
+### `events/`
+
+Contém somente classes de eventos para Redis Streams. A classe abstrata concentra propriedades e serialização comuns e declara o método abstrato de conversão do payload. Cada evento concreto implementa esse método e define seu tipo, stream e classe de payload. Uma classe própria centraliza os nomes de streams e um enum próprio centraliza os tipos de evento usados por produtores e consumidores.
+
+Na rota que produz um evento, a classe concreta de payload é instanciada explicitamente antes da classe do evento.
+
+### `consumers/`
+
+Contém um consumidor Redis Streams por setor do e-commerce. O arquivo do consumidor define seu consumer group, as listas de streams observados e tipos suportados, executa `XREADGROUP` com lotes de até dez mensagens, percorre cada lote e usa `processEvents` para selecionar o tipo e chamar o handler correspondente. O consumidor também mantém um loop de retry com conexão Redis própria, agenda as tentativas em Sorted Set, mantém os metadados em Hash, aplica exponential backoff tabelado, usa `XCLAIM` para reclamar mensagens elegíveis e reconcilia a agenda com `XPENDING`. Erros de payload derivados de `InvalidPayloadError` enviam a entrada para uma Dead Letter Stream antes de `XACK`, tanto na leitura inicial quanto no retry; no retry, a agenda e os metadados também são removidos. Handlers que alteram persistência acessam o TypeORM diretamente e executam todas as alterações relacionadas em uma única transação. O sucesso do handler recebe `XACK` somente após o commit da transação. `financialConsumerApp.ts` cria o consumer e `server.ts` o inicia e encerra fora de `createApp`.
 
 ### `presenters/`
 
@@ -197,6 +220,10 @@ Se uma nova responsabilidade puder ser implementada diretamente em uma rota ou e
 
 A existência de um arquivo adicional deve ser justificada por necessidade técnica concreta, e não por organização arquitetural.
 
+## 3.7 Testes unitários
+
+No monólito, `test/mocks/` separa os mocks dos repositórios TypeORM por classe de entidade, mantém mocks de Redis em arquivo próprio e usa um arquivo de dados de cenário por rota ou handler de consumer testado.
+
 ---
 
 # 4. MVC Técnico
@@ -211,6 +238,8 @@ A primeira dimensão de organização é:
 Controller
 Model
 Entity
+Event
+Consumer
 Service
 Presenter
 Middleware
@@ -228,6 +257,9 @@ src/
 ├── controllers/
 ├── models/
 ├── entities/
+├── enums/
+├── events/
+├── consumers/
 ├── services/
 ├── presenters/
 ├── middleware/
@@ -265,9 +297,21 @@ A regra de negócio pode permanecer no arquivo da rota neste experimento.
 
 Mapeamento TypeORM (decorators, colunas, relações). Sem métodos de persistência além do que o TypeORM exige.
 
+### `enums/`
+
+Define status e outros conjuntos limitados de valores usados pela aplicação.
+
 ### `models/`
 
-Importam a entity correspondente e concentram as operações de persistência (`createEmpty`, `findById`, `save`, `remove`, etc.) como métodos estáticos.
+Importam a entity correspondente e concentram somente as operações de acesso e persistência (`find`, `create`, `update`, `remove`, etc.) como métodos estáticos. No fluxo de pedidos, cálculos, status, idempotência e composição de pedido pertencem à rota ou ao handler do consumer; os models podem receber um `EntityManager` para usar a mesma transação. A rota coordena a transação que persiste pedido e itens.
+
+### `events/`
+
+Contém o contrato, a validação e a serialização dos eventos da aplicação. Eventos não acessam o Redis diretamente; a publicação permanece em `services/`.
+
+### `consumers/`
+
+`ConfigConsumer` valida os parâmetros de ambiente. `Consumer` implementa o ciclo de leitura, retry, reconciliação da PEL e Dead Letter. Cada consumer concreto implementa `processEvent` e os handlers dos tipos aceitos. Comandos Redis ficam em `services/redis.ts`; persistência fica nos models. `financialConsumerApp.ts` instancia o consumer financeiro e `server.ts` o inicia e encerra fora de `createApp`.
 
 ### `services/`
 
@@ -381,6 +425,10 @@ Regras mínimas:
 
 ---
 
+## 4.7 Testes unitários
+
+No MVC, `test/mocks/` separa mocks de persistência por Model, um arquivo por classe, mantém mocks de Redis em arquivo próprio e usa um arquivo de dados de cenário por rota ou handler de consumer testado.
+
 # 5. Clean Architecture
 
 ## 5.1 Objetivo arquitetural
@@ -400,9 +448,12 @@ src/
 ├── controllers/
 ├── usecases/
 ├── entities/
+├── events/
 ├── ports/
 ├── repositories/
 ├── services/
+├── consumers/
+├── handler/
 ├── presenters/
 ├── middleware/
 ├── errors/
@@ -466,9 +517,13 @@ Estendem `UseCase` em `base/useCase.base.ts`. A entrada pública é `run`; `exec
 
 Responsável pelas regras e objetos centrais do domínio, sem depender diretamente de Express, TypeORM ou infraestrutura externa.
 
+### `events/`
+
+Contratos tipados de eventos, payloads validados e enums de tipos e streams. Não executa comandos Redis.
+
 ### `ports/`
 
-Responsável pelas abstrações de persistência utilizadas pelos Use Cases.
+Responsável pelas abstrações de persistência e publicação utilizadas pelos Use Cases.
 
 Exemplo:
 
@@ -476,6 +531,7 @@ Exemplo:
 ProductRepository
 CartRepository
 CartItemRepository
+IEventService
 ```
 
 ### `repositories/`
@@ -486,7 +542,15 @@ Implementações concretas das ports (TypeORM). Não contém entidades TypeORM.
 
 Responsável por operações técnicas ou de domínio compartilhadas que não sejam adequadamente representadas por Entity ou Use Case.
 
-Redis: todas as ações (`createRedis`, `getRedis`, `ping` e futuras) ficam no service.
+Integrações externas e comandos Redis não são services: pertencem a `infrastructure/`.
+
+### `consumers/`
+
+`Consumer` organiza o ciclo de vida (`start`/`stop`), o algoritmo de consumo e o algoritmo comum de uma tentativa de retry, além de possuir o `consumerName`. A classe registra a primeira falha antes de delegar ao `handleFailure` concreto e registra a falha de retry antes de delegar ao `handleRetryFailure` concreto. `FinancialConsumer` compõe um `Consumer` abstrato e registra handlers financeiros, sem herdar nem depender de `RedisConsumer`; `financialConsumerApp.ts`, na raiz de `src/`, monta as implementações concretas, em paralelo a `app.ts` para HTTP, e `server.ts` inicia o consumer após as conexões. `IConsumerSettings` descreve os parâmetros e `ConsumerSettings` lê e valida o ambiente. `EventDispatcher` chama handlers registrados por tipo. Todos os arquivos desta pasta começam com letra minúscula.
+
+### `handler/`
+
+Contém todos os handlers concretos de eventos. Handlers validam e extraem o payload dos eventos, delimitam a transação e chamam Use Cases apenas com os dados de negócio necessários; Use Cases acionados por consumidores não recebem instâncias de eventos como entrada. Os efeitos de negócio ficam nos Use Cases. Handlers concretos não importam nem acionam `Logger`.
 
 ### `presenters/`
 
@@ -505,13 +569,14 @@ Utilitários técnicos sem regra de negócio: `requireEnv`, `loadAppEnv`, `Logge
 Classes abstratas compartilhadas da aplicação:
 
 - `useCase.base.ts`: `UseCase.run` com logs
-- `router.base.ts`: `RouterBase.asHandler` envolve o handle numa transação via `DbManager` e loga início/commit/rollback
+- `router.base.ts`: `RouterBase.asHandler` envolve o handle numa transação via `DbManager`; rotas que retornam `RouteResponse` enviam a resposta após o commit e as ações pós-commit
+- `eventHandler.base.ts`: classe abstrata comum dos handlers de eventos; seu método público executa o método protegido do handler concreto e registra o sucesso somente depois que o processamento termina, com `eventId` e o payload validado
 
 Use cases não importam `router.base`.
 
 ### `manager/`
 
-`DbManager` encapsula QueryRunner (connect, transação, commit/rollback, release). Repositórios obtêm o `EntityManager` corrente com `DbManager.getManager(dataSource)`.
+`DbManager` encapsula QueryRunner (connect, transação, commit/rollback, release) e executa ações registradas somente depois do commit. Repositórios obtêm o `EntityManager` corrente com `DbManager.getManager(dataSource)`.
 
 ### `errors/`
 
@@ -522,12 +587,14 @@ Responsável pelos erros semânticos identificáveis utilizados pelos Use Cases 
 Responsável por:
 
 - entidades TypeORM (`infrastructure/typeorm/`);
+- adaptadores Redis em `infrastructure/redis/`, separados entre factory/conexão, comandos de Streams, armazenamento do estado de retry, implementação de `IEventService` e `RedisConsumer`;
+- `RedisConsumer`, responsável pela leitura de Redis Streams, retry, reconciliação da PEL, lease e Dead Letter; utiliza `utils/parser` para interpretar datas e números recebidos do Redis e erros técnicos específicos para seus estados inválidos, sem lançar `Error` genérico;
 - TypeORM DataSource;
 - PostgreSQL (conexão);
 - clientes de integrações externas;
 - detalhes de framework (Swagger).
 
-Implementações de repository, Redis e `requireEnv` não pertencem a `infrastructure/`.
+Implementações de repository não pertencem a `infrastructure/`. Em `infrastructure/redis/`, cada comando recebe a conexão Redis explicitamente; não há cliente global, `getRedis` nem parâmetros com conexão implícita. `requireEnv` é permitido somente no factory que cria a conexão. `EventRedisService` implementa `IEventService`, registra publicações da aplicação para depois do commit via `DbManager` e publica Dead Letter imediatamente. Falhas técnicas próprias dessa infraestrutura usam erros específicos, sem `Error` genérico. `XACK` só ocorre após o commit do processamento, e suas falhas não são classificadas como falhas do handler.
 
 ## 5.4 Regra de dependência
 
@@ -536,7 +603,7 @@ A regra fundamental é:
 ```text
 Infrastructure → Application/Domain
 Application/Controllers → Use Cases
-Use Cases → ports
+Use Cases → ports, entities, events
 Entities → nenhum detalhe externo
 ```
 
@@ -563,6 +630,15 @@ controllers
 repositories
     implementam ports
     usam DbManager.getManager para o EntityManager da transação corrente
+
+consumers
+    podem depender de base/eventHandler, events e ports
+
+handler
+    pode depender de base/eventHandler, events, manager e usecases
+
+infrastructure/redis
+    pode depender de consumers, errors, events, manager, ports, utils e Redis
 ```
 
 ## 5.5 Estruturas proibidas
@@ -589,6 +665,10 @@ orchestrators/
 ```
 
 quando utilizadas apenas como camadas intermediárias genéricas.
+
+## 5.6 Testes unitários
+
+Na Clean, `test/mocks/` contém apenas mocks de dependências separados por repository, event service ou outra dependência. Dados de cenário pertencem a `test/data/`, em um arquivo por use case testado.
 
 ---
 
@@ -628,12 +708,18 @@ ordering/
         errors/
     removeCartItem/
         ...
+    createOrder/
+        usecases/
+        repositories/
+        controllers/
+        errors/
     cart.controller.ts
+    order.controller.ts
 ```
 
 ## 6.2 Contextos permitidos
 
-Os contextos implementados são `ordering/` (carrinho), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). As operações de cada contexto seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
+Os contextos implementados são `ordering/` (carrinho e pedidos), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). As operações de cada contexto seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
 
 Outros contextos (`payments/`) não devem ser criados sem que exista uma funcionalidade pertencente a eles.
 
@@ -648,7 +734,7 @@ Dentro do contexto, a primeira subdivisão é a **operação**. Cada operação 
 │   ├── repositories/
 │   ├── controllers/
 │   └── errors/
-└── <recurso>.controller.ts   # registra as rotas HTTP do contexto (cart.controller.ts, stock.controller.ts, product.controller.ts)
+└── <recurso>.controller.ts   # registra as rotas HTTP do contexto (cart.controller.ts, order.controller.ts, stock.controller.ts, product.controller.ts)
 ```
 
 As estruturas devem ser criadas somente quando houver código correspondente àquela responsabilidade.
@@ -689,14 +775,14 @@ Além de `shared/`, existem componentes técnicos globais que não pertencem a u
 src/services/      # Redis: createRedis, getRedis, ping
 src/middleware/    # errorHandler, authenticate (por rota), audit
 src/utils/         # requireEnv, loadAppEnv, Logger, format, parser, time
-src/manager/       # DbManager (transação TypeORM)
+src/manager/       # DbManager (transação TypeORM e callbacks pós-commit)
 ```
 
 Pode existir também:
 
 ```text
 shared/
-├── entities/      # entidades de domínio (Cart, CartItem, Product)
+├── entities/      # entidades de domínio (Cart, CartItem, Product, Order, OrderItem)
 ├── database/      # equivalente à infrastructure da Clean: records TypeORM, DataSource, schema
 ├── presenters/    # serialização HTTP compartilhada
 ├── base/          # UseCase, RouterBase
@@ -709,6 +795,8 @@ Records TypeORM vivem em `shared/database/`, não nas pastas `repositories/` das
 `requireEnv` / `loadAppEnv` não vivem em `shared/database`. Redis não vive em `shared/messaging`.
 
 Regras específicas de uma operação não devem ser movidas para `shared/` apenas para remover duplicação.
+
+Efeitos externos dependentes da persistência devem ser registrados durante a transação e executados pelo `DbManager` depois do commit. O `RouterBase` pode receber um `RouteResponse` do controller para enviar a resposta somente após o commit e esses efeitos pós-commit.
 
 ## 6.6 Isolamento entre contextos
 
@@ -757,7 +845,7 @@ Também não devem ser criados contextos artificiais apenas para aumentar a modu
 | Presenter | pasta `presenters/` | pasta `presenters/` | pasta `presenters/` | `shared/presenters/` |
 | Middleware | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` |
 | Repository abstraction | não | não | `ports/` | implementação por operação |
-| Services | factory Redis; uso direto nas rotas | Redis centralizado | Redis centralizado | Redis centralizado |
+| Services | factory Redis + publicação em Streams | Redis centralizado | serviços compartilhados; Redis em `infrastructure/` | Redis centralizado |
 | Errors | arquivo único | global | global | por operação |
 | Env (`requireEnv`) | `helpers.ts` | `utils/` | `utils/` | `utils/` |
 | Infrastructure | mínima (`database.ts`) | `database.ts` | explícita | compartilhada + específica quando necessária |

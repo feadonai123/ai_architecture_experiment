@@ -1,6 +1,6 @@
 import { CreateCart } from '../../src/usecases/CreateCart';
-import { mockCartRepository } from '../mocks/cart';
-import { cartMock } from '../mocks/create-cart';
+import { mockCartRepository } from '../mocks/cartRepository';
+import { cartMock } from '../data/create-cart';
 
 describe('create cart', () => {
   describe('success', () => {

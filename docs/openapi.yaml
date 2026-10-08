@@ -1,8 +1,8 @@
 openapi: 3.0.3
 info:
-  title: E-commerce Cart and Stock API
+  title: E-commerce API
   version: 1.0.0
-  description: Contrato HTTP das APIs de catálogo, estoque e carrinho.
+  description: Contrato HTTP das APIs de catálogo, estoque, carrinho e pedidos.
 servers:
   - url: /
 security:
@@ -14,6 +14,8 @@ tags:
     description: Consulta e alteração da quantidade em estoque dos produtos.
   - name: Carrinho
     description: Criação de carrinho e gerenciamento de itens.
+  - name: Pedidos
+    description: Criação de pedidos e seus itens.
 paths:
   /products:
     get:
@@ -415,6 +417,44 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /orders:
+    post:
+      tags: [Pedidos]
+      summary: Cria um pedido e publica o evento OrderCreated
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+      responses:
+        '201':
+          description: Pedido criado com preços atuais e total calculado pelo servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Lista de itens vazia ou quantidade inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Usuário ou produto inexistente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Estoque insuficiente para a quantidade agregada solicitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -451,6 +491,65 @@ components:
         type: string
         format: uuid
   schemas:
+    Order:
+      type: object
+      required: [id, userId, status, total, createdAt, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        status:
+          type: integer
+          enum: [0, 1]
+          description: 0 = PENDING; 1 = PAYMENT_PENDING
+        total:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+    OrderItem:
+      type: object
+      required: [productId, quantity, unitPrice]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        unitPrice:
+          type: number
+          format: double
+    CreateOrderRequest:
+      type: object
+      required: [userId, items]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/CreateOrderItemRequest'
+    CreateOrderItemRequest:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
     Cart:
       type: object
       required: [id, createdAt, items]

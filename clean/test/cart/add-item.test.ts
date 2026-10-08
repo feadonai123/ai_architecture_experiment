@@ -7,7 +7,6 @@ import {
   cartMock,
   cartWithIncrementedItemMock,
   cartWithItemMock,
-  createItemIdMock,
   exceedingQuantityMock,
   incrementQuantityMock,
   incrementedItemMock,
@@ -17,17 +16,18 @@ import {
   missingCartMock,
   missingProductMock,
   productMock,
-} from '../mocks/add-item';
-import { mockCartRepository } from '../mocks/cart';
-import { mockCartItemRepository } from '../mocks/cartItem';
-import { mockProductRepository } from '../mocks/product';
+} from '../data/add-item';
+import { mockCartRepository } from '../mocks/cartRepository';
+import { mockCartItemRepository } from '../mocks/cartItemRepository';
+import { mockIdentifier } from '../mocks/identifier';
+import { mockProductRepository } from '../mocks/productRepository';
 
 function addCartItem(
   products = mockProductRepository({ findById: productMock }),
   carts = mockCartRepository({ findById: cartMock, findWithItems: cartMock }),
   cartItems = mockCartItemRepository(),
 ) {
-  return new AddCartItem(products, carts, cartItems, createItemIdMock);
+  return new AddCartItem(products, carts, cartItems, mockIdentifier(itemMock.id));
 }
 
 describe('add item', () => {
