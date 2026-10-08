@@ -8,7 +8,7 @@ Organizar primeiro por **contexto**, depois por **operação**, depois por respo
 contexto → operação → responsabilidade técnica
 ```
 
-Os contextos são `ordering/` (carrinho), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). Cada operação possui seus próprios use cases, repositories, controllers e erros, seguindo os componentes existentes.
+Os contextos são `ordering/` (carrinho e pedidos), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). Cada operação possui seus próprios use cases, repositories, controllers e erros, seguindo os componentes existentes.
 
 ## Estrutura de um contexto
 
@@ -18,7 +18,9 @@ ordering/
 ├── getCart/      usecases, repositories, controllers, errors
 ├── addCartItem/  ...
 ├── removeCartItem/
-└── cart.controller.ts   # registra as rotas HTTP do contexto
+├── createOrder/  usecases, repositories, controllers, errors
+├── cart.controller.ts   # registra as rotas HTTP de carrinho
+└── order.controller.ts  # registra as rotas HTTP de pedido
 
 inventory/
 ├── listStocks/
@@ -52,10 +54,12 @@ src/manager/      DbManager
 
 ```text
 shared/
-├── entities/      Cart, CartItem, Product (domínio, sem TypeORM)
+├── entities/      Cart, CartItem, Product, Order, OrderItem (domínio, sem TypeORM)
 ├── database/      records TypeORM, DataSource, schema (papel da infrastructure da Clean)
 ├── presenters/    payload HTTP
-└── base/          UseCase, RouterBase
+├── base/          UseCase, RouterBase
+├── messaging/     contratos e eventos compartilhados entre contextos
+└── integrations/  adaptadores técnicos compartilhados
 ```
 
 Não colocar em `shared/` regra que pertence a uma operação só para reduzir duplicação.
@@ -71,6 +75,8 @@ Não colocar em `shared/` regra que pertence a uma operação só para reduzir d
 ## Transação
 
 `RouterBase.asHandler` abre transação via `DbManager`. Use cases não importam `router.base` nem `manager/`. Repos usam `DbManager.getManager(dataSource)`.
+
+Efeitos externos que dependem da persistência, como publicar um evento, são registrados no `DbManager` e executados depois do commit. Quando a resposta depende desse efeito, o controller retorna um `RouteResponse` para o `RouterBase` enviá-la somente após o commit e os callbacks registrados.
 
 ## Proibido
 

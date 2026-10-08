@@ -708,12 +708,18 @@ ordering/
         errors/
     removeCartItem/
         ...
+    createOrder/
+        usecases/
+        repositories/
+        controllers/
+        errors/
     cart.controller.ts
+    order.controller.ts
 ```
 
 ## 6.2 Contextos permitidos
 
-Os contextos implementados são `ordering/` (carrinho), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). As operações de cada contexto seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
+Os contextos implementados são `ordering/` (carrinho e pedidos), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). As operações de cada contexto seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
 
 Outros contextos (`payments/`) não devem ser criados sem que exista uma funcionalidade pertencente a eles.
 
@@ -728,7 +734,7 @@ Dentro do contexto, a primeira subdivisão é a **operação**. Cada operação 
 │   ├── repositories/
 │   ├── controllers/
 │   └── errors/
-└── <recurso>.controller.ts   # registra as rotas HTTP do contexto (cart.controller.ts, stock.controller.ts, product.controller.ts)
+└── <recurso>.controller.ts   # registra as rotas HTTP do contexto (cart.controller.ts, order.controller.ts, stock.controller.ts, product.controller.ts)
 ```
 
 As estruturas devem ser criadas somente quando houver código correspondente àquela responsabilidade.
@@ -769,14 +775,14 @@ Além de `shared/`, existem componentes técnicos globais que não pertencem a u
 src/services/      # Redis: createRedis, getRedis, ping
 src/middleware/    # errorHandler, authenticate (por rota), audit
 src/utils/         # requireEnv, loadAppEnv, Logger, format, parser, time
-src/manager/       # DbManager (transação TypeORM)
+src/manager/       # DbManager (transação TypeORM e callbacks pós-commit)
 ```
 
 Pode existir também:
 
 ```text
 shared/
-├── entities/      # entidades de domínio (Cart, CartItem, Product)
+├── entities/      # entidades de domínio (Cart, CartItem, Product, Order, OrderItem)
 ├── database/      # equivalente à infrastructure da Clean: records TypeORM, DataSource, schema
 ├── presenters/    # serialização HTTP compartilhada
 ├── base/          # UseCase, RouterBase
@@ -789,6 +795,8 @@ Records TypeORM vivem em `shared/database/`, não nas pastas `repositories/` das
 `requireEnv` / `loadAppEnv` não vivem em `shared/database`. Redis não vive em `shared/messaging`.
 
 Regras específicas de uma operação não devem ser movidas para `shared/` apenas para remover duplicação.
+
+Efeitos externos dependentes da persistência devem ser registrados durante a transação e executados pelo `DbManager` depois do commit. O `RouterBase` pode receber um `RouteResponse` do controller para enviar a resposta somente após o commit e esses efeitos pós-commit.
 
 ## 6.6 Isolamento entre contextos
 
