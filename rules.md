@@ -47,6 +47,8 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 - Não testar timeouts de rede, SQL cru, stack de framework, nem mensagens genéricas que a aplicação não emite.
 - Dados de persistência via `test/prefabs/`. HTTP autenticado via `test/helpers/api.ts` (não via `mocks/`).
 - Novo endpoint, status ou classe de erro no contrato → novo teste de integração compartilhado.
+- Testes de integração de consumers sem endpoint HTTP iniciam o consumer pela respectiva composition root, publicam o evento real no Redis e aguardam os efeitos observáveis no PostgreSQL e no Redis.
+- O setup compartilhado expõe as conexões de teste necessárias e limpa, antes de cada caso, tanto as tabelas do PostgreSQL quanto streams, agenda, metadados de retry e Dead Letter conhecidos do Redis.
 
 ## Contratos HTTP
 

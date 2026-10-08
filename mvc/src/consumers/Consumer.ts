@@ -245,6 +245,16 @@ export abstract class Consumer {
     const confirm = async () => {
       await acknowledge(stream, this.config.group, entryId, redis);
     };
+    const confirmAndRemoveRetry = () =>
+      acknowledgeAndRemoveHashAndSchedule(
+        stream,
+        this.config.group,
+        entryId,
+        this.metadataKey(stream, entryId),
+        this.config.retryScheduleKey,
+        this.member(stream, entryId),
+        redis,
+      );
     try {
       await this.process(redis, stream, entryId, fields, confirm);
     } catch (error) {
@@ -255,7 +265,7 @@ export abstract class Consumer {
             ? error
             : new RetryAttemptsExhaustedError(this.config.retryMaxAttempts, errorMessage(error));
         try {
-          await this.deadLetter(redis, stream, entryId, fields, reason, confirm);
+          await this.deadLetter(redis, stream, entryId, fields, reason, confirmAndRemoveRetry);
         } catch {
           // A falha auxiliar mantém a entrada pendente e não gera outro log.
         }
@@ -287,6 +297,9 @@ export abstract class Consumer {
           continue;
         }
         for (const [entryId, , idleTime, deliveryCount] of pending) {
+          if (idleTime < this.config.retryProcessingLeaseMs) {
+            continue;
+          }
           if (Object.keys(await getHash(this.metadataKey(stream, entryId), redis)).length === 0) {
             await this.scheduleRetry(
               redis,

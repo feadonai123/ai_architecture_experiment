@@ -25,6 +25,48 @@ export function getTestDataSource(): DataSource {
   return testDataSource;
 }
 
+export function getAppDataSource(): DataSource {
+  if (!appDataSource) {
+    throw new Error('Application data source has not been started');
+  }
+  return appDataSource;
+}
+
+export function getTestRedis(): Redis {
+  if (!redis) {
+    throw new Error('Test Redis has not been started');
+  }
+  return redis;
+}
+
+async function clearTestRedis(): Promise<void> {
+  const streams = requireEnv('FINANCIAL_CONSUMER_STREAMS')
+    .split(',')
+    .map((stream) => stream.trim());
+  const keys = [
+    ...streams,
+    requireEnv('FINANCIAL_CONSUMER_DEAD_LETTER_STREAM'),
+    requireEnv('FINANCIAL_CONSUMER_RETRY_SCHEDULE_KEY'),
+  ];
+  const retryPrefix = requireEnv('FINANCIAL_CONSUMER_RETRY_EVENT_KEY_PREFIX');
+  let cursor = '0';
+  do {
+    const [nextCursor, matchedKeys] = await redis.scan(
+      cursor,
+      'MATCH',
+      `${retryPrefix}:*`,
+      'COUNT',
+      100,
+    );
+    cursor = nextCursor;
+    keys.push(...matchedKeys);
+  } while (cursor !== '0');
+
+  if (keys.length > 0) {
+    await redis.del(...keys);
+  }
+}
+
 async function initializeWithRetry(dataSource: DataSource): Promise<void> {
   let lastError: unknown;
   for (let attempt = 0; attempt < 30; attempt += 1) {
@@ -58,6 +100,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await truncateAll(testDataSource);
+  await clearTestRedis();
 });
 
 afterAll(async () => {
@@ -67,6 +110,9 @@ afterAll(async () => {
   }
   if (testDataSource?.isInitialized) {
     await truncateAll(testDataSource);
+  }
+  if (redis) {
+    await clearTestRedis();
   }
   if (appDataSource?.isInitialized) {
     await appDataSource.destroy();

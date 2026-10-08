@@ -39,10 +39,7 @@ const SUPPORTED_EVENTS = requireEnv('FINANCIAL_CONSUMER_SUPPORTED_EVENTS')
     }
     return value as EventType;
   });
-if (
-  SUPPORTED_EVENTS.length !== 1 ||
-  SUPPORTED_EVENTS[0] !== EventType.OrderCreated
-) {
+if (SUPPORTED_EVENTS.length !== 1 || SUPPORTED_EVENTS[0] !== EventType.OrderCreated) {
   throw new Error('FINANCIAL_CONSUMER_SUPPORTED_EVENTS must match the handled events');
 }
 const BATCH_SIZE = positiveIntegerEnv('FINANCIAL_CONSUMER_BATCH_SIZE');
@@ -385,6 +382,9 @@ export async function reconcilePendingEvents(redis: Redis): Promise<void> {
       }
 
       for (const [entryId, , idleTime, deliveryCount] of pendingEntries) {
+        if (idleTime < RETRY_PROCESSING_LEASE_MS) {
+          continue;
+        }
         const metadataKey = retryEventKey(stream, entryId);
         const currentState = await redis.hgetall(metadataKey);
         if (Object.keys(currentState).length === 0) {
@@ -414,7 +414,6 @@ export async function retryPendingEvents(
   redis: Redis,
   consumerName: string,
 ): Promise<void> {
-
   // Coleta todos os itens que estão para retry prontos para retry e com um limite de pegar no máximo dez
   const dueMembers = await redis.zrange(
     RETRY_SCHEDULE_KEY,
@@ -428,14 +427,12 @@ export async function retryPendingEvents(
 
   // loop para item
   for (const member of dueMembers) {
-
     // separa o item em stream e entryId, se não tiver no formato certo joga fora
     const separatorIndex = member.indexOf(':');
     if (separatorIndex < 1) {
       await redis.zrem(RETRY_SCHEDULE_KEY, member);
       continue;
     }
-
 
     const stream = member.slice(0, separatorIndex);
     const entryId = member.slice(separatorIndex + 1);
@@ -449,7 +446,7 @@ export async function retryPendingEvents(
     const eventStream = stream as EventStreamName;
     const metadataKey = retryEventKey(eventStream, entryId);
 
-    // Verifica no hash se existe o item de retry, a partir do entryId e stream, se não existir remove do retry 
+    // Verifica no hash se existe o item de retry, a partir do entryId e stream, se não existir remove do retry
     const state = parseRetryState(await redis.hgetall(metadataKey));
     if (!state) {
       await removeRetryState(redis, eventStream, entryId);
@@ -468,7 +465,6 @@ export async function retryPendingEvents(
 
     // Se não conseguir pegar o item do stream
     if (!claimedMessage) {
-
       // Verifica se o item está na lista de pendentes, caso não esteja remove do retry,caso esteja ele só continua o loop
       const pending = (await redis.xpending(
         eventStream,
@@ -483,7 +479,7 @@ export async function retryPendingEvents(
       continue;
     }
 
-    // converte a messagem clamada para objeto fields 
+    // converte a messagem clamada para objeto fields
 
     const [claimedEntryId, fields] = claimedMessage;
     const claimedFields = toFieldRecord(fields);
@@ -493,7 +489,6 @@ export async function retryPendingEvents(
 
     // Verifica se a quantidade de tentativas de retry não é maior que o máximo de tentativas
     if (state.deliveryCount >= RETRY_MAX_ATTEMPTS) {
-
       // Cria uma lease (nova tentativa de retry) para o item, e envia para dead letter, caso não consiga enviar para dead letter loga o erro
       const nextAttemptAt = Date.now() + RETRY_PROCESSING_LEASE_MS;
       await redis
@@ -585,9 +580,9 @@ export async function processNewEvent(
     });
     if (error instanceof InvalidPayloadError) {
       try {
-        await sendToDeadLetter(redis, stream, entryId, fields, error, async () => {
-          await redis.xack(stream, GROUP, entryId);
-        });
+        await sendToDeadLetter(redis, stream, entryId, fields, error, () =>
+          acknowledgeRetriedEvent(redis, stream, entryId),
+        );
       } catch {
         // A falha auxiliar mantém a entrada pendente e não gera outro log.
       }
@@ -599,9 +594,7 @@ export async function processNewEvent(
           entryId,
           fields,
           new RetryAttemptsExhaustedError(RETRY_MAX_ATTEMPTS, errorMessage(error)),
-          async () => {
-            await redis.xack(stream, GROUP, entryId);
-          },
+          () => acknowledgeRetriedEvent(redis, stream, entryId),
         );
       } catch {
         // A falha auxiliar mantém a entrada pendente e não gera outro log.

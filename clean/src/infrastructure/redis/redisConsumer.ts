@@ -294,7 +294,9 @@ export class RedisConsumer extends Consumer {
           ? error
           : new RetryAttemptsExhaustedError(this.settings.retryMaxAttempts, errorMessage(error));
       try {
-        await this.deadLetterThenConfirm(message, reason, () => this.ack(message));
+        await this.deadLetterThenConfirm(message, reason, () =>
+          this.acknowledgeAndRemoveRetry(message, this.primary()),
+        );
       } catch {
         // A entrada permanece pendente para recuperação, sem log adicional.
       }
@@ -322,6 +324,7 @@ export class RedisConsumer extends Consumer {
         );
         if (pending.length === 0) break;
         for (const [entryId, , idleTime, deliveryCount] of pending) {
+          if (idleTime < this.settings.retryProcessingLeaseMs) continue;
           const message: ConsumerMessage = { id: entryId, stream, fields: {}, rawFields: [] };
           if (Object.keys(await getHash(redis, this.metadataKey(message))).length === 0) {
             await this.scheduleRetry(
@@ -349,7 +352,10 @@ export class RedisConsumer extends Consumer {
   }
 
   protected async confirmRetry(message: ConsumerMessage): Promise<void> {
-    const redis = this.retryClient();
+    await this.acknowledgeAndRemoveRetry(message, this.retryClient());
+  }
+
+  private async acknowledgeAndRemoveRetry(message: ConsumerMessage, redis: Redis): Promise<void> {
     await acknowledgeAndRemoveHashAndSchedule(
       redis,
       message.stream,
