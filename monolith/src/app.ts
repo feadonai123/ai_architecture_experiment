@@ -1,7 +1,6 @@
 import express, { Express } from 'express';
 import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
-import { startFinancialConsumer } from './consumers/consumerFinancial';
 import { mountSwagger } from './helpers';
 import { authenticate } from './middleware/authenticate';
 import { audit } from './middleware/audit';
@@ -24,8 +23,6 @@ import { updateStockRoute } from './routes/updateStock';
 
 export function createApp(dataSource: DataSource, redis: Redis): Express {
   const app = express();
-  const financialConsumer = startFinancialConsumer(dataSource, redis);
-  app.locals.stopConsumers = () => financialConsumer.stop();
 
   app.use(express.json());
   app.use(audit);

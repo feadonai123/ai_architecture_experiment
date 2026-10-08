@@ -61,6 +61,8 @@ PostgreSQL e Redis são infraestrutura externa comum a todas as implementações
 
 A utilização dessas dependências pode ser encapsulada de maneiras diferentes conforme a arquitetura, mas não deve ser criada uma infraestrutura tecnicamente diferente para uma implementação.
 
+`createApp` monta somente a aplicação HTTP. Nos projetos que possuem consumers, um composition root `financialConsumerApp.ts` cria o consumer financeiro e `server.ts` controla sua inicialização e encerramento separadamente.
+
 ## 2.5 Pastas por responsabilidade
 
 O nome da pasta define o conteúdo permitido. Uma pasta `mocks/` só pode conter mocks. Funções de teste que não são mocks (por exemplo `invokeHandler`) devem viver no próprio arquivo de teste ou em `helpers/`.
@@ -122,7 +124,7 @@ A pasta `services/` expõe o cliente Redis (`createRedis`) e a publicação de e
 
 ### `app.ts`
 
-Responsável por montar a aplicação Express, registrar rotas, Swagger e o tratamento de erros HTTP, além de iniciar os consumidores Redis da aplicação.
+Responsável por montar a aplicação Express, registrar rotas, Swagger e o tratamento de erros HTTP. Não cria nem inicia consumers Redis; `financialConsumerApp.ts` cria o consumer e `server.ts` controla seu ciclo de vida.
 
 ### `database.ts`
 
@@ -175,7 +177,7 @@ Na rota que produz um evento, a classe concreta de payload é instanciada explic
 
 ### `consumers/`
 
-Contém um consumidor Redis Streams por setor do e-commerce. O arquivo do consumidor define seu consumer group, as listas de streams observados e tipos suportados, executa `XREADGROUP` com lotes de até dez mensagens, percorre cada lote e usa `processEvents` para selecionar o tipo e chamar o handler correspondente. O consumidor também mantém um loop de retry com conexão Redis própria, agenda as tentativas em Sorted Set, mantém os metadados em Hash, aplica exponential backoff tabelado, usa `XCLAIM` para reclamar mensagens elegíveis e reconcilia a agenda com `XPENDING`. Erros de payload derivados de `InvalidPayloadError` enviam a entrada para uma Dead Letter Stream antes de `XACK`, tanto na leitura inicial quanto no retry; no retry, a agenda e os metadados também são removidos. Handlers que alteram persistência acessam o TypeORM diretamente e executam todas as alterações relacionadas em uma única transação. O sucesso do handler recebe `XACK` somente após o commit da transação.
+Contém um consumidor Redis Streams por setor do e-commerce. O arquivo do consumidor define seu consumer group, as listas de streams observados e tipos suportados, executa `XREADGROUP` com lotes de até dez mensagens, percorre cada lote e usa `processEvents` para selecionar o tipo e chamar o handler correspondente. O consumidor também mantém um loop de retry com conexão Redis própria, agenda as tentativas em Sorted Set, mantém os metadados em Hash, aplica exponential backoff tabelado, usa `XCLAIM` para reclamar mensagens elegíveis e reconcilia a agenda com `XPENDING`. Erros de payload derivados de `InvalidPayloadError` enviam a entrada para uma Dead Letter Stream antes de `XACK`, tanto na leitura inicial quanto no retry; no retry, a agenda e os metadados também são removidos. Handlers que alteram persistência acessam o TypeORM diretamente e executam todas as alterações relacionadas em uma única transação. O sucesso do handler recebe `XACK` somente após o commit da transação. `financialConsumerApp.ts` cria o consumer e `server.ts` o inicia e encerra fora de `createApp`.
 
 ### `presenters/`
 
@@ -309,7 +311,7 @@ Contém o contrato, a validação e a serialização dos eventos da aplicação.
 
 ### `consumers/`
 
-`ConfigConsumer` valida os parâmetros de ambiente. `Consumer` implementa o ciclo de leitura, retry, reconciliação da PEL e Dead Letter. Cada consumer concreto implementa `processEvent` e os handlers dos tipos aceitos. Comandos Redis ficam em `services/redis.ts`; persistência fica nos models.
+`ConfigConsumer` valida os parâmetros de ambiente. `Consumer` implementa o ciclo de leitura, retry, reconciliação da PEL e Dead Letter. Cada consumer concreto implementa `processEvent` e os handlers dos tipos aceitos. Comandos Redis ficam em `services/redis.ts`; persistência fica nos models. `financialConsumerApp.ts` instancia o consumer financeiro e `server.ts` o inicia e encerra fora de `createApp`.
 
 ### `services/`
 

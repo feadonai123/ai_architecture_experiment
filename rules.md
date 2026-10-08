@@ -31,6 +31,7 @@ Se uma função não for da pasta, ela não entra nessa pasta. Prefira o arquivo
 - O processamento financeiro de `OrderCreated` registra sucesso via `Logger.info` somente após o commit, com `eventId`, `orderId`, `userId` e `items`, em todas as abordagens.
 - Consumers emitem logs somente no sucesso do handler, na primeira falha do evento e na falha de uma tentativa de retry, usando exatamente as estruturas definidas em `flows/RedisConsumer.md`. Falhas auxiliares de leitura, confirmação, agendamento, reconciliação, Dead Letter ou do ciclo não geram logs adicionais.
 - `requireEnv` não tem valor default. Variáveis novas entram em `.env`, `.env.example` e `.env.test`.
+- `createApp` monta somente a aplicação HTTP e não cria nem inicia consumers. Nos projetos que possuem consumers, `financialConsumerApp.ts` cria o consumer financeiro e `server.ts` controla sua inicialização e encerramento separadamente.
 
 ## Testes de integração
 

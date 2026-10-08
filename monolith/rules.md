@@ -9,6 +9,7 @@ Organização mínima, forte acoplamento, sem fronteiras internas formais. A men
 ```text
 src/
 ├── app.ts
+├── financialConsumerApp.ts
 ├── database.ts
 ├── errors.ts
 ├── helpers.ts
@@ -41,6 +42,7 @@ src/
 - Validações de payload de eventos lançam uma classe de erro específica declarada em `errors.ts`, nunca `Error` genérico.
 - Erros específicos de payload herdam de `InvalidPayloadError`. O consumidor envia esses eventos para uma Dead Letter Stream configurada por consumer e executa `XACK` somente depois da publicação; no retry, também remove a entrada da agenda e seus metadados. Outras falhas continuam elegíveis para retry.
 - `database.ts` — conexão TypeORM. Sem pasta `database/`.
+- `app.ts` e `financialConsumerApp.ts` são pontos de composição: o primeiro monta somente HTTP e o segundo cria o consumer financeiro. `server.ts` abre as conexões e inicia e encerra o consumer separadamente das rotas.
 
 ## Proibido
 

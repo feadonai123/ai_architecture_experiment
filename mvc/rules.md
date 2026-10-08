@@ -8,6 +8,8 @@ Primeira dimensão = **responsabilidade técnica** (Controller, Model, Entity, E
 
 ```text
 src/
+├── app.ts
+├── financialConsumerApp.ts
 ├── controllers/
 ├── models/
 ├── entities/
@@ -38,6 +40,7 @@ Não existe `src/routes/` nem `src/database/`.
 - `errors/` — classes de erro da aplicação (`AppError` + erros semânticos).
 - `utils/` — `requireEnv`, `loadAppEnv`, `Logger`.
 - `database.ts` — arquivo único de conexão TypeORM.
+- `app.ts` e `financialConsumerApp.ts` são pontos de composição: o primeiro monta somente HTTP e o segundo cria o consumer financeiro. `server.ts` abre as conexões e inicia e encerra o consumer separadamente das rotas.
 
 ## Fluxo
 
