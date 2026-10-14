@@ -2,6 +2,7 @@ import { EventStream } from './EventStream';
 import { EventType } from './EventType';
 
 export abstract class Event<TPayload> {
+
   private payload?: TPayload;
 
   protected constructor(

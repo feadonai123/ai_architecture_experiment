@@ -719,9 +719,9 @@ ordering/
 
 ## 6.2 Contextos permitidos
 
-Os contextos implementados são `ordering/` (carrinho e pedidos), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). As operações de cada contexto seguem os mesmos componentes: use cases, repositories, controllers e erros por operação.
+Os contextos implementados são `ordering/` (carrinho e pedidos), `payments/` (pagamentos), `inventory/` (estoque, RF03) e `catalog/` (produtos, RF01/RF02). As operações de cada contexto seguem os componentes necessários: use cases, repositories, controllers ou handlers e erros por operação.
 
-Outros contextos (`payments/`) não devem ser criados sem que exista uma funcionalidade pertencente a eles.
+Outros contextos não devem ser criados sem que exista uma funcionalidade pertencente a eles.
 
 ## 6.3 Estrutura interna obrigatória de cada contexto
 
@@ -733,6 +733,7 @@ Dentro do contexto, a primeira subdivisão é a **operação**. Cada operação 
 │   ├── usecases/
 │   ├── repositories/
 │   ├── controllers/
+│   ├── handlers/
 │   └── errors/
 └── <recurso>.controller.ts   # registra as rotas HTTP do contexto (cart.controller.ts, order.controller.ts, stock.controller.ts, product.controller.ts)
 ```
@@ -759,6 +760,10 @@ Somente a implementação de persistência da operação. Não contém entities 
 
 Interface HTTP da operação. Classes que estendem `RouterBase` em `shared/base`; `asHandler()` envolve cada rota numa transação.
 
+### `handlers/`
+
+Interface de eventos da operação. Handlers estendem `EventHandler` em `shared/base` e abrem via `DbManager` a transação da regra executada pelo consumer.
+
 ### `errors/`
 
 Erros semânticos lançados por aquela operação.
@@ -772,7 +777,7 @@ Vivem em `shared/presenters/`. Transformam o modelo de domínio no payload HTTP 
 Além de `shared/`, existem componentes técnicos globais que não pertencem a um contexto:
 
 ```text
-src/services/      # Redis: createRedis, getRedis, ping
+src/services/      # Redis
 src/middleware/    # errorHandler, authenticate (por rota), audit
 src/utils/         # requireEnv, loadAppEnv, Logger, format, parser, time
 src/manager/       # DbManager (transação TypeORM e callbacks pós-commit)
@@ -782,21 +787,26 @@ Pode existir também:
 
 ```text
 shared/
-├── entities/      # entidades de domínio (Cart, CartItem, Product, Order, OrderItem)
+├── entities/      # entidades de domínio (Cart, CartItem, Product, Order, OrderItem, OrderPayment)
 ├── database/      # equivalente à infrastructure da Clean: records TypeORM, DataSource, schema
 ├── presenters/    # serialização HTTP compartilhada
 ├── base/          # UseCase, RouterBase
-├── messaging/
-└── integrations/
+├── consumers/     # Consumer, dispatcher, settings e estado de retry
+├── events/        # eventos, payloads e contratos de publicação
+└── infrastructure/ # Redis, RedisConsumer e detalhes técnicos externos
 ```
 
 Records TypeORM vivem em `shared/database/`, não nas pastas `repositories/` das operações.
 
-`requireEnv` / `loadAppEnv` não vivem em `shared/database`. Redis não vive em `shared/messaging`.
+`requireEnv` / `loadAppEnv` não vivem em `shared/database`. Classes de evento não encapsulam Redis; essa implementação vive diretamente em `shared/infrastructure`.
 
 Regras específicas de uma operação não devem ser movidas para `shared/` apenas para remover duplicação.
 
 Efeitos externos dependentes da persistência devem ser registrados durante a transação e executados pelo `DbManager` depois do commit. O `RouterBase` pode receber um `RouteResponse` do controller para enviar a resposta somente após o commit e esses efeitos pós-commit.
+
+As classes genéricas de consumer vivem em `shared/consumers`, as classes de evento em `shared/events`, e Redis com `RedisConsumer` diretamente em `shared/infrastructure`. A composição fica em `financialConsumerApp.ts`; o registro dos handlers do contexto fica em `payments/financial.consumer.ts`; cada handler permanece na operação correspondente. `createApp` não inicia consumers, e `server.ts` controla seu ciclo de vida separadamente da aplicação HTTP. O `XACK` só ocorre depois do retorno bem-sucedido do handler e do commit.
+
+Erros semânticos permanecem na operação. Erros exclusivamente técnicos do adaptador Redis podem viver em `shared/infrastructure/errors/`.
 
 ## 6.6 Isolamento entre contextos
 

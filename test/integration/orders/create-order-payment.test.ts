@@ -71,9 +71,7 @@ async function wasDelivered(redis: Redis, entryId: string): Promise<boolean> {
   }
 }
 
-const describeWithConsumer = requireEnv('APP_TARGET') === 'domain' ? describe.skip : describe;
-
-describeWithConsumer('OrderCreated financial consumer', () => {
+describe('OrderCreated financial consumer', () => {
   let consumer: TestFinancialConsumer;
 
   beforeEach(async () => {

@@ -63,7 +63,7 @@ import { OrderRepository as CreateOrderRepository } from './ordering/createOrder
 import { ProductRepository as CreateOrderProductRepository } from './ordering/createOrder/repositories/ProductRepository';
 import { UserRepository as CreateOrderUserRepository } from './ordering/createOrder/repositories/UserRepository';
 import { CreateOrder } from './ordering/createOrder/usecases/CreateOrder';
-import { EventRedisService } from './shared/integrations/EventRedisService';
+import { EventRedisService } from './shared/infrastructure/EventRedisService';
 
 function mountSwagger(app: Express): void {
   const specPath = path.resolve(__dirname, '../../docs/openapi.yaml');

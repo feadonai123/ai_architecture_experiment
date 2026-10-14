@@ -1,4 +1,4 @@
-import { IEventService } from '../../src/shared/messaging/EventService';
+import { IEventService } from '../../src/shared/events/EventService';
 
 export function mockEventService(): jest.Mocked<IEventService> {
   return {

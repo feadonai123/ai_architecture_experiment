@@ -5,11 +5,20 @@ import { postgresOptions } from './postgresOptions';
 import { ProductRecord } from './ProductRecord';
 import { OrderItemRecord } from './OrderItemRecord';
 import { OrderRecord } from './OrderRecord';
+import { OrderPaymentRecord } from './OrderPaymentRecord';
 import { UserRecord } from './UserRecord';
 
 export function createDataSource(): DataSource {
   return new DataSource({
     ...postgresOptions(),
-    entities: [CartRecord, CartItemRecord, ProductRecord, UserRecord, OrderRecord, OrderItemRecord],
+    entities: [
+      CartRecord,
+      CartItemRecord,
+      ProductRecord,
+      UserRecord,
+      OrderRecord,
+      OrderItemRecord,
+      OrderPaymentRecord,
+    ],
   });
 }

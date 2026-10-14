@@ -24,23 +24,23 @@ module.exports = {
       severity: 'error',
       from: {},
       to: {
-        path: '^src/(ordering|inventory|catalog)/(ports|infrastructure|http|routes)(/|$)',
+        path: '^src/(ordering|payments|inventory|catalog)/(ports|infrastructure|http|routes)(/|$)',
       },
     },
     {
       name: 'no-shared-extras',
       comment:
-        'shared/ may only contain database, entities, presenters, base, messaging and integrations',
+        'shared/ may only contain database, entities, presenters, base, consumers, events and infrastructure',
       severity: 'error',
       from: {},
-      to: { path: '^src/shared/(http|errors|redis|services|env)(/|$)' },
+      to: { path: '^src/shared/(http|errors|redis|services|env|messaging|integrations)(/|$)' },
     },
     {
       name: 'no-context-presenters',
       comment: 'Presenters live in shared/presenters, not inside a bounded context',
       severity: 'error',
       from: {},
-      to: { path: '^src/(ordering|inventory|catalog)/presenters(/|$)' },
+      to: { path: '^src/(ordering|payments|inventory|catalog)/presenters(/|$)' },
     },
     {
       name: 'entities-no-express',

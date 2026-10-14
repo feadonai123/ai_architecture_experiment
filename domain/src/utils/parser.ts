@@ -12,6 +12,16 @@ export function parseNonEmptyArray(value: unknown): [unknown, ...unknown[]] | nu
     : null;
 }
 
+function parseSafeInteger(value: unknown): number | null {
+  const parsed =
+    typeof value === 'string' && value.trim() !== ''
+      ? Number(value)
+      : typeof value === 'number'
+        ? value
+        : Number.NaN;
+  return Number.isSafeInteger(parsed) ? parsed : null;
+}
+
 export function parsePositiveInteger(value: unknown): number | null {
   if (typeof value !== 'number' || !Number.isInteger(value) || value <= 0) {
     return null;
@@ -24,6 +34,24 @@ export function parseNonNegativeInteger(value: unknown): number | null {
     return null;
   }
   return value;
+}
+
+export function parsePositiveSafeInteger(value: unknown): number | null {
+  const parsed = parseSafeInteger(value);
+  return parsed !== null && parsed > 0 ? parsed : null;
+}
+
+export function parseNonNegativeSafeInteger(value: unknown): number | null {
+  const parsed = parseSafeInteger(value);
+  return parsed !== null && parsed >= 0 ? parsed : null;
+}
+
+export function parseDate(value: unknown): Date | null {
+  if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) {
+    return null;
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
 export function parseNonNegativeNumber(value: unknown): number | null {
