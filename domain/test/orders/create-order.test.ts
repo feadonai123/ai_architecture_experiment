@@ -5,7 +5,7 @@ import { ProductNotFoundError } from '../../src/ordering/createOrder/errors/Prod
 import { UserNotFoundError } from '../../src/ordering/createOrder/errors/UserNotFoundError';
 import { CreateOrder } from '../../src/ordering/createOrder/usecases/CreateOrder';
 import { OrderStatus } from '../../src/shared/entities/OrderStatus';
-import { EventType } from '../../src/shared/messaging/EventType';
+import { EventType } from '../../src/shared/events/EventType';
 import { mockClock } from '../mocks/clock';
 import { orderProductMock } from '../mocks/create-order';
 import { mockEventService } from '../mocks/eventService';

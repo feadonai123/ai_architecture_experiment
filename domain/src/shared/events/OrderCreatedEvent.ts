@@ -2,8 +2,10 @@ import { parseNonEmptyArray, parsePositiveInteger, parseRecord, parseString } fr
 import { Event } from './Event';
 import { EventStream } from './EventStream';
 import { EventType } from './EventType';
+import { InvalidOrderCreatedPayloadError } from './InvalidOrderCreatedPayloadError';
 
 export type OrderCreatedItem = { productId: string; quantity: number };
+
 
 export class OrderCreatedPayload {
   readonly orderId: string;
@@ -27,7 +29,7 @@ export class OrderCreatedPayload {
         );
       })
     ) {
-      throw new Error('Invalid OrderCreated payload');
+      throw new InvalidOrderCreatedPayloadError();
     }
     this.orderId = payload.orderId as string;
     this.userId = payload.userId as string;
@@ -39,11 +41,21 @@ export class OrderCreatedPayload {
 }
 
 export class OrderCreatedEvent extends Event<OrderCreatedPayload> {
-  constructor(eventId: string, payload: OrderCreatedPayload, timestamp?: Date) {
+  constructor(
+    eventId: string,
+    payload: OrderCreatedPayload | string | undefined,
+    timestamp?: Date,
+  ) {
     super(eventId, EventType.OrderCreated, EventStream.Orders, payload, timestamp);
   }
 
   protected convertPayload(value: unknown): OrderCreatedPayload {
-    return value instanceof OrderCreatedPayload ? value : new OrderCreatedPayload(value);
+    try {
+      return value instanceof OrderCreatedPayload
+        ? value
+        : new OrderCreatedPayload(typeof value === 'string' ? (JSON.parse(value) as unknown) : value);
+    } catch {
+      throw new InvalidOrderCreatedPayloadError();
+    }
   }
 }

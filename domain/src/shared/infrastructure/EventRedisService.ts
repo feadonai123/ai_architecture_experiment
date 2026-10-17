@@ -1,7 +1,7 @@
 import type Redis from 'ioredis';
 import { DbManager } from '../../manager/db.manager';
-import { Event } from '../messaging/Event';
-import { IEventService } from '../messaging/EventService';
+import { Event } from '../events/Event';
+import { IEventService } from '../events/EventService';
 
 export class EventRedisService implements IEventService {
   constructor(private readonly redis: Redis) {}
