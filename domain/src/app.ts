@@ -56,6 +56,14 @@ import { RemoveCartItemController } from './ordering/removeCartItem/controllers/
 import { CartItemRepository as RemoveCartItemCartItemRepository } from './ordering/removeCartItem/repositories/CartItemRepository';
 import { CartRepository as RemoveCartItemCartRepository } from './ordering/removeCartItem/repositories/CartRepository';
 import { RemoveCartItem } from './ordering/removeCartItem/usecases/RemoveCartItem';
+import { createOrderController } from './ordering/order.controller';
+import { CreateOrderController } from './ordering/createOrder/controllers/CreateOrderController';
+import { OrderItemRepository as CreateOrderItemRepository } from './ordering/createOrder/repositories/OrderItemRepository';
+import { OrderRepository as CreateOrderRepository } from './ordering/createOrder/repositories/OrderRepository';
+import { ProductRepository as CreateOrderProductRepository } from './ordering/createOrder/repositories/ProductRepository';
+import { UserRepository as CreateOrderUserRepository } from './ordering/createOrder/repositories/UserRepository';
+import { CreateOrder } from './ordering/createOrder/usecases/CreateOrder';
+import { EventRedisService } from './shared/integrations/EventRedisService';
 
 function mountSwagger(app: Express): void {
   const specPath = path.resolve(__dirname, '../../docs/openapi.yaml');
@@ -63,7 +71,7 @@ function mountSwagger(app: Express): void {
   app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec));
 }
 
-export function createApp(dataSource: DataSource, _redis: Redis): Express {
+export function createApp(dataSource: DataSource, redis: Redis): Express {
   const createCart = new CreateCart(new CreateCartRepository(dataSource));
   const getCart = new GetCart(new GetCartRepository(dataSource));
   const addCartItem = new AddCartItem(
@@ -76,6 +84,15 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
     new RemoveCartItemCartRepository(dataSource),
     new RemoveCartItemCartItemRepository(dataSource),
   );
+  const createOrder = new CreateOrder(
+    new CreateOrderUserRepository(dataSource),
+    new CreateOrderProductRepository(dataSource),
+    new CreateOrderRepository(dataSource),
+    new CreateOrderItemRepository(dataSource),
+    new EventRedisService(redis),
+    uuidv4,
+    () => new Date(),
+  );
 
   const app = express();
   app.use(express.json());
@@ -87,6 +104,11 @@ export function createApp(dataSource: DataSource, _redis: Redis): Express {
       getCart: new GetCartController(dataSource, getCart),
       addCartItem: new AddCartItemController(dataSource, addCartItem),
       removeCartItem: new RemoveCartItemController(dataSource, removeCartItem),
+    }),
+  );
+  app.use(
+    createOrderController({
+      createOrder: new CreateOrderController(dataSource, createOrder),
     }),
   );
   app.use(

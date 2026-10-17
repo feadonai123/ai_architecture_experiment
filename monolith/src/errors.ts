@@ -27,6 +27,24 @@ export class ProductNotFoundError extends AppError {
   }
 }
 
+export class UserNotFoundError extends AppError {
+  constructor(userId: string) {
+    super(`User not found: ${userId}`, 404);
+  }
+}
+
+export class OrderNotFoundError extends AppError {
+  constructor(orderId: string) {
+    super(`Order not found: ${orderId}`, 404);
+  }
+}
+
+export class EmptyOrderItemsError extends AppError {
+  constructor() {
+    super('Order items must be a non-empty array', 400);
+  }
+}
+
 export class InvalidQuantityError extends AppError {
   constructor(quantity: unknown) {
     super(`Invalid quantity: ${String(quantity)}`, 400);
@@ -45,6 +63,27 @@ export class ForbiddenError extends AppError {
   }
 }
 
+export class InvalidPayloadError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
+
+export class InvalidOrderCreatedPayloadError extends InvalidPayloadError {
+  constructor() {
+    super('Invalid OrderCreated payload');
+  }
+}
+
+export class RetryAttemptsExhaustedError extends Error {
+  constructor(maxAttempts: number, lastError: string) {
+    super(`Retry attempts exhausted after ${maxAttempts} attempts. Last error: ${lastError}`);
+    this.name = new.target.name;
+    Object.setPrototypeOf(this, new.target.prototype);
+  }
+}
 export class InvalidNameError extends AppError {
   constructor(name: unknown) {
     super(`Invalid name: ${String(name)}`, 400);

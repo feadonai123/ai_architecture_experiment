@@ -1,7 +1,7 @@
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { UpdateStock } from '../../src/usecases/UpdateStock';
-import { mockProductRepository } from '../mocks/product';
+import { mockProductRepository } from '../mocks/productRepository';
 import {
   emptiedProductMock,
   invalidAbsoluteQuantityMock,
@@ -9,7 +9,7 @@ import {
   productMock,
   updatedProductMock,
   updateQuantityMock,
-} from '../mocks/update-stock';
+} from '../data/update-stock';
 
 function updateStock(products = mockProductRepository({ findById: productMock })) {
   return new UpdateStock(products);

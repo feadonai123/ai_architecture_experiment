@@ -4,6 +4,7 @@ module.exports = {
   testEnvironment: 'node',
   roots: ['<rootDir>/test'],
   testTimeout: 10000,
+  setupFiles: ['<rootDir>/../test/helpers/load-env.ts'],
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',

@@ -1,8 +1,8 @@
 import { InvalidFilterError } from '../../src/errors/InvalidFilterError';
 import { InvalidPriceError } from '../../src/errors/InvalidPriceError';
 import { ListProducts } from '../../src/usecases/ListProducts';
-import { mockProductRepository } from '../mocks/product';
-import { productMock, secondProductMock, unavailableProductMock } from '../mocks/list-products';
+import { mockProductRepository } from '../mocks/productRepository';
+import { productMock, secondProductMock, unavailableProductMock } from '../data/list-products';
 
 function listProducts(
   products = mockProductRepository({ findByFilters: [productMock, secondProductMock] }),

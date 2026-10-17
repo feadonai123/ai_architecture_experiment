@@ -4,12 +4,12 @@ import { InvalidPriceError } from '../../src/errors/InvalidPriceError';
 import { InvalidSlugError } from '../../src/errors/InvalidSlugError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { UpdateProduct } from '../../src/usecases/UpdateProduct';
-import { mockProductRepository } from '../mocks/product';
+import { mockProductRepository } from '../mocks/productRepository';
 import {
   missingProductMock,
   productMock,
   updatedCatalogProductMock,
-} from '../mocks/update-product';
+} from '../data/update-product';
 
 function updateProduct(products = mockProductRepository({ findById: productMock })) {
   return new UpdateProduct(products);

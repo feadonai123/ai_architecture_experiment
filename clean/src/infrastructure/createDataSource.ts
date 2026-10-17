@@ -5,6 +5,10 @@ import { requireEnv } from '../utils/env';
 import { CartItemRecord } from './typeorm/CartItemRecord';
 import { CartRecord } from './typeorm/CartRecord';
 import { ProductRecord } from './typeorm/ProductRecord';
+import { UserRecord } from './typeorm/UserRecord';
+import { OrderRecord } from './typeorm/OrderRecord';
+import { OrderItemRecord } from './typeorm/OrderItemRecord';
+import { OrderPaymentRecord } from './typeorm/OrderPaymentRecord';
 
 export function createDataSource(): DataSource {
   return new DataSource({
@@ -14,7 +18,15 @@ export function createDataSource(): DataSource {
     username: requireEnv('POSTGRES_USER'),
     password: requireEnv('POSTGRES_PASSWORD'),
     database: requireEnv('POSTGRES_DB'),
-    entities: [ProductRecord, CartRecord, CartItemRecord],
+    entities: [
+      ProductRecord,
+      CartRecord,
+      CartItemRecord,
+      UserRecord,
+      OrderRecord,
+      OrderItemRecord,
+      OrderPaymentRecord,
+    ],
     synchronize: false,
     logging: false,
   });

@@ -1,14 +1,14 @@
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { IncreaseStock } from '../../src/usecases/IncreaseStock';
-import { mockProductRepository } from '../mocks/product';
+import { mockProductRepository } from '../mocks/productRepository';
 import {
   increaseQuantityMock,
   increasedProductMock,
   invalidQuantityMock,
   missingProductMock,
   productMock,
-} from '../mocks/increase-stock';
+} from '../data/increase-stock';
 
 function increaseStock(products = mockProductRepository({ findById: productMock })) {
   return new IncreaseStock(products);

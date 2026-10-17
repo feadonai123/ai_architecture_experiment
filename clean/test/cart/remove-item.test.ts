@@ -1,8 +1,8 @@
 import { CartItemNotFoundError } from '../../src/errors/CartItemNotFoundError';
 import { CartNotFoundError } from '../../src/errors/CartNotFoundError';
 import { RemoveCartItem } from '../../src/usecases/RemoveCartItem';
-import { mockCartRepository } from '../mocks/cart';
-import { mockCartItemRepository } from '../mocks/cartItem';
+import { mockCartRepository } from '../mocks/cartRepository';
+import { mockCartItemRepository } from '../mocks/cartItemRepository';
 import {
   cartMock,
   emptyCartMock,
@@ -10,7 +10,7 @@ import {
   missingCartMock,
   missingProductMock,
   productMock,
-} from '../mocks/remove-item';
+} from '../data/remove-item';
 
 describe('remove item', () => {
   describe('success', () => {
