@@ -61,7 +61,7 @@ PostgreSQL e Redis são infraestrutura externa comum a todas as implementações
 
 A utilização dessas dependências pode ser encapsulada de maneiras diferentes conforme a arquitetura, mas não deve ser criada uma infraestrutura tecnicamente diferente para uma implementação.
 
-`createApp` monta somente a aplicação HTTP. Nos projetos que possuem consumers, um composition root `financialConsumerApp.ts` cria o consumer financeiro e `server.ts` controla sua inicialização e encerramento separadamente.
+`createApp` monta somente a aplicação HTTP. Os composition roots `financialConsumerApp.ts` e `orderConsumerApp.ts` criam os consumers financeiro e de pedidos; `server.ts` controla sua inicialização e encerramento separadamente.
 
 ## 2.5 Pastas por responsabilidade
 
@@ -311,7 +311,7 @@ Contém o contrato, a validação e a serialização dos eventos da aplicação.
 
 ### `consumers/`
 
-`ConfigConsumer` valida os parâmetros de ambiente. `Consumer` implementa o ciclo de leitura, retry, reconciliação da PEL e Dead Letter. Cada consumer concreto implementa `processEvent` e os handlers dos tipos aceitos. Comandos Redis ficam em `services/redis.ts`; persistência fica nos models. `financialConsumerApp.ts` instancia o consumer financeiro e `server.ts` o inicia e encerra fora de `createApp`.
+`ConfigConsumer` valida os parâmetros de ambiente. `RedisConsumer` implementa o ciclo de leitura, retry, reconciliação da PEL e Dead Letter. Cada consumer concreto implementa `processEvent` e os handlers dos tipos aceitos. Comandos Redis ficam em `services/redis.ts`; persistência fica nos models. `financialConsumerApp.ts` instancia o consumer financeiro e `server.ts` o inicia e encerra fora de `createApp`.
 
 ### `services/`
 
@@ -668,7 +668,7 @@ quando utilizadas apenas como camadas intermediárias genéricas.
 
 ## 5.6 Testes unitários
 
-Na Clean, `test/mocks/` contém apenas mocks de dependências separados por repository, event service ou outra dependência. Dados de cenário pertencem a `test/data/`, em um arquivo por use case testado.
+Na Clean, `test/mocks/` reúne todos os mocks de dependências e dados mockados de cenário dos testes unitários. Mocks de dependências ficam separados por repository, event service ou outra dependência; dados de cenário ficam em arquivos próprios por use case nessa mesma pasta. Não criar `test/data/`. Helpers HTTP, execução de handlers e asserts não pertencem a `mocks/`.
 
 ---
 
@@ -845,23 +845,23 @@ Também não devem ser criados contextos artificiais apenas para aumentar a modu
 
 # 7. Comparação estrutural normativa
 
-| Característica | Monólito Acoplado | MVC Técnico | Clean | Domain-Oriented |
-|---|---|---|---|---|
-| Primeira dimensão | aplicação | técnica | técnica | **domínio → operação** |
-| Controller | não separado (rotas) | sim, por recurso + arquivo por rota | sim, por recurso + arquivo por rota | sim, por operação |
-| Model | não como camada | sim (operações); Entity = TypeORM | não como camada principal | não como camada principal |
-| Use Case | não | não | sim | sim, por operação |
-| Entity | apenas representação ORM | TypeORM em `entities/` | sim (domínio) | `shared/entities/` |
-| Presenter | pasta `presenters/` | pasta `presenters/` | pasta `presenters/` | `shared/presenters/` |
-| Middleware | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` | pasta `middleware/` |
-| Repository abstraction | não | não | `ports/` | implementação por operação |
-| Services | factory Redis + publicação em Streams | Redis centralizado | serviços compartilhados; Redis em `infrastructure/` | Redis centralizado |
-| Errors | arquivo único | global | global | por operação |
-| Env (`requireEnv`) | `helpers.ts` | `utils/` | `utils/` | `utils/` |
-| Infrastructure | mínima (`database.ts`) | `database.ts` | explícita | compartilhada + específica quando necessária |
-| Isolamento por domínio | baixo | baixo | baixo | **alto** |
-| Duplicação entre domínios | permitida | permitida | reduzida | **explicitamente permitida** |
-| Dependências rígidas | mínimas | moderadas | fortes | fortes + entre contextos |
+| Característica            | Monólito Acoplado                     | MVC Técnico                         | Clean                                               | Domain-Oriented                              |
+| ------------------------- | ------------------------------------- | ----------------------------------- | --------------------------------------------------- | -------------------------------------------- |
+| Primeira dimensão         | aplicação                             | técnica                             | técnica                                             | **domínio → operação**                       |
+| Controller                | não separado (rotas)                  | sim, por recurso + arquivo por rota | sim, por recurso + arquivo por rota                 | sim, por operação                            |
+| Model                     | não como camada                       | sim (operações); Entity = TypeORM   | não como camada principal                           | não como camada principal                    |
+| Use Case                  | não                                   | não                                 | sim                                                 | sim, por operação                            |
+| Entity                    | apenas representação ORM              | TypeORM em `entities/`              | sim (domínio)                                       | `shared/entities/`                           |
+| Presenter                 | pasta `presenters/`                   | pasta `presenters/`                 | pasta `presenters/`                                 | `shared/presenters/`                         |
+| Middleware                | pasta `middleware/`                   | pasta `middleware/`                 | pasta `middleware/`                                 | pasta `middleware/`                          |
+| Repository abstraction    | não                                   | não                                 | `ports/`                                            | implementação por operação                   |
+| Services                  | factory Redis + publicação em Streams | Redis centralizado                  | serviços compartilhados; Redis em `infrastructure/` | Redis centralizado                           |
+| Errors                    | arquivo único                         | global                              | global                                              | por operação                                 |
+| Env (`requireEnv`)        | `helpers.ts`                          | `utils/`                            | `utils/`                                            | `utils/`                                     |
+| Infrastructure            | mínima (`database.ts`)                | `database.ts`                       | explícita                                           | compartilhada + específica quando necessária |
+| Isolamento por domínio    | baixo                                 | baixo                               | baixo                                               | **alto**                                     |
+| Duplicação entre domínios | permitida                             | permitida                           | reduzida                                            | **explicitamente permitida**                 |
+| Dependências rígidas      | mínimas                               | moderadas                           | fortes                                              | fortes + entre contextos                     |
 
 ---
 
@@ -1019,3 +1019,13 @@ Organização por domínio → responsabilidade técnica
 ```
 
 Essa diferença constitui uma das principais propriedades experimentais utilizadas para investigar a influência da co-localização semântica sobre a navegação e evolução da codebase por agentes de IA.
+
+## RF06 — Organização do consumidor de pedidos
+
+`orderConsumerApp.ts` compõe o consumidor de pedidos, separado de HTTP. `server.ts` controla o ciclo de vida dos consumers financeiro e de pedidos.
+
+- Monólito: `consumers/consumerOrder.ts` copia o algoritmo completo do financeiro e concentra despacho e handlers com TypeORM direto.
+- MVC: `consumers/RedisConsumer.ts` é a base Redis existente; `ConsumerFinancial` e `OrderConsumer` herdam dela, com handlers no consumidor concreto.
+- Clean: `consumers/orderConsumer.ts` compõe `Consumer`; handlers separados em `handler/` abrem transações e acionam use cases distintos.
+- Domain: `ordering/order.consumer.ts` registra handlers das operações `ordering/approveOrderPayment` e `ordering/cancelOrderPayment`. A rota fica em `payments/processOrderPayment`, registrada em `payments/payment.controller.ts`. A integração entre os contextos ocorre pelos eventos compartilhados.
+- Nas quatro aplicações, dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` pertencem a `test/mocks/`, um arquivo por operação; não criar `test/data/` para esses mocks.

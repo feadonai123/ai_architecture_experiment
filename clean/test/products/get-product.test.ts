@@ -1,7 +1,7 @@
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { GetProduct } from '../../src/usecases/GetProduct';
 import { mockProductRepository } from '../mocks/productRepository';
-import { missingProductMock, productMock } from '../data/get-product';
+import { missingProductMock, productMock } from '../mocks/get-product';
 
 describe('get product', () => {
   describe('success', () => {

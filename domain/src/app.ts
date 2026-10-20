@@ -1,3 +1,8 @@
+import { createPaymentController } from './payments/payment.controller';
+import { ProcessOrderPaymentController } from './payments/processOrderPayment/controllers/ProcessOrderPaymentController';
+import { ProcessOrderPayment } from './payments/processOrderPayment/usecases/ProcessOrderPayment';
+import { OrderRepository as PaymentOrderRepository } from './payments/processOrderPayment/repositories/OrderRepository';
+import { OrderPaymentRepository as PaymentRepository } from './payments/processOrderPayment/repositories/OrderPaymentRepository';
 import fs from 'node:fs';
 import path from 'node:path';
 import express, { Express } from 'express';
@@ -158,6 +163,20 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
         new DeleteProduct(new DeleteProductRepository(dataSource)),
       ),
     }),
+  );
+  app.use(
+    createPaymentController(
+      new ProcessOrderPaymentController(
+        dataSource,
+        new ProcessOrderPayment(
+          new PaymentOrderRepository(dataSource),
+          new PaymentRepository(dataSource),
+          new EventRedisService(redis),
+          uuidv4,
+          () => new Date(),
+        ),
+      ),
+    ),
   );
   app.use(errorHandler);
   return app;

@@ -6,7 +6,7 @@ import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { UserNotFoundError } from '../../src/errors/UserNotFoundError';
 import { EventType } from '../../src/events/EventType';
 import { CreateOrder } from '../../src/usecases/CreateOrder';
-import { orderProductMock } from '../data/create-order';
+import { orderProductMock } from '../mocks/create-order';
 import { mockClock } from '../mocks/clock';
 import { mockEventService } from '../mocks/eventService';
 import { mockSequentialIdentifier } from '../mocks/identifier';

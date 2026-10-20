@@ -9,7 +9,7 @@ import {
   missingProductMock,
   productMock,
   updatedCatalogProductMock,
-} from '../data/update-product';
+} from '../mocks/update-product';
 
 function updateProduct(products = mockProductRepository({ findById: productMock })) {
   return new UpdateProduct(products);

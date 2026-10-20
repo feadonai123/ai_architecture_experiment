@@ -8,7 +8,7 @@ import {
   invalidQuantityMock,
   missingProductMock,
   productMock,
-} from '../data/increase-stock';
+} from '../mocks/increase-stock';
 
 function increaseStock(products = mockProductRepository({ findById: productMock })) {
   return new IncreaseStock(products);

@@ -455,6 +455,70 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /orders/{orderId}/payment:
+    post:
+      tags:
+        - Pedidos
+      summary: Processa pagamento simulado e publica o resultado
+      operationId: processOrderPayment
+      description: Persiste PAID ou DECLINED e publica PaymentApproved ou
+        PaymentDeclinedError no stream payments após commit. O OrderConsumer
+        atualiza o pedido de forma assíncrona. Repetições retornam o resultado
+        existente sem nova publicação.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessOrderPaymentRequest'
+            examples:
+              approved:
+                value:
+                  paymentToken: sim-approved
+              declined:
+                value:
+                  paymentToken: sim-declined
+      responses:
+        '200':
+          description: Pagamento aprovado; pedido atualizado de forma assíncrona
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPayment'
+        '400':
+          description: InvalidOrderIdError ou InvalidPaymentTokenError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: OrderNotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: PaymentNotReadyError ou InvalidOrderPaymentStateError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: 'PaymentDeclinedError: recusa persistida e evento publicado para
+            cancelamento'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 components:
   securitySchemes:
     ApiKeyAuth:
@@ -503,8 +567,12 @@ components:
           format: uuid
         status:
           type: integer
-          enum: [0, 1]
-          description: 0 = PENDING; 1 = PAYMENT_PENDING
+          enum:
+            - 0
+            - 1
+            - 2
+            - 3
+          description: 0 = PENDING; 1 = PAYMENT_PENDING; 2 = PAID; 3 = CANCELED
         total:
           type: number
           format: double
@@ -660,3 +728,138 @@ components:
           type: string
         statusCode:
           type: integer
+    ProcessOrderPaymentRequest:
+      type: object
+      required:
+        - paymentToken
+      properties:
+        paymentToken:
+          type: string
+          enum:
+            - sim-approved
+            - sim-declined
+          description: Token do simulador; valor obtido do total persistido no pedido.
+    OrderPayment:
+      type: object
+      required:
+        - orderId
+        - status
+        - paymentDetails
+        - paidAt
+        - createdAt
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        status:
+          type: integer
+          enum:
+            - 0
+            - 1
+            - 2
+          description: 0 = PENDING; 1 = PAID; 2 = DECLINED
+        paymentDetails:
+          $ref: '#/components/schemas/PaymentDetails'
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    PaymentDetails:
+      type: object
+      nullable: true
+      required:
+        - provider
+        - transactionId
+        - amount
+      properties:
+        provider:
+          type: string
+          enum:
+            - simulated
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0
+    PaymentApprovedPayload:
+      type: object
+      required:
+        - orderId
+        - transactionId
+        - amount
+        - paidAt
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0
+        paidAt:
+          type: string
+          format: date-time
+    PaymentApprovedEvent:
+      type: object
+      description: Evento no stream payments; altera pedido para PAID.
+      required:
+        - event
+        - eventId
+        - timestamp
+        - payload
+      properties:
+        event:
+          type: string
+          enum:
+            - PaymentApproved
+        eventId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          $ref: '#/components/schemas/PaymentApprovedPayload'
+    PaymentDeclinedErrorPayload:
+      type: object
+      required:
+        - orderId
+        - transactionId
+        - amount
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0
+    PaymentDeclinedErrorEvent:
+      type: object
+      description: Evento no stream payments; altera pedido para CANCELED.
+      required:
+        - event
+        - eventId
+        - timestamp
+        - payload
+      properties:
+        event:
+          type: string
+          enum:
+            - PaymentDeclinedError
+        eventId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          $ref: '#/components/schemas/PaymentDeclinedErrorPayload'

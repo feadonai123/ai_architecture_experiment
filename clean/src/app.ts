@@ -1,3 +1,5 @@
+import { ProcessOrderPayment } from './usecases/ProcessOrderPayment';
+import { TypeOrmOrderPaymentRepository } from './repositories/TypeOrmOrderPaymentRepository';
 import express, { Express } from 'express';
 import { createStockController } from './controllers/stock/stock.controller';
 import { createProductController } from './controllers/product/product.controller';
@@ -62,6 +64,13 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
     createOrderController(
       dataSource,
       new CreateOrder(users, products, orders, orderItems, events, uuidv4, () => new Date()),
+      new ProcessOrderPayment(
+        orders,
+        new TypeOrmOrderPaymentRepository(dataSource),
+        events,
+        uuidv4,
+        () => new Date(),
+      ),
     ),
   );
   app.use(
