@@ -713,6 +713,11 @@ ordering/
         repositories/
         controllers/
         errors/
+    getOrderStatus/
+        usecases/
+        repositories/
+        controllers/
+        errors/
     cart.controller.ts
     order.controller.ts
 ```

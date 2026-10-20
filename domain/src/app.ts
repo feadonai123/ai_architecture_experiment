@@ -70,6 +70,10 @@ import { UserRepository as CreateOrderUserRepository } from './ordering/createOr
 import { CreateOrder } from './ordering/createOrder/usecases/CreateOrder';
 import { EventRedisService } from './shared/infrastructure/EventRedisService';
 
+import { GetOrderStatus } from './ordering/getOrderStatus/usecases/GetOrderStatus';
+import { GetOrderStatusController } from './ordering/getOrderStatus/controllers/GetOrderStatusController';
+import { OrderRepository as GetOrderStatusRepository } from './ordering/getOrderStatus/repositories/OrderRepository';
+
 function mountSwagger(app: Express): void {
   const specPath = path.resolve(__dirname, '../../docs/openapi.yaml');
   const spec = parse(fs.readFileSync(specPath, 'utf8'));
@@ -114,6 +118,10 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
   app.use(
     createOrderController({
       createOrder: new CreateOrderController(dataSource, createOrder),
+      getOrderStatus: new GetOrderStatusController(
+        dataSource,
+        new GetOrderStatus(new GetOrderStatusRepository(dataSource)),
+      ),
     }),
   );
   app.use(

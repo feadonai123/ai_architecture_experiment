@@ -19,6 +19,7 @@ ordering/
 ├── addCartItem/  ...
 ├── removeCartItem/
 ├── createOrder/  usecases, repositories, controllers, errors
+├── getOrderStatus/ usecases, repositories, controllers, errors
 ├── approveOrderPayment/ usecases, repositories, handlers, errors
 ├── cancelOrderPayment/  usecases, repositories, handlers, errors
 ├── order.consumer.ts   # registra handlers do consumer de pedidos

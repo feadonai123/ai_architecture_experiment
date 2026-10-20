@@ -15,7 +15,7 @@ tags:
   - name: Carrinho
     description: Criação de carrinho e gerenciamento de itens.
   - name: Pedidos
-    description: Criação de pedidos e seus itens.
+    description: Criação de pedidos, pagamento e consulta de status.
 paths:
   /products:
     get:
@@ -456,6 +456,40 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+  /orders/{orderId}/status:
+    get:
+      tags: [Pedidos]
+      summary: Consulta o status persistido de um pedido
+      operationId: getOrderStatus
+      description: Consulta somente orders, inclusive antes da criação do pagamento. As atualizações dos consumers são assíncronas; a resposta pode permanecer PENDING ou PAYMENT_PENDING até seu processamento. Não altera dados nem publica eventos.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status atual do pedido, inclusive quando cancelado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+        '400':
+          description: 'InvalidOrderIdError — Invalid order id: {orderId}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: 'OrderNotFoundError — Order not found: {orderId}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /orders/{orderId}/payment:
     post:
       tags:
@@ -556,6 +590,20 @@ components:
         type: string
         format: uuid
   schemas:
+    OrderStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [orderId, status]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+          example: 0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f
+        status:
+          type: integer
+          enum: [0, 1, 2, 3]
+          description: '0 = PENDING, 1 = PAYMENT_PENDING, 2 = PAID, 3 = CANCELED. Status do pedido, não do pagamento.'
+          example: 2
     Order:
       type: object
       required: [id, userId, status, total, createdAt, items]

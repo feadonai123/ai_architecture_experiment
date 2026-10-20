@@ -34,6 +34,8 @@ import { TypeOrmOrderItemRepository } from './repositories/TypeOrmOrderItemRepos
 import { EventRedisService } from './infrastructure/redis/eventRedisService';
 import { CreateOrder } from './usecases/CreateOrder';
 
+import { GetOrderStatus } from './usecases/GetOrderStatus';
+
 export function createApp(dataSource: DataSource, redis: Redis): Express {
   const products = new TypeOrmProductRepository(dataSource);
   const carts = new TypeOrmCartRepository(dataSource);
@@ -71,6 +73,7 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
         uuidv4,
         () => new Date(),
       ),
+      new GetOrderStatus(orders),
     ),
   );
   app.use(

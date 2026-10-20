@@ -1,4 +1,4 @@
-# Pedidos e pagamentos — RF05 e RF06
+# Pedidos e pagamentos — RF05, RF06 e RF08
 
 ## POST `/orders`
 
@@ -33,3 +33,20 @@ O `OrderConsumer` consome `PaymentApproved` e `PaymentDeclinedError` no stream `
 Payload exige UUIDs válidos para `orderId` e `transactionId`, `amount` numérico finito não negativo e, na aprovação, `paidAt` ISO-8601 UTC válido. Payload inválido gera `InvalidPaymentApprovedPayloadError` ou `InvalidPaymentDeclinedPayloadError`, derivados de `InvalidPayloadError`, e segue Dead Letter. Demais erros seguem retry. Evento e exceção HTTP `PaymentDeclinedError` são representações distintas.
 
 Sem outbox, uma falha entre commit e publicação pode manter o pedido pendente apesar do pagamento concluído. Repetições da rota não republicam o evento.
+
+## GET `/orders/:orderId/status` — RF08
+
+Requer `x-api-key`. Autenticar antes de validar o UUID de `orderId`. Não requer body nem query.
+
+Retorna `200` com somente `orderId` (UUID persistido) e `status` numérico do pedido: `OrderStatus.PENDING = 0`, `PAYMENT_PENDING = 1`, `PAID = 2` ou `CANCELED = 3`. Todos os estados são consultáveis, mesmo antes da criação do pagamento. Exemplo:
+
+```json
+{
+  "orderId": "0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f",
+  "status": 2
+}
+```
+
+A consulta lê o status persistido em `orders`, sem deduzir o resultado pelo pagamento. As transições dos consumers são assíncronas: um pedido pode permanecer `PENDING` até a preparação financeira ou `PAYMENT_PENDING` até o consumo do resultado do pagamento. Pedido cancelado retorna `200`. Não altera dados, adquire bloqueio de escrita nem publica eventos.
+
+Erros: `ForbiddenError` (403, `Forbidden`), `InvalidOrderIdError` (400, `Invalid order id: {orderId}`) e `OrderNotFoundError` (404, `Order not found: {orderId}`). Corpo de erro: `error`, `message` e `statusCode`. A validação do UUID segue o RF06 e ocorre antes da consulta ao banco.

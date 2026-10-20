@@ -56,3 +56,20 @@ describe('Payment API key authentication', () => {
     });
   });
 });
+
+describe('Order status API key authentication', () => {
+  it.each([undefined, 'wrong-key'])(
+    'rejects header %s before validating the order UUID',
+    async (key) => {
+      const req = request(getApp()).get('/orders/invalid/status');
+      if (key) req.set('x-api-key', key);
+      const response = await req;
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        error: 'ForbiddenError',
+        message: 'Forbidden',
+        statusCode: 403,
+      });
+    },
+  );
+});

@@ -90,3 +90,9 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 - A devolução inclui produtos excluídos logicamente, sem reativá-los. Falta de produto gera `ProductNotFoundError` e rollback; o evento segue retry, sem confirmação.
 - Operações de estoque e alterações de catálogo que salvam produtos usam leitura com bloqueio de escrita e persistência na mesma transação, evitando sobrescrever baixas e devoluções concorrentes. A definição absoluta de estoque continua sendo uma substituição explícita da quantidade disponível.
 - Erros de validação ou infraestrutura do pagamento não representam recusa definitiva e não liberam estoque automaticamente.
+
+## RF08 — Consulta de status dos pedidos
+
+- `GET /orders/:orderId/status` segue `flows/RF08.md` nas quatro aplicações: autenticação, validação de UUID e consulta do pedido, nessa ordem; resposta com `orderId` e `status` numérico.
+- Consultar o status persistido no pedido, inclusive antes da criação do pagamento e após cancelamento. Não inferir status pelo pagamento, alterar dados, adquirir bloqueio de escrita ou publicar eventos.
+- As atualizações dos consumers permanecem assíncronas. A consulta não aguarda nem executa o processamento de eventos.
