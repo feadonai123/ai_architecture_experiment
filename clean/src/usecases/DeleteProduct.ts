@@ -4,12 +4,14 @@ import { ProductNotFoundError } from '../errors/ProductNotFoundError';
 import { ProductRepository } from '../ports/ProductRepository';
 
 export class DeleteProduct extends UseCase<[string], Product> {
-  constructor(private readonly products: Pick<ProductRepository, 'findById' | 'softDelete'>) {
+  constructor(
+    private readonly products: Pick<ProductRepository, 'findByIdForUpdate' | 'softDelete'>,
+  ) {
     super();
   }
 
   protected async execute(productId: string): Promise<Product> {
-    const product = await this.products.findById(productId);
+    const product = await this.products.findByIdForUpdate(productId);
     if (!product) {
       throw new ProductNotFoundError(productId);
     }

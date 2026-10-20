@@ -2,6 +2,7 @@ export function mockProductRepo(
   overrides: { find?: unknown; findOne?: unknown; save?: unknown; create?: unknown } = {},
 ) {
   return {
+    update: jest.fn().mockResolvedValue({ affected: 1 }),
     find: jest.fn().mockResolvedValue('find' in overrides ? overrides.find : []),
     findOne: jest.fn().mockResolvedValue('findOne' in overrides ? overrides.findOne : undefined),
     save: jest

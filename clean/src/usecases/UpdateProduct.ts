@@ -18,7 +18,7 @@ export type UpdateProductInput = {
 
 export class UpdateProduct extends UseCase<[UpdateProductInput], Product> {
   constructor(
-    private readonly products: Pick<ProductRepository, 'findById' | 'findBySlug' | 'save'>,
+    private readonly products: Pick<ProductRepository, 'findByIdForUpdate' | 'findBySlug' | 'save'>,
   ) {
     super();
   }
@@ -40,7 +40,7 @@ export class UpdateProduct extends UseCase<[UpdateProductInput], Product> {
       throw new InvalidPriceError(input.price);
     }
 
-    const product = await this.products.findById(input.productId);
+    const product = await this.products.findByIdForUpdate(input.productId);
     if (!product) {
       throw new ProductNotFoundError(input.productId);
     }

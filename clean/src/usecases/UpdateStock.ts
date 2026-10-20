@@ -8,7 +8,7 @@ import { parseNonNegativeInteger } from '../utils/parser';
 export type UpdateStockInput = { productId: string; quantity: unknown };
 
 export class UpdateStock extends UseCase<[UpdateStockInput], Product> {
-  constructor(private readonly products: Pick<ProductRepository, 'findById' | 'save'>) {
+  constructor(private readonly products: Pick<ProductRepository, 'findByIdForUpdate' | 'save'>) {
     super();
   }
 
@@ -18,7 +18,7 @@ export class UpdateStock extends UseCase<[UpdateStockInput], Product> {
       throw new InvalidQuantityError(input.quantity);
     }
 
-    const product = await this.products.findById(input.productId);
+    const product = await this.products.findByIdForUpdate(input.productId);
     if (!product) {
       throw new ProductNotFoundError(input.productId);
     }

@@ -1,11 +1,14 @@
 import Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
+import { Product } from '../entities/Product';
+import { OrderItem } from '../entities/OrderItem';
 import { Order } from '../entities/Order';
 import { OrderStatus } from '../enums/OrderStatus';
 import {
   InvalidPayloadError,
   OrderNotFoundError,
+  ProductNotFoundError,
   InvalidOrderPaymentStateError,
   RetryAttemptsExhaustedError,
 } from '../errors';
@@ -133,6 +136,20 @@ export async function handlePaymentDeclined(
     if (order.status === OrderStatus.CANCELED) return;
     if (order.status !== OrderStatus.PAYMENT_PENDING)
       throw new InvalidOrderPaymentStateError(payload.orderId);
+    const items = await manager.getRepository(OrderItem).find({ where: { orderId: order.id } });
+    const quantities = new Map<string, number>();
+    for (const item of items) {
+      quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+    }
+    const products = manager.getRepository(Product);
+    for (const productId of [...quantities.keys()].sort()) {
+      const product = await products.findOne({
+        where: { id: productId },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (!product) throw new ProductNotFoundError(productId);
+      await products.update(productId, { stock: product.stock + quantities.get(productId)! });
+    }
     order.status = OrderStatus.CANCELED;
     await orders.save(order);
   });

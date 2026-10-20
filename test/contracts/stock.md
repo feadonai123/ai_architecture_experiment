@@ -162,3 +162,13 @@ Remove `quantity` unidades do estoque atual sem permitir estoque negativo.
 | PATCH /stocks/:id/decrease  | quantidade inválida      | InvalidQuantityError     |  400 |
 | PATCH /stocks/:id/decrease  | produto inexistente ou deletado       | ProductNotFoundError     |  404 |
 | PATCH /stocks/:id/decrease  | estoque insuficiente      | InsufficientStockError   |  409 |
+
+## Estoque de pedidos
+
+- `stock` representa a quantidade disponível para novas compras.
+- Criar pedido reduz o estoque agregado por produto na mesma transação que grava pedido e itens. Consultar e bloquear produtos ativos em ordem crescente de ID antes de validar disponibilidade. Falha desfaz toda a operação.
+- Aprovação e preparação financeira não alteram estoque. `OrderCreated` não provoca outra baixa.
+- Recusa definitiva devolve as quantidades dos itens persistidos na mesma transação que muda o pedido de `PAYMENT_PENDING` para `CANCELED`. Bloquear primeiro o pedido e depois os produtos em ordem de ID. Pedido já cancelado não devolve novamente.
+- A devolução inclui produtos excluídos logicamente, sem reativá-los. Falta de produto gera `ProductNotFoundError` e rollback; o evento segue retry, sem confirmação.
+- Operações de estoque e alterações de catálogo que salvam produtos usam leitura com bloqueio de escrita e persistência na mesma transação, evitando sobrescrever baixas e devoluções concorrentes. A definição absoluta de estoque continua sendo uma substituição explícita da quantidade disponível.
+- Erros de validação ou infraestrutura do pagamento não representam recusa definitiva e não liberam estoque automaticamente.

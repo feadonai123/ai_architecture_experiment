@@ -1,3 +1,5 @@
+import { Product } from '../../src/shared/entities/Product';
+import { OrderItem } from '../../src/shared/entities/OrderItem';
 import { Order } from '../../src/shared/entities/Order';
 import { OrderPayment } from '../../src/shared/entities/OrderPayment';
 import { OrderStatus } from '../../src/shared/entities/OrderStatus';
@@ -15,7 +17,7 @@ export function orderMock(status = OrderStatus.PAYMENT_PENDING): Order {
     status,
     total: 250,
     createdAt,
-    items: [],
+    items: declinedItemsMock(),
   } as unknown as Order;
 }
 export function paymentMock(status = OrderPaymentStatus.PENDING): OrderPayment {
@@ -31,3 +33,24 @@ export function paymentMock(status = OrderPaymentStatus.PENDING): OrderPayment {
   } as OrderPayment;
 }
 export const payloadMock = { orderId, transactionId, amount: 250 };
+
+export function declinedItemsMock(): OrderItem[] {
+  return [1, 2].map((quantity, index) => ({
+    id: `item-${index}`,
+    orderId,
+    productId: 'product-1',
+    quantity,
+    unitPrice: 10,
+  })) as OrderItem[];
+}
+export function declinedProductMock(): Product {
+  return {
+    id: 'product-1',
+    name: 'Tea',
+    slug: 'tea',
+    description: '',
+    price: 10,
+    stock: 7,
+    deletedAt: null,
+  } as Product;
+}

@@ -1,3 +1,4 @@
+import { TypeOrmProductRepository } from './repositories/TypeOrmProductRepository';
 import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
 import { ConsumerSettings } from './consumers/consumerSettings';
@@ -42,7 +43,10 @@ export function createOrderConsumer(dataSource: DataSource, redis: Redis): Order
     ),
     new PaymentDeclinedHandler(
       dataSource,
-      new CancelOrderPayment(new TypeOrmOrderRepository(dataSource)),
+      new CancelOrderPayment(
+        new TypeOrmOrderRepository(dataSource),
+        new TypeOrmProductRepository(dataSource),
+      ),
     ),
   );
 }

@@ -1,3 +1,4 @@
+import { getDataSource } from '../../../database';
 import { NextFunction, Request, Response } from 'express';
 import { InvalidQuantityError } from '../../../errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../../errors/ProductNotFoundError';
@@ -21,13 +22,15 @@ export async function increaseStock(
       throw new InvalidQuantityError(quantity);
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
+    const updated = await getDataSource().transaction(async (manager) => {
+      const product = await Product.findByIdForUpdate(productId, manager);
+      if (!product) {
+        throw new ProductNotFoundError(productId);
+      }
 
-    product.stock += quantity;
-    const updated = await Product.save(product);
+      product.stock += quantity;
+      return Product.save(product, manager);
+    });
     res.status(200).json(presentProduct(updated));
   } catch (error) {
     next(error);

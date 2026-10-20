@@ -121,3 +121,8 @@ Um contexto não acessa a implementação interna de outro. Integração explíc
 - `orderConsumerApp.ts` compõe o consumidor de pedidos; `server.ts` inicia e encerra ambos os consumers separadamente de HTTP. O consumer de pedidos usa configurações obrigatórias com prefixo `ORDER_CONSUMER_`, sem fallback.
 - `ordering/order.consumer.ts` registra os handlers das operações `ordering/approveOrderPayment` e `ordering/cancelOrderPayment`. A rota pertence a `payments/processOrderPayment` e seu registro a `payments/payment.controller.ts`. Contextos integram-se pelos eventos compartilhados.
 - Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` ficam em `test/mocks/`, em um arquivo próprio por operação. Helpers HTTP e asserts ficam fora dessa pasta.
+
+## Baixa e devolução de estoque de pedidos
+
+A criação reduz estoque e grava pedido e itens na mesma transação, com produtos bloqueados em ordem de ID. A recusa devolve os itens persistidos e cancela o pedido atomicamente; bloquear o pedido antes dos produtos. Pedido já cancelado não devolve novamente. A devolução inclui produtos excluídos logicamente sem reativação. Aprovação e preparação financeira mantêm a quantidade. Escritas de estoque e catálogo que salvam produtos também protegem sua leitura e gravação com transação e bloqueio.
+A dependência de estoque das operações de pedidos é explícita no construtor dos use cases, implementada pelos repositories locais da operação sobre os records compartilhados. Não importar implementações internas de inventory nem criar outra transação ou evento para efetuar a baixa/devolução.

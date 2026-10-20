@@ -1,3 +1,4 @@
+import { getDataSource } from '../../../database';
 import { NextFunction, Request, Response } from 'express';
 import { DuplicateSlugError } from '../../../errors/DuplicateSlugError';
 import { InvalidNameError } from '../../../errors/InvalidNameError';
@@ -37,22 +38,24 @@ export async function updateProduct(
       throw new InvalidPriceError(price);
     }
 
-    const product = await Product.findById(productId);
-    if (!product) {
-      throw new ProductNotFoundError(productId);
-    }
+    const updated = await getDataSource().transaction(async (manager) => {
+      const product = await Product.findByIdForUpdate(productId, manager);
+      if (!product) {
+        throw new ProductNotFoundError(productId);
+      }
 
-    const trimmedSlug = slug.trim();
-    const existing = await Product.findBySlug(trimmedSlug);
-    if (existing && existing.id !== product.id) {
-      throw new DuplicateSlugError(trimmedSlug);
-    }
+      const trimmedSlug = slug.trim();
+      const existing = await Product.findBySlug(trimmedSlug);
+      if (existing && existing.id !== product.id) {
+        throw new DuplicateSlugError(trimmedSlug);
+      }
 
-    product.name = name.trim();
-    product.slug = trimmedSlug;
-    product.description = typeof description === 'string' ? description : '';
-    product.price = price;
-    const updated = await Product.save(product);
+      product.name = name.trim();
+      product.slug = trimmedSlug;
+      product.description = typeof description === 'string' ? description : '';
+      product.price = price;
+      return Product.save(product, manager);
+    });
     res.status(200).json(presentProduct(updated));
   } catch (error) {
     next(error);

@@ -9,7 +9,7 @@ export class ProductRepository {
   async findById(id: string): Promise<Product | null> {
     const record = await DbManager.getManager(this.dataSource)
       .getRepository(ProductRecord)
-      .findOne({ where: { id, deletedAt: IsNull() } });
+      .findOne({ where: { id, deletedAt: IsNull() }, lock: { mode: 'pessimistic_write' } });
     return record
       ? new Product(
           record.id,

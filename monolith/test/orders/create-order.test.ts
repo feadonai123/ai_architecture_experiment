@@ -34,7 +34,7 @@ describe('create order', () => {
       .mockReturnValueOnce('id-2')
       .mockReturnValueOnce('id-3');
     users = mockUserRepo({ findOne: userMock });
-    products = mockProductRepo({ find: [orderProductMock] });
+    products = mockProductRepo({ findOne: { ...orderProductMock } });
     orders = mockOrderRepo();
     items = mockOrderItemRepo();
     redis = mockRedis();
@@ -57,6 +57,7 @@ describe('create order', () => {
 
       expect(order.status).toBe(OrderStatus.PENDING);
       expect(order.total).toBe(30);
+      expect(products.update).toHaveBeenCalledWith('product-1', { stock: 7 });
       expect(orders.save).toHaveBeenCalledWith(order);
       expect(items.save).toHaveBeenCalledWith(order.items);
       const fields = (redis.xadd as jest.Mock).mock.calls[0];
@@ -113,7 +114,7 @@ describe('create order', () => {
     });
 
     it('rejects missing product', async () => {
-      products.find.mockResolvedValue([]);
+      products.findOne.mockResolvedValue(null);
       await expect(
         createOrder(dataSource, redis, {
           userId: 'user-1',

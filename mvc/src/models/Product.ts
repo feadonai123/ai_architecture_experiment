@@ -1,4 +1,4 @@
-import { In, IsNull } from 'typeorm';
+import { EntityManager, In, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { getDataSource } from '../database';
 import { Product as ProductEntity } from '../entities/Product';
@@ -17,8 +17,11 @@ export class Product {
       .find({ where: { deletedAt: IsNull() }, order: { id: 'ASC' } });
   }
 
-  static save(product: ProductEntity): Promise<ProductEntity> {
-    return getDataSource().getRepository(ProductEntity).save(product);
+  static save(
+    product: ProductEntity,
+    manager: EntityManager = getDataSource().manager,
+  ): Promise<ProductEntity> {
+    return manager.getRepository(ProductEntity).save(product);
   }
 
   static findById(id: string): Promise<ProductEntity | null> {
@@ -78,12 +81,37 @@ export class Product {
     return repository.save(product);
   }
 
-  static async softDelete(product: ProductEntity): Promise<ProductEntity> {
+  static async softDelete(
+    product: ProductEntity,
+    manager: EntityManager = getDataSource().manager,
+  ): Promise<ProductEntity> {
     product.deletedAt = new Date();
-    return Product.save(product);
+    return Product.save(product, manager);
+  }
+
+  static findByIdForUpdate(
+    id: string,
+    manager: EntityManager,
+    includeDeleted = false,
+  ): Promise<ProductEntity | null> {
+    return manager.getRepository(ProductEntity).findOne({
+      where: includeDeleted ? { id } : { id, deletedAt: IsNull() },
+      lock: { mode: 'pessimistic_write' },
+    });
+  }
+
+  static async findByIdsForUpdate(ids: string[], manager: EntityManager): Promise<ProductEntity[]> {
+    const products: ProductEntity[] = [];
+    for (const id of [...ids].sort()) {
+      const product = await Product.findByIdForUpdate(id, manager);
+      if (product) products.push(product);
+    }
+    return products;
   }
 
   static findByIds(ids: string[]): Promise<ProductEntity[]> {
-    return getDataSource().getRepository(ProductEntity).find({ where: { id: In(ids) } });
+    return getDataSource()
+      .getRepository(ProductEntity)
+      .find({ where: { id: In(ids) } });
   }
 }

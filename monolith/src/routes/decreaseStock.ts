@@ -12,18 +12,24 @@ export async function decreaseStock(
     throw new InvalidQuantityError(input.quantity);
   }
 
-  const repository = dataSource.getRepository(Product);
-  const product = await repository.findOne({ where: { id: input.productId, deletedAt: IsNull() } });
-  if (!product) {
-    throw new ProductNotFoundError(input.productId);
-  }
+  const quantity = input.quantity;
+  return dataSource.transaction(async (manager) => {
+    const repository = manager.getRepository(Product);
+    const product = await repository.findOne({
+      where: { id: input.productId, deletedAt: IsNull() },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!product) {
+      throw new ProductNotFoundError(input.productId);
+    }
 
-  if (input.quantity > product.stock) {
-    throw new InsufficientStockError();
-  }
+    if (quantity > product.stock) {
+      throw new InsufficientStockError();
+    }
 
-  product.stock -= input.quantity;
-  return repository.save(product);
+    product.stock -= quantity;
+    return repository.save(product);
+  });
 }
 
 export function decreaseStockRoute(dataSource: DataSource) {

@@ -1,3 +1,6 @@
+import { ProductPrefab } from '../../prefabs/product.prefab';
+import { OrderItemPrefab } from '../../prefabs/order-item.prefab';
+import { ProductRecord } from '../../persistence/product.record';
 import { v4 as uuidv4 } from 'uuid';
 import { getAppDataSource, getTestDataSource, getTestRedis } from '../../helpers/setup';
 import { createTestOrderConsumer, TestOrderConsumer } from '../../helpers/load-order-consumer-app';
@@ -29,25 +32,63 @@ describe('PaymentApproved order consumer', () => {
     const ds = getTestDataSource();
     const user = await UserPrefab.create(ds);
     const order = await OrderPrefab.create(ds, { userId: user.id, status: 1 });
+    const product = await ProductPrefab.create(ds, { stock: 7 });
+    await OrderItemPrefab.create(ds, {
+      orderId: order.id,
+      productId: product.id,
+      quantity: 3,
+      unitPrice: 10,
+    });
     const id = await publishPaymentEvent('PaymentApproved', payload(order.id));
     await waitUntil(() => wasDelivered(id));
+    expect((await ds.getRepository(ProductRecord).findOneByOrFail({ id: product.id })).stock).toBe(
+      7,
+    );
     expect((await ds.getRepository(OrderRecord).findOneByOrFail({ id: order.id })).status).toBe(2);
   });
   it('handles repeated deliveries idempotently', async () => {
     const ds = getTestDataSource();
     const user = await UserPrefab.create(ds);
     const order = await OrderPrefab.create(ds, { userId: user.id, status: 1 });
+    const product = await ProductPrefab.create(ds, { stock: 7 });
+    for (const quantity of [1, 2])
+      await OrderItemPrefab.create(ds, {
+        orderId: order.id,
+        productId: product.id,
+        quantity,
+        unitPrice: 10,
+      });
     const data = payload(order.id);
-    const first = await publishPaymentEvent('PaymentApproved', data);
-    await waitUntil(() => wasDelivered(first));
-    const second = await publishPaymentEvent('PaymentApproved', data);
-    await waitUntil(() => wasDelivered(second));
+    const other = await createTestOrderConsumer(getAppDataSource(), getTestRedis());
+    await other.start();
+    try {
+      const entries = await Promise.all([
+        publishPaymentEvent('PaymentApproved', data),
+        publishPaymentEvent('PaymentApproved', data),
+      ]);
+      await waitUntil(() => wasDelivered(entries[1]));
+    } finally {
+      await other.stop();
+    }
+    expect((await ds.getRepository(ProductRecord).findOneByOrFail({ id: product.id })).stock).toBe(
+      7,
+    );
     expect((await ds.getRepository(OrderRecord).findOneByOrFail({ id: order.id })).status).toBe(2);
   });
   it('consumes the event published by the payment route', async () => {
     const ds = getTestDataSource();
     const user = await UserPrefab.create(ds);
-    const order = await OrderPrefab.create(ds, { userId: user.id, status: 1 });
+    const product = await ProductPrefab.create(ds, { stock: 10 });
+    const created = await api()
+      .post('/orders')
+      .send({ userId: user.id, items: [{ productId: product.id, quantity: 3 }] });
+    expect(created.status).toBe(201);
+    const order = await OrderPrefab.create(ds, {
+      id: created.body.id,
+      userId: user.id,
+      status: 1,
+      total: created.body.total,
+    });
     await OrderPaymentPrefab.create(ds, { orderId: order.id });
     const response = await api()
       .post('/orders/' + order.id + '/payment')
@@ -59,6 +100,9 @@ describe('PaymentApproved order consumer', () => {
     );
     const entries = await getTestRedis().xrange('payments', '-', '+');
     await waitUntil(() => wasDelivered(entries[0][0]));
+    expect((await ds.getRepository(ProductRecord).findOneByOrFail({ id: product.id })).stock).toBe(
+      7,
+    );
   });
   it('schedules OrderNotFoundError for retry without acknowledgment', async () => {
     const redis = getTestRedis();

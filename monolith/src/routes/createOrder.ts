@@ -1,5 +1,5 @@
 import type Redis from 'ioredis';
-import { DataSource, In } from 'typeorm';
+import { DataSource, IsNull } from 'typeorm';
 import { v4 as uuidv4 } from 'uuid';
 import { Order } from '../entities/Order';
 import { OrderItem } from '../entities/OrderItem';
@@ -16,7 +16,6 @@ import {
 } from '../errors';
 import { isValidQuantity, wrap } from '../helpers';
 import { presentOrder } from '../presenters/order.presenter';
-
 
 type CreateOrderItemInput = {
   productId: string;
@@ -55,33 +54,43 @@ export async function createOrder(
     throw new UserNotFoundError(input.userId);
   }
 
-  const productIds = [...new Set(validItems.map((item) => item.productId))];
-  const products = await dataSource.getRepository(Product).find({
-    where: { id: In(productIds) },
-  });
-  const productsById = new Map(products.map((product) => [product.id, product]));
-
-  for (const productId of productIds) {
-    if (!productsById.has(productId)) {
-      throw new ProductNotFoundError(productId);
-    }
-  }
-
-  const quantitiesByProduct = new Map<string, number>();
-  for (const item of validItems) {
-    quantitiesByProduct.set(
-      item.productId,
-      (quantitiesByProduct.get(item.productId) ?? 0) + item.quantity,
-    );
-  }
-
-  for (const [productId, quantity] of quantitiesByProduct) {
-    if (quantity > productsById.get(productId)!.stock) {
-      throw new InsufficientStockError();
-    }
-  }
-
   const order = await dataSource.transaction(async (manager) => {
+    const productIds = [...new Set(validItems.map((item) => item.productId))];
+    const products: Product[] = [];
+    for (const productId of [...productIds].sort()) {
+      const product = await manager.getRepository(Product).findOne({
+        where: { id: productId, deletedAt: IsNull() },
+        lock: { mode: 'pessimistic_write' },
+      });
+      if (product) products.push(product);
+    }
+    const productsById = new Map(products.map((product) => [product.id, product]));
+
+    for (const productId of productIds) {
+      if (!productsById.has(productId)) {
+        throw new ProductNotFoundError(productId);
+      }
+    }
+
+    const quantitiesByProduct = new Map<string, number>();
+    for (const item of validItems) {
+      quantitiesByProduct.set(
+        item.productId,
+        (quantitiesByProduct.get(item.productId) ?? 0) + item.quantity,
+      );
+    }
+
+    for (const [productId, quantity] of quantitiesByProduct) {
+      if (quantity > productsById.get(productId)!.stock) {
+        throw new InsufficientStockError();
+      }
+    }
+
+    for (const [productId, quantity] of quantitiesByProduct) {
+      const product = productsById.get(productId)!;
+      await manager.getRepository(Product).update(productId, { stock: product.stock - quantity });
+    }
+
     const orderRepository = manager.getRepository(Order);
     const orderItemRepository = manager.getRepository(OrderItem);
     const id = uuidv4();

@@ -1,3 +1,4 @@
+import { ProductRecord } from '../../persistence/product.record';
 import { v4 as uuidv4 } from 'uuid';
 import { api } from '../../helpers/api';
 import { getTestDataSource, getTestRedis } from '../../helpers/setup';
@@ -66,6 +67,9 @@ describe('POST /orders', () => {
         ],
       });
 
+      expect(
+        (await dataSource.getRepository(ProductRecord).findOneByOrFail({ id: product.id })).stock,
+      ).toBe(7);
       const persistedOrder = await dataSource.getRepository(OrderRecord).findOneByOrFail({
         id: response.body.id,
       });
@@ -101,7 +105,106 @@ describe('POST /orders', () => {
     });
   });
 
+  describe('concurrency', () => {
+    it('preserves an increment concurrent with order creation', async () => {
+      const ds = getTestDataSource();
+      const user = await UserPrefab.create(ds);
+      const product = await ProductPrefab.create(ds, { stock: 10 });
+      const responses = await Promise.all([
+        api()
+          .post('/orders')
+          .send({ userId: user.id, items: [{ productId: product.id, quantity: 3 }] }),
+        api().patch(`/stocks/${product.id}/increase`).send({ quantity: 3 }),
+      ]);
+      expect(responses.map((response) => response.status)).toEqual([201, 200]);
+      expect(
+        (await ds.getRepository(ProductRecord).findOneByOrFail({ id: product.id })).stock,
+      ).toBe(10);
+    });
+    it('preserves the deducted stock during a concurrent catalog update', async () => {
+      const ds = getTestDataSource();
+      const user = await UserPrefab.create(ds);
+      const product = await ProductPrefab.create(ds, { stock: 10 });
+      const responses = await Promise.all([
+        api()
+          .post('/orders')
+          .send({ userId: user.id, items: [{ productId: product.id, quantity: 3 }] }),
+        api()
+          .put(`/products/${product.id}`)
+          .send({ name: 'Updated', slug: product.slug, description: '', price: 50 }),
+      ]);
+      expect(responses.map((response) => response.status)).toEqual([201, 200]);
+      expect(
+        await ds.getRepository(ProductRecord).findOneByOrFail({ id: product.id }),
+      ).toMatchObject({ stock: 7, name: 'Updated', price: 50 });
+    });
+    it('accepts only one order competing for the last units', async () => {
+      const ds = getTestDataSource();
+      const user = await UserPrefab.create(ds);
+      const product = await ProductPrefab.create(ds, { stock: 3 });
+      const buy = () =>
+        api()
+          .post('/orders')
+          .send({ userId: user.id, items: [{ productId: product.id, quantity: 3 }] });
+      const responses = await Promise.all([buy(), buy()]);
+      expect(responses.map((response) => response.status).sort()).toEqual([201, 409]);
+      expectAppError(
+        responses.find((response) => response.status === 409)!.body,
+        'InsufficientStockError',
+        'Insufficient stock for the requested quantity',
+        409,
+      );
+      expect(
+        (await ds.getRepository(ProductRecord).findOneByOrFail({ id: product.id })).stock,
+      ).toBe(0);
+      expect(await ds.getRepository(OrderRecord).count()).toBe(1);
+      expect(await getTestRedis().xlen('orders')).toBe(1);
+    });
+    it('locks multiple products in a stable order for reversed item lists', async () => {
+      const ds = getTestDataSource();
+      const user = await UserPrefab.create(ds);
+      const a = await ProductPrefab.create(ds, { stock: 2 });
+      const b = await ProductPrefab.create(ds, { stock: 2 });
+      const buy = (ids: string[]) =>
+        api()
+          .post('/orders')
+          .send({ userId: user.id, items: ids.map((productId) => ({ productId, quantity: 1 })) });
+      const responses = await Promise.all([buy([a.id, b.id]), buy([b.id, a.id])]);
+      expect(responses.map((response) => response.status)).toEqual([201, 201]);
+      for (const id of [a.id, b.id])
+        expect((await ds.getRepository(ProductRecord).findOneByOrFail({ id })).stock).toBe(0);
+    });
+  });
+
   describe('errors', () => {
+    it('preserves all stocks when any item has insufficient stock', async () => {
+      const ds = getTestDataSource();
+      const user = await UserPrefab.create(ds);
+      const a = await ProductPrefab.create(ds, { stock: 10 });
+      const b = await ProductPrefab.create(ds, { stock: 1 });
+      const response = await api()
+        .post('/orders')
+        .send({
+          userId: user.id,
+          items: [
+            { productId: a.id, quantity: 3 },
+            { productId: b.id, quantity: 2 },
+          ],
+        });
+      expect(response.status).toBe(409);
+      expectAppError(
+        response.body,
+        'InsufficientStockError',
+        'Insufficient stock for the requested quantity',
+        409,
+      );
+      expect((await ds.getRepository(ProductRecord).findOneByOrFail({ id: a.id })).stock).toBe(10);
+      expect((await ds.getRepository(ProductRecord).findOneByOrFail({ id: b.id })).stock).toBe(1);
+      expect(await ds.getRepository(OrderRecord).count()).toBe(0);
+      expect(await ds.getRepository(OrderItemRecord).count()).toBe(0);
+      expect(await getTestRedis().xlen('orders')).toBe(0);
+    });
+
     it('returns EmptyOrderItemsError when items is empty', async () => {
       const response = await api().post('/orders').send({ userId: uuidv4(), items: [] });
 

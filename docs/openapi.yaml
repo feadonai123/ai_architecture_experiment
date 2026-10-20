@@ -420,7 +420,8 @@ paths:
   /orders:
     post:
       tags: [Pedidos]
-      summary: Cria um pedido e publica o evento OrderCreated
+      summary: Cria um pedido com baixa de estoque e publica OrderCreated
+      description: Baixa de estoque, pedido e itens são persistidos atomicamente. Produtos são bloqueados em ordem de ID e as quantidades são agregadas por produto. Estoque insuficiente não persiste alterações.
       operationId: createOrder
       requestBody:
         required: true
@@ -430,7 +431,7 @@ paths:
               $ref: '#/components/schemas/CreateOrderRequest'
       responses:
         '201':
-          description: Pedido criado com preços atuais e total calculado pelo servidor
+          description: Pedido criado com baixa de estoque, preços atuais e total calculado pelo servidor
           content:
             application/json:
               schema:
@@ -463,7 +464,7 @@ paths:
       operationId: processOrderPayment
       description: Persiste PAID ou DECLINED e publica PaymentApproved ou
         PaymentDeclinedError no stream payments após commit. O OrderConsumer
-        atualiza o pedido de forma assíncrona. Repetições retornam o resultado
+        atualiza o pedido de forma assíncrona. Na recusa, devolve o estoque e cancela o pedido na mesma transação; na aprovação, mantém a baixa realizada na criação. Repetições retornam o resultado
         existente sem nova publicação.
       parameters:
         - name: orderId
@@ -662,6 +663,7 @@ components:
           type: number
           format: double
         stock:
+          description: Quantidade disponível para novas compras; reduzida na criação do pedido e devolvida no cancelamento por recusa. A aprovação mantém a quantidade.
           type: integer
           minimum: 0
     CreateProductRequest:

@@ -1,3 +1,4 @@
+import { getDataSource } from '../../../database';
 import { NextFunction, Request, Response } from 'express';
 import { ProductNotFoundError } from '../../../errors/ProductNotFoundError';
 import { Product } from '../../../models/Product';
@@ -9,12 +10,14 @@ export async function deleteProduct(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const product = await Product.findById(req.params.productId);
-    if (!product) {
-      throw new ProductNotFoundError(req.params.productId);
-    }
-    const deleted = await Product.softDelete(product);
-    res.status(200).json(presentProduct(deleted));
+    const updated = await getDataSource().transaction(async (manager) => {
+      const product = await Product.findByIdForUpdate(req.params.productId, manager);
+      if (!product) {
+        throw new ProductNotFoundError(req.params.productId);
+      }
+      return Product.softDelete(product, manager);
+    });
+    res.status(200).json(presentProduct(updated));
   } catch (error) {
     next(error);
   }

@@ -1,9 +1,11 @@
+import { setDataSource } from '../../src/database';
+import { mockPaymentTransaction } from '../mocks/paymentTransaction';
 import { Request, Response } from 'express';
 import { updateStock } from '../../src/controllers/stock/routes/updateStock.route';
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
-import { mockProductFindById, mockProductSave } from '../mocks/product';
+import { mockProductFindByIdForUpdate, mockProductSave } from '../mocks/product';
 import {
   invalidAbsoluteQuantityMock,
   missingProductMock,
@@ -32,13 +34,14 @@ function update(input: { productId: string; quantity: unknown }) {
 }
 
 describe('update stock', () => {
+  beforeEach(() => setDataSource(mockPaymentTransaction()));
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   describe('success', () => {
     it('sets the product stock to the informed quantity', async () => {
-      mockProductFindById({ ...productMock });
+      mockProductFindByIdForUpdate({ ...productMock });
       mockProductSave();
 
       await expect(
@@ -47,7 +50,7 @@ describe('update stock', () => {
     });
 
     it('allows setting stock to zero', async () => {
-      mockProductFindById({ ...productMock });
+      mockProductFindByIdForUpdate({ ...productMock });
       mockProductSave();
 
       await expect(update({ productId: productMock.id, quantity: 0 })).resolves.toEqual({
@@ -65,7 +68,7 @@ describe('update stock', () => {
     });
 
     it('throws ProductNotFoundError', async () => {
-      mockProductFindById(null);
+      mockProductFindByIdForUpdate(null);
 
       await expect(
         update({ productId: missingProductMock.id, quantity: updateQuantityMock }),

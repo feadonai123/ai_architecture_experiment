@@ -50,6 +50,16 @@ export class TypeOrmProductRepository implements ProductRepository {
     return toProduct(record);
   }
 
+  async findByIdForUpdate(id: string, includeDeleted = false): Promise<Product | null> {
+    const record = await DbManager.getManager(this.dataSource)
+      .getRepository(ProductRecord)
+      .findOne({
+        where: includeDeleted ? { id } : { id, deletedAt: IsNull() },
+        lock: { mode: 'pessimistic_write' },
+      });
+    return record ? toProduct(record) : null;
+  }
+
   async findBySlug(slug: string): Promise<Product | null> {
     const record = await DbManager.getManager(this.dataSource)
       .getRepository(ProductRecord)

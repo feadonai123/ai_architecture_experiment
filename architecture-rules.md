@@ -1029,3 +1029,11 @@ Essa diferença constitui uma das principais propriedades experimentais utilizad
 - Clean: `consumers/orderConsumer.ts` compõe `Consumer`; handlers separados em `handler/` abrem transações e acionam use cases distintos.
 - Domain: `ordering/order.consumer.ts` registra handlers das operações `ordering/approveOrderPayment` e `ordering/cancelOrderPayment`. A rota fica em `payments/processOrderPayment`, registrada em `payments/payment.controller.ts`. A integração entre os contextos ocorre pelos eventos compartilhados.
 - Nas quatro aplicações, dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` pertencem a `test/mocks/`, um arquivo por operação; não criar `test/data/` para esses mocks.
+
+## Estoque na criação e no cancelamento por recusa
+
+- Monólito: regra na função da rota de criação e no handler de recusa, com TypeORM direto e transação local.
+- MVC: rota e handler coordenam regra e transação; models recebem o EntityManager e executam acesso e persistência, inclusive consultas com bloqueio.
+- Clean: `CreateOrder` e `CancelOrderPayment` usam ports de persistência. HTTP mantém transação em `RouterBase` + `DbManager`; o handler mantém a transação do consumo.
+- Domain: as operações `ordering/createOrder` e `ordering/cancelOrderPayment` declaram explicitamente sua dependência de estoque nos construtores dos use cases. Repositories locais implementam essa dependência usando os records compartilhados, sem importar implementações de outro contexto. Preservar a transação de `RouterBase`/handler via `DbManager`.
+- Baixa, pedido e itens são atômicos; devolução e cancelamento também. Bloquear produtos em ordem de ID e, no cancelamento, bloquear primeiro o pedido. Reentregas não repetem a devolução. Escritas concorrentes de estoque e catálogo protegem leitura e persistência na mesma transação.

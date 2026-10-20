@@ -1,3 +1,5 @@
+import { setDataSource } from '../../src/database';
+import { mockPaymentTransaction } from '../mocks/paymentTransaction';
 import { Request, Response } from 'express';
 import { updateProduct } from '../../src/controllers/product/routes/updateProduct.route';
 import { DuplicateSlugError } from '../../src/errors/DuplicateSlugError';
@@ -6,7 +8,11 @@ import { InvalidPriceError } from '../../src/errors/InvalidPriceError';
 import { InvalidSlugError } from '../../src/errors/InvalidSlugError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
-import { mockProductFindById, mockProductFindBySlug, mockProductSave } from '../mocks/product';
+import {
+  mockProductFindByIdForUpdate,
+  mockProductFindBySlug,
+  mockProductSave,
+} from '../mocks/product';
 import {
   missingProductMock,
   productMock,
@@ -45,13 +51,14 @@ function update(input: {
 }
 
 describe('update product', () => {
+  beforeEach(() => setDataSource(mockPaymentTransaction()));
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   describe('success', () => {
     it('updates name, slug, description and price', async () => {
-      mockProductFindById({ ...productMock });
+      mockProductFindByIdForUpdate({ ...productMock });
       mockProductFindBySlug(null);
       mockProductSave();
 
@@ -67,7 +74,7 @@ describe('update product', () => {
     });
 
     it('does not change stock', async () => {
-      mockProductFindById({ ...productMock });
+      mockProductFindByIdForUpdate({ ...productMock });
       mockProductFindBySlug(null);
       mockProductSave();
 
@@ -85,7 +92,7 @@ describe('update product', () => {
 
   describe('errors', () => {
     it('throws ProductNotFoundError', async () => {
-      mockProductFindById(null);
+      mockProductFindByIdForUpdate(null);
 
       await expect(
         update({ productId: missingProductMock.id, name: 'Tea', slug: 'tea', price: 10 }),
@@ -111,7 +118,7 @@ describe('update product', () => {
     });
 
     it('throws DuplicateSlugError', async () => {
-      mockProductFindById({ ...productMock });
+      mockProductFindByIdForUpdate({ ...productMock });
       mockProductFindBySlug({ ...productMock, id: 'product-2', slug: 'green-tea' });
 
       await expect(

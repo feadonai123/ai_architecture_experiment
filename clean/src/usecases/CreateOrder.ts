@@ -45,10 +45,13 @@ export class CreateOrder extends UseCase<[CreateOrderInput], Order> {
 
     const productIds = [...new Set(validItems.map((item) => item.productId))];
     const productsById = new Map<string, Product>();
+    for (const productId of [...productIds].sort()) {
+      const product = await this.products.findByIdForUpdate(productId);
+      if (product) productsById.set(productId, product);
+    }
+
     for (const productId of productIds) {
-      const product = await this.products.findById(productId);
-      if (!product) throw new ProductNotFoundError(productId);
-      productsById.set(productId, product);
+      if (!productsById.has(productId)) throw new ProductNotFoundError(productId);
     }
 
     const quantitiesByProduct = new Map<string, number>();
@@ -59,6 +62,21 @@ export class CreateOrder extends UseCase<[CreateOrderInput], Order> {
       );
     for (const [productId, quantity] of quantitiesByProduct) {
       if (quantity > productsById.get(productId)!.stock) throw new InsufficientStockError();
+    }
+
+    for (const [productId, quantity] of quantitiesByProduct) {
+      const product = productsById.get(productId)!;
+      await this.products.save(
+        new Product(
+          product.id,
+          product.name,
+          product.slug,
+          product.description,
+          product.price,
+          product.stock - quantity,
+          product.deletedAt,
+        ),
+      );
     }
 
     const orderId = this.createId();

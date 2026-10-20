@@ -1,3 +1,6 @@
+import { Product } from '../models/Product';
+import { OrderItem } from '../models/OrderItem';
+import { ProductNotFoundError } from '../errors/ProductNotFoundError';
 import type Redis from 'ioredis';
 import { getDataSource } from '../database';
 import { Order } from '../models/Order';
@@ -55,6 +58,17 @@ export class OrderConsumer extends RedisConsumer {
       if (order.status === OrderStatus.CANCELED) return;
       if (order.status !== OrderStatus.PAYMENT_PENDING)
         throw new InvalidOrderPaymentStateError(payload.orderId);
+      const items = await OrderItem.findByOrderId(order.id, manager);
+      const quantities = new Map<string, number>();
+      for (const item of items) {
+        quantities.set(item.productId, (quantities.get(item.productId) ?? 0) + item.quantity);
+      }
+      for (const productId of [...quantities.keys()].sort()) {
+        const product = await Product.findByIdForUpdate(productId, manager, true);
+        if (!product) throw new ProductNotFoundError(productId);
+        product.stock += quantities.get(productId)!;
+        await Product.save(product, manager);
+      }
       order.status = OrderStatus.CANCELED;
       await Order.update(order, manager);
     });
