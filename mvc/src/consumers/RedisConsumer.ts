@@ -48,7 +48,7 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? `${error.name}: ${error.message}` : String(error);
 }
 
-export abstract class Consumer {
+export abstract class RedisConsumer {
   private readonly primaryRedis: Redis;
   private readonly retryRedis: Redis;
   private readonly name: string;

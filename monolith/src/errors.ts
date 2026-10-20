@@ -113,3 +113,45 @@ export class InvalidFilterError extends AppError {
     super(`Invalid filter: ${String(value)}`, 400);
   }
 }
+
+export class InvalidOrderIdError extends AppError {
+  constructor(orderId: unknown) {
+    super(`Invalid order id: ${orderId}`, 400);
+  }
+}
+
+export class InvalidPaymentTokenError extends AppError {
+  constructor() {
+    super('Invalid payment token', 400);
+  }
+}
+
+export class PaymentNotReadyError extends AppError {
+  constructor(orderId: string) {
+    super(`Payment not ready for order: ${orderId}`, 409);
+  }
+}
+
+export class InvalidOrderPaymentStateError extends AppError {
+  constructor(orderId: string) {
+    super(`Invalid payment state for order: ${orderId}`, 409);
+  }
+}
+
+export class PaymentDeclinedError extends AppError {
+  constructor(orderId: string) {
+    super(`Payment declined for order: ${orderId}`, 422);
+  }
+}
+
+export class InvalidPaymentApprovedPayloadError extends InvalidPayloadError {
+  constructor() {
+    super('Invalid PaymentApproved payload');
+  }
+}
+
+export class InvalidPaymentDeclinedPayloadError extends InvalidPayloadError {
+  constructor() {
+    super('Invalid PaymentDeclinedError payload');
+  }
+}

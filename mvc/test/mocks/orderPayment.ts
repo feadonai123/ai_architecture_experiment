@@ -10,3 +10,7 @@ export function mockOrderPaymentCreate(value?: OrderPaymentEntity) {
     .spyOn(OrderPayment, 'create')
     .mockImplementation(async (payment) => value ?? (payment as OrderPaymentEntity));
 }
+
+export function mockOrderPaymentUpdate() {
+  return jest.spyOn(OrderPayment, 'update').mockImplementation(async (payment) => payment);
+}

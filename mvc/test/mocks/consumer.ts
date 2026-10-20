@@ -20,3 +20,15 @@ export function mockConsumerConfig(): ConfigConsumer {
     deadLetterStream: 'financial:dead-letter',
   } as ConfigConsumer;
 }
+
+export function mockOrderConsumerConfig(): ConfigConsumer {
+  return {
+    ...mockConsumerConfig(),
+    group: 'order',
+    streams: [EventStream.Payments],
+    supportedEvents: [EventType.PaymentApproved, EventType.PaymentDeclinedError],
+    retryScheduleKey: 'order:retry:schedule',
+    retryEventKeyPrefix: 'order:retry:event',
+    deadLetterStream: 'order:dead-letter',
+  };
+}

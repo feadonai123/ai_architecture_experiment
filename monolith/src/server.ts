@@ -8,6 +8,7 @@ loadAppEnv();
 async function start(): Promise<void> {
   const { createApp } = await import('./app');
   const { createFinancialConsumer } = await import('./financialConsumerApp');
+  const { createOrderConsumer } = await import('./orderConsumerApp');
   const dataSource = createDataSource();
   await dataSource.initialize();
   await applySchema(dataSource);
@@ -17,6 +18,8 @@ async function start(): Promise<void> {
 
   const financialConsumer = createFinancialConsumer(dataSource, redis);
   await financialConsumer.start();
+  const orderConsumer = createOrderConsumer(dataSource, redis);
+  await orderConsumer.start();
   const app = createApp(dataSource, redis);
   const port = Number(requireEnv('PORT'));
   const server = app.listen(port, () => {
@@ -30,6 +33,7 @@ async function start(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
+    await orderConsumer.stop();
     await financialConsumer.stop();
     await redis.quit();
     await dataSource.destroy();

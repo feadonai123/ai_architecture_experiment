@@ -17,4 +17,10 @@ export class OrderPayment {
     const repository = manager.getRepository(OrderPaymentEntity);
     return repository.save(repository.create(payment));
   }
+  static update(
+    payment: OrderPaymentEntity,
+    manager: EntityManager = getDataSource().manager,
+  ): Promise<OrderPaymentEntity> {
+    return manager.getRepository(OrderPaymentEntity).save(payment);
+  }
 }
