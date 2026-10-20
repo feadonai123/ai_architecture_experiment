@@ -10,7 +10,7 @@ import {
   missingCartMock,
   missingProductMock,
   productMock,
-} from '../data/remove-item';
+} from '../mocks/remove-item';
 
 describe('remove item', () => {
   describe('success', () => {

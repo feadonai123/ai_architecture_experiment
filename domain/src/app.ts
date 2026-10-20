@@ -1,3 +1,8 @@
+import { createPaymentController } from './payments/payment.controller';
+import { ProcessOrderPaymentController } from './payments/processOrderPayment/controllers/ProcessOrderPaymentController';
+import { ProcessOrderPayment } from './payments/processOrderPayment/usecases/ProcessOrderPayment';
+import { OrderRepository as PaymentOrderRepository } from './payments/processOrderPayment/repositories/OrderRepository';
+import { OrderPaymentRepository as PaymentRepository } from './payments/processOrderPayment/repositories/OrderPaymentRepository';
 import fs from 'node:fs';
 import path from 'node:path';
 import express, { Express } from 'express';
@@ -65,6 +70,10 @@ import { UserRepository as CreateOrderUserRepository } from './ordering/createOr
 import { CreateOrder } from './ordering/createOrder/usecases/CreateOrder';
 import { EventRedisService } from './shared/infrastructure/EventRedisService';
 
+import { GetOrderStatus } from './ordering/getOrderStatus/usecases/GetOrderStatus';
+import { GetOrderStatusController } from './ordering/getOrderStatus/controllers/GetOrderStatusController';
+import { OrderRepository as GetOrderStatusRepository } from './ordering/getOrderStatus/repositories/OrderRepository';
+
 function mountSwagger(app: Express): void {
   const specPath = path.resolve(__dirname, '../../docs/openapi.yaml');
   const spec = parse(fs.readFileSync(specPath, 'utf8'));
@@ -109,6 +118,10 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
   app.use(
     createOrderController({
       createOrder: new CreateOrderController(dataSource, createOrder),
+      getOrderStatus: new GetOrderStatusController(
+        dataSource,
+        new GetOrderStatus(new GetOrderStatusRepository(dataSource)),
+      ),
     }),
   );
   app.use(
@@ -158,6 +171,20 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
         new DeleteProduct(new DeleteProductRepository(dataSource)),
       ),
     }),
+  );
+  app.use(
+    createPaymentController(
+      new ProcessOrderPaymentController(
+        dataSource,
+        new ProcessOrderPayment(
+          new PaymentOrderRepository(dataSource),
+          new PaymentRepository(dataSource),
+          new EventRedisService(redis),
+          uuidv4,
+          () => new Date(),
+        ),
+      ),
+    ),
   );
   app.use(errorHandler);
   return app;

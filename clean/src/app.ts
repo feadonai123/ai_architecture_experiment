@@ -1,3 +1,5 @@
+import { ProcessOrderPayment } from './usecases/ProcessOrderPayment';
+import { TypeOrmOrderPaymentRepository } from './repositories/TypeOrmOrderPaymentRepository';
 import express, { Express } from 'express';
 import { createStockController } from './controllers/stock/stock.controller';
 import { createProductController } from './controllers/product/product.controller';
@@ -32,6 +34,8 @@ import { TypeOrmOrderItemRepository } from './repositories/TypeOrmOrderItemRepos
 import { EventRedisService } from './infrastructure/redis/eventRedisService';
 import { CreateOrder } from './usecases/CreateOrder';
 
+import { GetOrderStatus } from './usecases/GetOrderStatus';
+
 export function createApp(dataSource: DataSource, redis: Redis): Express {
   const products = new TypeOrmProductRepository(dataSource);
   const carts = new TypeOrmCartRepository(dataSource);
@@ -62,6 +66,14 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
     createOrderController(
       dataSource,
       new CreateOrder(users, products, orders, orderItems, events, uuidv4, () => new Date()),
+      new ProcessOrderPayment(
+        orders,
+        new TypeOrmOrderPaymentRepository(dataSource),
+        events,
+        uuidv4,
+        () => new Date(),
+      ),
+      new GetOrderStatus(orders),
     ),
   );
   app.use(

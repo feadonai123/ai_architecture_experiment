@@ -2,7 +2,7 @@ import { OrderPaymentStatus } from '../../src/entities/OrderPaymentStatus';
 import { OrderStatus } from '../../src/entities/OrderStatus';
 import { OrderNotFoundError } from '../../src/errors/OrderNotFoundError';
 import { CreateOrderPayment } from '../../src/usecases/CreateOrderPayment';
-import { existingPaymentMock, orderMock } from '../data/create-order-payment';
+import { existingPaymentMock, orderMock } from '../mocks/create-order-payment';
 import { mockClock } from '../mocks/clock';
 import { mockOrderPaymentRepository } from '../mocks/orderPaymentRepository';
 import { mockOrderRepository } from '../mocks/orderRepository';

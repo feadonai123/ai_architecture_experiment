@@ -10,6 +10,7 @@ Primeira dimensão = **responsabilidade técnica** (Controller, Model, Entity, E
 src/
 ├── app.ts
 ├── financialConsumerApp.ts
+├── orderConsumerApp.ts
 ├── controllers/
 ├── models/
 ├── entities/
@@ -32,7 +33,7 @@ Não existe `src/routes/` nem `src/database/`.
 - `entities/` — mapeamento TypeORM, sem métodos de persistência de negócio.
 - `enums/` — valores finitos de status e outros tipos limitados usados pela aplicação.
 - `events/` — contrato, validação e serialização dos eventos da aplicação, sem acesso direto ao Redis.
-- `consumers/` — `ConfigConsumer` valida as configurações de ambiente; `Consumer` concentra leitura, retry e Dead Letter; consumidores concretos implementam `processEvent` e os handlers do seu setor.
+- `consumers/` — `ConfigConsumer` valida as configurações de ambiente; `RedisConsumer` concentra leitura, retry e Dead Letter; consumidores concretos implementam `processEvent` e os handlers do seu setor.
 - `models/` — somente operações de acesso e persistência (`find`, `create`, `update`) como métodos estáticos sobre a entity. Decisões de negócio, como status, total, idempotência, composição de pedido e quando criar pagamento, ficam na rota ou no handler do consumer. A rota coordena a transação que persiste pedido e itens.
 - `services/` — Redis centralizado (`createRedis`, `getRedis`, `ping`, `publish` e operações de consumo). Sem service “só para mover código”.
 - `presenters/` — um presenter por entidade.
@@ -40,7 +41,7 @@ Não existe `src/routes/` nem `src/database/`.
 - `errors/` — classes de erro da aplicação (`AppError` + erros semânticos).
 - `utils/` — `requireEnv`, `loadAppEnv`, `Logger`.
 - `database.ts` — arquivo único de conexão TypeORM.
-- `app.ts` e `financialConsumerApp.ts` são pontos de composição: o primeiro monta somente HTTP e o segundo cria o consumer financeiro. `server.ts` abre as conexões e inicia e encerra o consumer separadamente das rotas.
+- `app.ts`, `financialConsumerApp.ts` e `orderConsumerApp.ts` são pontos de composição: o primeiro monta somente HTTP e os outros criam os consumers financeiro e de pedidos. `server.ts` abre as conexões e inicia e encerra o consumer separadamente das rotas.
 
 ## Fluxo
 
@@ -69,3 +70,13 @@ Não organizar primeiro por domínio (`products/`, `orders/`).
 - Não criar testes com `createApp`, `supertest` ou end-to-end nesta pasta.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
 - `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.
+
+## RF06 e consumidor de pedidos
+
+- `orderConsumerApp.ts` compõe o consumidor de pedidos; `server.ts` inicia e encerra ambos os consumers separadamente de HTTP. O consumer de pedidos usa configurações obrigatórias com prefixo `ORDER_CONSUMER_`, sem fallback.
+- `RedisConsumer` é a base existente de leitura, retry e Dead Letter. `ConsumerFinancial` e `OrderConsumer` herdam dela. Os handlers permanecem dentro de cada consumidor concreto, com persistência nos models.
+- Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` ficam em `test/mocks/`, em um arquivo próprio por operação. Helpers HTTP e asserts ficam fora dessa pasta.
+
+## Baixa e devolução de estoque de pedidos
+
+A criação reduz estoque e grava pedido e itens na mesma transação, com produtos bloqueados em ordem de ID. A recusa devolve os itens persistidos e cancela o pedido atomicamente; bloquear o pedido antes dos produtos. Pedido já cancelado não devolve novamente. A devolução inclui produtos excluídos logicamente sem reativação. Aprovação e preparação financeira mantêm a quantidade. Escritas de estoque e catálogo que salvam produtos também protegem sua leitura e gravação com transação e bloqueio.

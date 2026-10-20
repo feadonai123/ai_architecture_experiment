@@ -10,6 +10,7 @@ Organização mínima, forte acoplamento, sem fronteiras internas formais. A men
 src/
 ├── app.ts
 ├── financialConsumerApp.ts
+├── orderConsumerApp.ts
 ├── database.ts
 ├── errors.ts
 ├── helpers.ts
@@ -42,7 +43,7 @@ src/
 - Validações de payload de eventos lançam uma classe de erro específica declarada em `errors.ts`, nunca `Error` genérico.
 - Erros específicos de payload herdam de `InvalidPayloadError`. O consumidor envia esses eventos para uma Dead Letter Stream configurada por consumer e executa `XACK` somente depois da publicação; no retry, também remove a entrada da agenda e seus metadados. Outras falhas continuam elegíveis para retry.
 - `database.ts` — conexão TypeORM. Sem pasta `database/`.
-- `app.ts` e `financialConsumerApp.ts` são pontos de composição: o primeiro monta somente HTTP e o segundo cria o consumer financeiro. `server.ts` abre as conexões e inicia e encerra o consumer separadamente das rotas.
+- `app.ts`, `financialConsumerApp.ts` e `orderConsumerApp.ts` são pontos de composição: o primeiro monta somente HTTP e os outros criam os consumers financeiro e de pedidos. `server.ts` abre as conexões e inicia e encerra o consumer separadamente das rotas.
 
 ## Proibido
 
@@ -65,3 +66,13 @@ Se a responsabilidade cabe na rota ou em `app.ts` sem tornar o código impratic�
 - Não criar em `test/` testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
 - `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.
+
+## RF06 e consumidor de pedidos
+
+- `orderConsumerApp.ts` compõe o consumidor de pedidos; `server.ts` inicia e encerra ambos os consumers separadamente de HTTP. O consumer de pedidos usa configurações obrigatórias com prefixo `ORDER_CONSUMER_`, sem fallback.
+- `consumers/consumerOrder.ts` copia o algoritmo completo do financeiro, alterando configurações, despacho e handlers; não extrair uma base de consumer.
+- Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` ficam em `test/mocks/`, em um arquivo próprio por operação. Helpers HTTP e asserts ficam fora dessa pasta.
+
+## Baixa e devolução de estoque de pedidos
+
+A criação reduz estoque e grava pedido e itens na mesma transação, com produtos bloqueados em ordem de ID. A recusa devolve os itens persistidos e cancela o pedido atomicamente; bloquear o pedido antes dos produtos. Pedido já cancelado não devolve novamente. A devolução inclui produtos excluídos logicamente sem reativação. Aprovação e preparação financeira mantêm a quantidade. Escritas de estoque e catálogo que salvam produtos também protegem sua leitura e gravação com transação e bloqueio.

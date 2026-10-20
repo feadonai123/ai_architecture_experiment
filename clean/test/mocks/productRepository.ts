@@ -14,6 +14,9 @@ export function mockProductRepository(
     save: jest.fn().mockResolvedValue(undefined),
     create: jest.fn().mockResolvedValue(undefined),
     softDelete: jest.fn().mockResolvedValue(undefined),
+    findByIdForUpdate: jest
+      .fn()
+      .mockResolvedValue('findById' in overrides ? overrides.findById : undefined),
     findById: jest.fn().mockResolvedValue('findById' in overrides ? overrides.findById : undefined),
     findBySlug: jest
       .fn()

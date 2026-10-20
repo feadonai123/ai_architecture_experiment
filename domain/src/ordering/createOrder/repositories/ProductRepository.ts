@@ -6,10 +6,16 @@ import { Product } from '../../../shared/entities/Product';
 export class ProductRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  async findById(id: string): Promise<Product | null> {
+  async save(product: Product): Promise<void> {
+    await DbManager.getManager(this.dataSource)
+      .getRepository(ProductRecord)
+      .update(product.id, { stock: product.stock });
+  }
+
+  async findByIdForUpdate(id: string): Promise<Product | null> {
     const record = await DbManager.getManager(this.dataSource)
       .getRepository(ProductRecord)
-      .findOne({ where: { id, deletedAt: IsNull() } });
+      .findOne({ where: { id, deletedAt: IsNull() }, lock: { mode: 'pessimistic_write' } });
     if (!record) return null;
     return new Product(
       record.id,

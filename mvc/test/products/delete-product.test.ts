@@ -1,8 +1,10 @@
+import { setDataSource } from '../../src/database';
+import { mockPaymentTransaction } from '../mocks/paymentTransaction';
 import { Request, Response } from 'express';
 import { deleteProduct } from '../../src/controllers/product/routes/deleteProduct.route';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
-import { mockProductFindById, mockProductSoftDelete } from '../mocks/product';
+import { mockProductFindByIdForUpdate, mockProductSoftDelete } from '../mocks/product';
 import { missingProductMock, productMock } from '../mocks/delete-product';
 
 async function invokeHandler(
@@ -19,6 +21,7 @@ async function invokeHandler(
 }
 
 describe('delete product', () => {
+  beforeEach(() => setDataSource(mockPaymentTransaction()));
   afterEach(() => {
     jest.restoreAllMocks();
   });
@@ -26,7 +29,7 @@ describe('delete product', () => {
   describe('success', () => {
     it('soft-deletes the product', async () => {
       const current = { ...productMock, deletedAt: null };
-      mockProductFindById(current);
+      mockProductFindByIdForUpdate(current);
       mockProductSoftDelete();
 
       const result = await invokeHandler(deleteProduct, {
@@ -40,7 +43,7 @@ describe('delete product', () => {
 
   describe('errors', () => {
     it('throws ProductNotFoundError when the product does not exist', async () => {
-      mockProductFindById(null);
+      mockProductFindByIdForUpdate(null);
 
       await expect(
         invokeHandler(deleteProduct, { params: { productId: missingProductMock.id } }),

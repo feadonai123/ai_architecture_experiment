@@ -12,3 +12,7 @@ export function mockOrderFindByIdForUpdate(value: OrderEntity | null) {
 export function mockOrderUpdate(value?: OrderEntity) {
   return jest.spyOn(Order, 'update').mockImplementation(async (order) => value ?? order);
 }
+
+export function mockOrderFindById(value: OrderEntity | null) {
+  return jest.spyOn(Order, 'findById').mockResolvedValue(value);
+}

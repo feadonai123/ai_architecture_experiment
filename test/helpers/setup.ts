@@ -40,31 +40,29 @@ export function getTestRedis(): Redis {
 }
 
 async function clearTestRedis(): Promise<void> {
-  const streams = requireEnv('FINANCIAL_CONSUMER_STREAMS')
-    .split(',')
-    .map((stream) => stream.trim());
-  const keys = [
-    ...streams,
-    requireEnv('FINANCIAL_CONSUMER_DEAD_LETTER_STREAM'),
-    requireEnv('FINANCIAL_CONSUMER_RETRY_SCHEDULE_KEY'),
-  ];
-  const retryPrefix = requireEnv('FINANCIAL_CONSUMER_RETRY_EVENT_KEY_PREFIX');
-  let cursor = '0';
-  do {
-    const [nextCursor, matchedKeys] = await redis.scan(
-      cursor,
-      'MATCH',
-      `${retryPrefix}:*`,
-      'COUNT',
-      100,
+  const keys: string[] = [];
+  for (const prefix of ['FINANCIAL_CONSUMER', 'ORDER_CONSUMER']) {
+    keys.push(
+      ...requireEnv(prefix + '_STREAMS')
+        .split(',')
+        .map((s) => s.trim()),
+      requireEnv(prefix + '_DEAD_LETTER_STREAM'),
+      requireEnv(prefix + '_RETRY_SCHEDULE_KEY'),
     );
-    cursor = nextCursor;
-    keys.push(...matchedKeys);
-  } while (cursor !== '0');
-
-  if (keys.length > 0) {
-    await redis.del(...keys);
+    let cursor = '0';
+    do {
+      const [next, matches] = await redis.scan(
+        cursor,
+        'MATCH',
+        requireEnv(prefix + '_RETRY_EVENT_KEY_PREFIX') + ':*',
+        'COUNT',
+        100,
+      );
+      cursor = next;
+      keys.push(...matches);
+    } while (cursor !== '0');
   }
+  if (keys.length) await redis.del(...new Set(keys));
 }
 
 async function initializeWithRetry(dataSource: DataSource): Promise<void> {

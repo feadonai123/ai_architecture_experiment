@@ -19,6 +19,10 @@ ordering/
 ├── addCartItem/  ...
 ├── removeCartItem/
 ├── createOrder/  usecases, repositories, controllers, errors
+├── getOrderStatus/ usecases, repositories, controllers, errors
+├── approveOrderPayment/ usecases, repositories, handlers, errors
+├── cancelOrderPayment/  usecases, repositories, handlers, errors
+├── order.consumer.ts   # registra handlers do consumer de pedidos
 ├── cart.controller.ts   # registra as rotas HTTP de carrinho
 └── order.controller.ts  # registra as rotas HTTP de pedido
 
@@ -40,6 +44,8 @@ catalog/
 
 payments/
 ├── createOrderPayment/  usecases, repositories, handlers, errors
+├── processOrderPayment/ usecases, repositories, controllers, errors
+├── payment.controller.ts # registra a rota de pagamento
 └── financial.consumer.ts  # registra handlers do consumer financeiro
 ```
 
@@ -92,7 +98,7 @@ Handlers de consumers que alteram persistência também abrem uma transação vi
 
 Erros semânticos da regra de negócio continuam dentro da operação. Erros puramente técnicos do adaptador Redis ficam em `shared/infrastructure/errors/`.
 
-`createApp` não inicia consumers. `server.ts` inicia e encerra o consumer financeiro separadamente da aplicação HTTP.
+`createApp` não inicia consumers. `server.ts` inicia e encerra os consumers financeiro e de pedidos separadamente da aplicação HTTP.
 
 ## Proibido
 
@@ -110,3 +116,14 @@ Um contexto não acessa a implementação interna de outro. Integração explíc
 - Não criar testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
 - `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.
+
+## RF06 e consumidor de pedidos
+
+- `orderConsumerApp.ts` compõe o consumidor de pedidos; `server.ts` inicia e encerra ambos os consumers separadamente de HTTP. O consumer de pedidos usa configurações obrigatórias com prefixo `ORDER_CONSUMER_`, sem fallback.
+- `ordering/order.consumer.ts` registra os handlers das operações `ordering/approveOrderPayment` e `ordering/cancelOrderPayment`. A rota pertence a `payments/processOrderPayment` e seu registro a `payments/payment.controller.ts`. Contextos integram-se pelos eventos compartilhados.
+- Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` ficam em `test/mocks/`, em um arquivo próprio por operação. Helpers HTTP e asserts ficam fora dessa pasta.
+
+## Baixa e devolução de estoque de pedidos
+
+A criação reduz estoque e grava pedido e itens na mesma transação, com produtos bloqueados em ordem de ID. A recusa devolve os itens persistidos e cancela o pedido atomicamente; bloquear o pedido antes dos produtos. Pedido já cancelado não devolve novamente. A devolução inclui produtos excluídos logicamente sem reativação. Aprovação e preparação financeira mantêm a quantidade. Escritas de estoque e catálogo que salvam produtos também protegem sua leitura e gravação com transação e bloqueio.
+A dependência de estoque das operações de pedidos é explícita no construtor dos use cases, implementada pelos repositories locais da operação sobre os records compartilhados. Não importar implementações internas de inventory nem criar outra transação ou evento para efetuar a baixa/devolução.

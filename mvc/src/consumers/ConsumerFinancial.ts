@@ -9,9 +9,9 @@ import { Order } from '../models/Order';
 import { OrderPayment } from '../models/OrderPayment';
 import { Logger } from '../utils/Logger';
 import { ConfigConsumer } from './ConfigConsumer';
-import { Consumer } from './Consumer';
+import { RedisConsumer } from './RedisConsumer';
 
-export class ConsumerFinancial extends Consumer {
+export class ConsumerFinancial extends RedisConsumer {
   constructor(
     redis: Redis,
     config: ConfigConsumer = new ConfigConsumer('FINANCIAL_CONSUMER', [EventType.OrderCreated]),

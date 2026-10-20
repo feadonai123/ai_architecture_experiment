@@ -4,7 +4,7 @@ Estas regras valem para **todas** as abordagens (`monolith/`, `mvc/`, `clean/`, 
 
 ## Experimento
 
-As quatro codebases implementam o **mesmo** recorte de catálogo, estoque e carrinho: mesmo contrato HTTP, mesmos status, mesmos erros, mesma modelagem e a mesma infra (Node, TypeScript, Express, TypeORM, PostgreSQL, Redis).
+As quatro codebases implementam o **mesmo** recorte de catálogo, estoque, carrinho, pedidos e pagamentos: mesmo contrato HTTP, mesmos status, mesmos erros, mesma modelagem e a mesma infra (Node, TypeScript, Express, TypeORM, PostgreSQL, Redis).
 
 A variável do experimento é **só a organização do código**. Não mude comportamento para “melhorar” uma abordagem.
 
@@ -31,7 +31,7 @@ Se uma função não for da pasta, ela não entra nessa pasta. Prefira o arquivo
 - O processamento financeiro de `OrderCreated` registra sucesso via `Logger.info` somente após o commit, com `eventId`, `orderId`, `userId` e `items`, em todas as abordagens.
 - Consumers emitem logs somente no sucesso do handler, na primeira falha do evento e na falha de uma tentativa de retry, usando exatamente as estruturas definidas em `flows/RedisConsumer.md`. Falhas auxiliares de leitura, confirmação, agendamento, reconciliação, Dead Letter ou do ciclo não geram logs adicionais.
 - `requireEnv` não tem valor default. Variáveis novas entram em `.env`, `.env.example` e `.env.test`.
-- `createApp` monta somente a aplicação HTTP e não cria nem inicia consumers. Nos projetos que possuem consumers, `financialConsumerApp.ts` cria o consumer financeiro e `server.ts` controla sua inicialização e encerramento separadamente.
+- `createApp` monta somente a aplicação HTTP e não cria nem inicia consumers. Nos projetos que possuem consumers, `financialConsumerApp.ts` e `orderConsumerApp.ts` criam os consumers financeiro e de pedidos; `server.ts` controla sua inicialização e encerramento separadamente.
 
 ## Testes de integração
 
@@ -73,3 +73,26 @@ Ficam em `test/integration/` na raiz e **devem passar nas quatro abordagens** (`
 - Não introduzir tecnologia diferente numa abordagem (outro ORM, outro HTTP framework, etc.).
 - Não copiar estrutura de outra abordagem (ex.: `usecases/` no MVC, `src/controllers/` global no Domain).
 - Não enfraquecer `requireEnv` com fallback.
+
+## RF06 — Pagamento simulado
+
+- Implementar o comportamento de `flows/RF06.md` de forma equivalente nas quatro aplicações. A rota persiste o pagamento e publica `PaymentApproved` ou `PaymentDeclinedError` no stream `payments` após commit. A recusa é persistida antes da resposta 422, sem rollback do resultado de negócio.
+- O consumidor de pedidos altera o pedido para `PAID` na aprovação e `CANCELED` na recusa, com transação, bloqueio de escrita e `XACK` após commit. Rota e consumo são idempotentes; repetições da rota não publicam outro evento.
+- Os unitários usam os mesmos valores de cenário, IDs, relógio e resultados simulados nas quatro aplicações. As dependências mockadas respeitam a API de cada abordagem, sem importar código de outros projetos.
+- Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` pertencem a `test/mocks/`, um arquivo por operação. Helpers HTTP, execução de handlers e asserts continuam fora de `mocks/`.
+
+## Estoque de pedidos
+
+- `stock` representa a quantidade disponível para novas compras.
+- Criar pedido reduz o estoque agregado por produto na mesma transação que grava pedido e itens. Consultar e bloquear produtos ativos em ordem crescente de ID antes de validar disponibilidade. Falha desfaz toda a operação.
+- Aprovação e preparação financeira não alteram estoque. `OrderCreated` não provoca outra baixa.
+- Recusa definitiva devolve as quantidades dos itens persistidos na mesma transação que muda o pedido de `PAYMENT_PENDING` para `CANCELED`. Bloquear primeiro o pedido e depois os produtos em ordem de ID. Pedido já cancelado não devolve novamente.
+- A devolução inclui produtos excluídos logicamente, sem reativá-los. Falta de produto gera `ProductNotFoundError` e rollback; o evento segue retry, sem confirmação.
+- Operações de estoque e alterações de catálogo que salvam produtos usam leitura com bloqueio de escrita e persistência na mesma transação, evitando sobrescrever baixas e devoluções concorrentes. A definição absoluta de estoque continua sendo uma substituição explícita da quantidade disponível.
+- Erros de validação ou infraestrutura do pagamento não representam recusa definitiva e não liberam estoque automaticamente.
+
+## RF08 — Consulta de status dos pedidos
+
+- `GET /orders/:orderId/status` segue `flows/RF08.md` nas quatro aplicações: autenticação, validação de UUID e consulta do pedido, nessa ordem; resposta com `orderId` e `status` numérico.
+- Consultar o status persistido no pedido, inclusive antes da criação do pagamento e após cancelamento. Não inferir status pelo pagamento, alterar dados, adquirir bloqueio de escrita ou publicar eventos.
+- As atualizações dos consumers permanecem assíncronas. A consulta não aguarda nem executa o processamento de eventos.

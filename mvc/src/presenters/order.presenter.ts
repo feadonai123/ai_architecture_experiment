@@ -11,3 +11,7 @@ export function presentOrder(order: Order) {
     items: (order.items ?? []).map(presentOrderItem),
   };
 }
+
+export function presentOrderStatus(order: Pick<Order, 'id' | 'status'>) {
+  return { orderId: order.id, status: order.status };
+}

@@ -5,7 +5,7 @@ import { InvalidSlugError } from '../../src/errors/InvalidSlugError';
 import { CreateProduct } from '../../src/usecases/CreateProduct';
 import { mockProductRepository } from '../mocks/productRepository';
 import { mockIdentifier } from '../mocks/identifier';
-import { createdProductMock, productMock } from '../data/create-product';
+import { createdProductMock, productMock } from '../mocks/create-product';
 
 function createProduct(products = mockProductRepository()) {
   return new CreateProduct(products, mockIdentifier(productMock.id));

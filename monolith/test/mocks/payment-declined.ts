@@ -1,0 +1,56 @@
+import { Product } from '../../src/entities/Product';
+import { OrderItem } from '../../src/entities/OrderItem';
+import { Order } from '../../src/entities/Order';
+import { OrderPayment } from '../../src/entities/OrderPayment';
+import { OrderStatus } from '../../src/enums/OrderStatus';
+import { OrderPaymentStatus } from '../../src/enums/OrderPaymentStatus';
+import { PaymentProvider } from '../../src/enums/PaymentProvider';
+export const orderId = '0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f';
+export const transactionId = 'da16e5ce-82c4-441b-bd19-3ec6e6e2d4a1';
+export const eventId = 'c049cce2-29f6-4c89-b3a1-3fe67501a928';
+export const createdAt = new Date('2026-01-01T00:00:00.000Z');
+export const paidAt = new Date('2026-01-01T00:01:00.000Z');
+export function orderMock(status = OrderStatus.PAYMENT_PENDING): Order {
+  return {
+    id: orderId,
+    userId: '25ec38d4-8b61-459d-93b3-78a1d8d0daf9',
+    status,
+    total: 250,
+    createdAt,
+    items: declinedItemsMock(),
+  } as unknown as Order;
+}
+export function paymentMock(status = OrderPaymentStatus.PENDING): OrderPayment {
+  return {
+    orderId,
+    status,
+    paymentDetails:
+      status === OrderPaymentStatus.PENDING
+        ? null
+        : { provider: PaymentProvider.SIMULATED, transactionId, amount: 250 },
+    paidAt: status === OrderPaymentStatus.PAID ? paidAt : null,
+    createdAt,
+  } as OrderPayment;
+}
+export const payloadMock = { orderId, transactionId, amount: 250 };
+
+export function declinedItemsMock(): OrderItem[] {
+  return [1, 2].map((quantity, index) => ({
+    id: `item-${index}`,
+    orderId,
+    productId: 'product-1',
+    quantity,
+    unitPrice: 10,
+  })) as OrderItem[];
+}
+export function declinedProductMock(): Product {
+  return {
+    id: 'product-1',
+    name: 'Tea',
+    slug: 'tea',
+    description: '',
+    price: 10,
+    stock: 7,
+    deletedAt: null,
+  } as Product;
+}

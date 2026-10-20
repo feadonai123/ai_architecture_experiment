@@ -3,6 +3,10 @@ import { getDataSource } from '../database';
 import { Order as OrderEntity } from '../entities/Order';
 
 export class Order {
+  static findById(id: string): Promise<OrderEntity | null> {
+    return getDataSource().getRepository(OrderEntity).findOne({ where: { id } });
+  }
+
   static findByIdForUpdate(
     id: string,
     manager: EntityManager = getDataSource().manager,

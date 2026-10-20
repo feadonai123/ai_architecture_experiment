@@ -42,3 +42,34 @@ describe('Order API key authentication', () => {
     expect(response.status).toBe(201);
   });
 });
+
+describe('Payment API key authentication', () => {
+  it.each([undefined, 'wrong-key'])('rejects missing or incorrect header %s', async (key) => {
+    const req = request(getApp()).post('/orders/0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f/payment');
+    if (key) req.set('x-api-key', key);
+    const response = await req.send({ paymentToken: 'sim-approved' });
+    expect(response.status).toBe(403);
+    expect(response.body).toEqual({
+      error: 'ForbiddenError',
+      message: 'Forbidden',
+      statusCode: 403,
+    });
+  });
+});
+
+describe('Order status API key authentication', () => {
+  it.each([undefined, 'wrong-key'])(
+    'rejects header %s before validating the order UUID',
+    async (key) => {
+      const req = request(getApp()).get('/orders/invalid/status');
+      if (key) req.set('x-api-key', key);
+      const response = await req;
+      expect(response.status).toBe(403);
+      expect(response.body).toEqual({
+        error: 'ForbiddenError',
+        message: 'Forbidden',
+        statusCode: 403,
+      });
+    },
+  );
+});

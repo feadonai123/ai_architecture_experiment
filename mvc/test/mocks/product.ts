@@ -34,3 +34,10 @@ export function mockProductSoftDelete(value?: ProductEntity) {
     return value ?? product;
   });
 }
+
+export function mockProductFindByIdForUpdate(value: ProductEntity | null) {
+  return jest.spyOn(Product, 'findByIdForUpdate').mockResolvedValue(value);
+}
+export function mockProductFindByIdsForUpdate(value: ProductEntity[]) {
+  return jest.spyOn(Product, 'findByIdsForUpdate').mockResolvedValue(value);
+}

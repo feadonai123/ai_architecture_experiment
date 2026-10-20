@@ -6,7 +6,7 @@ import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { UserNotFoundError } from '../../src/errors/UserNotFoundError';
 import { EventType } from '../../src/events/EventType';
 import { CreateOrder } from '../../src/usecases/CreateOrder';
-import { orderProductMock } from '../data/create-order';
+import { orderProductMock } from '../mocks/create-order';
 import { mockClock } from '../mocks/clock';
 import { mockEventService } from '../mocks/eventService';
 import { mockSequentialIdentifier } from '../mocks/identifier';
@@ -50,6 +50,10 @@ describe('create order', () => {
       });
       expect(order.status).toBe(OrderStatus.PENDING);
       expect(order.total).toBe(30);
+      expect(products.save).toHaveBeenCalledTimes(1);
+      expect(products.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'product-1', stock: 7 }),
+      );
       expect(orders.create).toHaveBeenCalledWith(order);
       expect(items.create).toHaveBeenCalledWith(order.items);
       const event = events.publishAfterCommit.mock.calls[0][0];
@@ -90,7 +94,7 @@ describe('create order', () => {
       ).rejects.toBeInstanceOf(UserNotFoundError);
     });
     it('rejects missing product', async () => {
-      products.findById.mockResolvedValue(null);
+      products.findByIdForUpdate.mockResolvedValue(null);
       await expect(
         useCase.run({ userId: 'user-1', items: [{ productId: 'missing', quantity: 1 }] }),
       ).rejects.toBeInstanceOf(ProductNotFoundError);

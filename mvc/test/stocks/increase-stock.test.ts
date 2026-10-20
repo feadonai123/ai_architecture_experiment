@@ -1,9 +1,11 @@
+import { setDataSource } from '../../src/database';
+import { mockPaymentTransaction } from '../mocks/paymentTransaction';
 import { Request, Response } from 'express';
 import { increaseStock } from '../../src/controllers/stock/routes/increaseStock.route';
 import { InvalidQuantityError } from '../../src/errors/InvalidQuantityError';
 import { ProductNotFoundError } from '../../src/errors/ProductNotFoundError';
 import { mockRes } from '../mocks/http';
-import { mockProductFindById, mockProductSave } from '../mocks/product';
+import { mockProductFindByIdForUpdate, mockProductSave } from '../mocks/product';
 import {
   increaseQuantityMock,
   invalidQuantityMock,
@@ -32,13 +34,14 @@ function increase(input: { productId: string; quantity: unknown }) {
 }
 
 describe('increase stock', () => {
+  beforeEach(() => setDataSource(mockPaymentTransaction()));
   afterEach(() => {
     jest.restoreAllMocks();
   });
 
   describe('success', () => {
     it('adds the informed quantity to the current stock', async () => {
-      mockProductFindById({ ...productMock });
+      mockProductFindByIdForUpdate({ ...productMock });
       mockProductSave();
 
       await expect(
@@ -58,7 +61,7 @@ describe('increase stock', () => {
     });
 
     it('throws ProductNotFoundError', async () => {
-      mockProductFindById(null);
+      mockProductFindByIdForUpdate(null);
 
       await expect(
         increase({ productId: missingProductMock.id, quantity: increaseQuantityMock }),

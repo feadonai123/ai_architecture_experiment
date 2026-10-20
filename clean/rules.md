@@ -28,7 +28,7 @@ src/
 
 ## Responsabilidades
 
-- `app.ts` e `financialConsumerApp.ts` são composition roots: o primeiro monta a aplicação HTTP e o segundo monta o consumer financeiro e suas implementações concretas. `server.ts` abre as conexões, chama essas factories e controla inicialização e encerramento.
+- `app.ts`, `financialConsumerApp.ts` e `orderConsumerApp.ts` são composition roots: o primeiro monta a aplicação HTTP e os outros montam os consumers financeiro e de pedidos e suas implementações concretas. `server.ts` abre as conexões, chama essas factories e controla inicialização e encerramento.
 - `controllers/` — por recurso, igual ao MVC (`cart.controller.ts` + `routes/*.route.ts`). Rotas são classes que estendem `RouterBase` e expõem `asHandler()`. Sem pasta `src/routes/`.
 - `usecases/` — regra de aplicação. Estendem `UseCase`; API pública é `run`. `execute` é protegido. Não abrem transação.
 - `entities/` — domínio puro: sem Express, TypeORM, Redis ou infrastructure.
@@ -71,7 +71,17 @@ Pastas de contexto como primeira dimensão (`ordering/`, `catalog/`, `contexts/`
 ## Testes desta abordagem
 
 - Unitários **somente de use cases** (`run`), com ports mockados em `test/mocks/`.
-- `test/mocks/` contém somente mocks de dependências, separados por repository, event service, relógio ou gerador de IDs. Dados de cenário ficam em `test/data/`, com um arquivo próprio para cada use case testado; arquivos de dados não exportam mocks de dependências.
+- `test/mocks/` reúne todos os mocks de dependências e dados mockados de cenário dos testes unitários. Dependências ficam separadas por repository, event service, relógio ou gerador de IDs; dados de cenário ficam em arquivos próprios por use case nessa mesma pasta. Não criar `test/data/`. Helpers HTTP, execução de handlers e asserts não pertencem a `mocks/`.
 - Não criar testes de controller/handler HTTP, testes com `createApp` ou `supertest`, nem testes end-to-end.
 - Cada arquivo unitário usa um `describe` externo com o nome da operação e agrupa os casos aplicáveis em `describe('success', ...)` e `describe('errors', ...)`.
 - `success` contém somente caminhos de sucesso. `errors` contém somente casos que lançam classes de erro da aplicação.
+
+## RF06 e consumidor de pedidos
+
+- `orderConsumerApp.ts` compõe o consumidor de pedidos; `server.ts` inicia e encerra ambos os consumers separadamente de HTTP. O consumer de pedidos usa configurações obrigatórias com prefixo `ORDER_CONSUMER_`, sem fallback.
+- `consumers/orderConsumer.ts` compõe `Consumer` e registra handlers separados em `handler/`. Cada handler abre transação e chama o use case correspondente; o algoritmo Redis permanece no adaptador existente.
+- Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` ficam em `test/mocks/`, em um arquivo próprio por operação. Helpers HTTP e asserts ficam fora dessa pasta.
+
+## Baixa e devolução de estoque de pedidos
+
+A criação reduz estoque e grava pedido e itens na mesma transação, com produtos bloqueados em ordem de ID. A recusa devolve os itens persistidos e cancela o pedido atomicamente; bloquear o pedido antes dos produtos. Pedido já cancelado não devolve novamente. A devolução inclui produtos excluídos logicamente sem reativação. Aprovação e preparação financeira mantêm a quantidade. Escritas de estoque e catálogo que salvam produtos também protegem sua leitura e gravação com transação e bloqueio.

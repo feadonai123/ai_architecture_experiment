@@ -20,7 +20,7 @@ import {
 import { mockRes } from '../mocks/http';
 import { mockOrderCreate } from '../mocks/order';
 import { mockOrderItemCreate } from '../mocks/orderItem';
-import { mockProductFindByIds } from '../mocks/product';
+import { mockProductSave, mockProductFindByIdsForUpdate } from '../mocks/product';
 import { mockPublish } from '../mocks/redis';
 import { mockUserFindById } from '../mocks/user';
 
@@ -45,7 +45,7 @@ function createOrder(input: { userId: string; items: unknown }) {
 
 describe('create order', () => {
   let users: ReturnType<typeof mockUserFindById>;
-  let products: ReturnType<typeof mockProductFindByIds>;
+  let products: ReturnType<typeof mockProductFindByIdsForUpdate>;
   let orders: ReturnType<typeof mockOrderCreate>;
   let items: ReturnType<typeof mockOrderItemCreate>;
   let publish: ReturnType<typeof mockPublish>;
@@ -57,10 +57,11 @@ describe('create order', () => {
       .mockReturnValueOnce('id-2')
       .mockReturnValueOnce('id-3');
     users = mockUserFindById(userMock);
-    products = mockProductFindByIds([orderProductMock]);
+    products = mockProductFindByIdsForUpdate([{ ...orderProductMock }]);
     orders = mockOrderCreate(orderMock());
     items = mockOrderItemCreate(orderItemsMock());
     publish = mockPublish();
+    mockProductSave();
     setDataSource({ transaction: jest.fn(async (run) => run({})) } as never);
   });
 

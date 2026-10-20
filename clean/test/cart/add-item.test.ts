@@ -16,7 +16,7 @@ import {
   missingCartMock,
   missingProductMock,
   productMock,
-} from '../data/add-item';
+} from '../mocks/add-item';
 import { mockCartRepository } from '../mocks/cartRepository';
 import { mockCartItemRepository } from '../mocks/cartItemRepository';
 import { mockIdentifier } from '../mocks/identifier';

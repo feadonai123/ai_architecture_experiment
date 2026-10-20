@@ -9,6 +9,15 @@ import { OrderRepository } from '../ports/OrderRepository';
 export class TypeOrmOrderRepository implements OrderRepository {
   constructor(private readonly dataSource: DataSource) {}
 
+  async findById(id: string): Promise<Order | null> {
+    const record = await DbManager.getManager(this.dataSource)
+      .getRepository(OrderRecord)
+      .findOne({ where: { id } });
+    return record
+      ? new Order(record.id, record.userId, record.status, record.total, record.createdAt, [])
+      : null;
+  }
+
   async create(order: Order): Promise<void> {
     await DbManager.getManager(this.dataSource).getRepository(OrderRecord).save({
       id: order.id,

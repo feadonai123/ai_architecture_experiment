@@ -1,3 +1,4 @@
+import { createOrderConsumer } from './orderConsumerApp';
 import 'reflect-metadata';
 import { createApp } from './app';
 import { applySchema, createDataSource } from './database';
@@ -17,6 +18,8 @@ async function start(): Promise<void> {
 
   const financialConsumer = createFinancialConsumer(redis);
   await financialConsumer.start();
+  const orderConsumer = createOrderConsumer(redis);
+  await orderConsumer.start();
   const app = createApp(dataSource, redis);
   const port = Number(requireEnv('PORT'));
   const server = app.listen(port, () => {
@@ -30,6 +33,7 @@ async function start(): Promise<void> {
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
+    await orderConsumer.stop();
     await financialConsumer.stop();
     await redis.quit();
     await dataSource.destroy();

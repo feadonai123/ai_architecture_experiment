@@ -1,3 +1,4 @@
+import { processOrderPaymentRoute } from './routes/processOrderPayment';
 import express, { Express } from 'express';
 import type Redis from 'ioredis';
 import { DataSource } from 'typeorm';
@@ -21,6 +22,8 @@ import { removeCartItemRoute } from './routes/removeCartItem';
 import { updateProductRoute } from './routes/updateProduct';
 import { updateStockRoute } from './routes/updateStock';
 
+import { getOrderStatusRoute } from './routes/getOrderStatus';
+
 export function createApp(dataSource: DataSource, redis: Redis): Express {
   const app = express();
 
@@ -32,6 +35,8 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
   app.get('/cart/:cartId', authenticate, getCartRoute(dataSource));
   app.post('/cart/items', authenticate, addCartItemRoute(dataSource));
   app.delete('/cart/items/:productId', authenticate, removeCartItemRoute(dataSource));
+  app.post('/orders/:orderId/payment', authenticate, processOrderPaymentRoute(dataSource, redis));
+  app.get('/orders/:orderId/status', authenticate, getOrderStatusRoute(dataSource));
   app.post('/orders', authenticate, createOrderRoute(dataSource, redis));
   app.get('/stocks', authenticate, listStocksRoute(dataSource));
   app.get('/stocks/:productId', authenticate, getStockRoute(dataSource));

@@ -50,43 +50,49 @@ export async function create(req: Request, res: Response, next: NextFunction): P
       throw new UserNotFoundError(userId);
     }
 
-    const productIds = [...new Set(validItems.map((item) => item.productId))];
-    const products = await Product.findByIds(productIds);
-    const productsById = new Map(products.map((product) => [product.id, product]));
-
-    for (const productId of productIds) {
-      if (!productsById.has(productId)) {
-        throw new ProductNotFoundError(productId);
-      }
-    }
-
-    const quantitiesByProduct = new Map<string, number>();
-    for (const item of validItems) {
-      quantitiesByProduct.set(
-        item.productId,
-        (quantitiesByProduct.get(item.productId) ?? 0) + item.quantity,
-      );
-    }
-
-    for (const [productId, quantity] of quantitiesByProduct) {
-      if (quantity > productsById.get(productId)!.stock) {
-        throw new InsufficientStockError();
-      }
-    }
-
-    const orderId = uuidv4();
-    const orderItems = validItems.map((item) => ({
-      id: uuidv4(),
-      orderId,
-      productId: item.productId,
-      quantity: item.quantity,
-      unitPrice: productsById.get(item.productId)!.price,
-    }));
-    const totalInCents = orderItems.reduce(
-      (total, item) => total + item.quantity * Math.round(item.unitPrice * 100),
-      0,
-    );
     const order = await getDataSource().transaction(async (manager) => {
+      const productIds = [...new Set(validItems.map((item) => item.productId))];
+      const products = await Product.findByIdsForUpdate(productIds, manager);
+      const productsById = new Map(products.map((product) => [product.id, product]));
+
+      for (const productId of productIds) {
+        if (!productsById.has(productId)) {
+          throw new ProductNotFoundError(productId);
+        }
+      }
+
+      const quantitiesByProduct = new Map<string, number>();
+      for (const item of validItems) {
+        quantitiesByProduct.set(
+          item.productId,
+          (quantitiesByProduct.get(item.productId) ?? 0) + item.quantity,
+        );
+      }
+
+      for (const [productId, quantity] of quantitiesByProduct) {
+        if (quantity > productsById.get(productId)!.stock) {
+          throw new InsufficientStockError();
+        }
+      }
+
+      for (const [productId, quantity] of quantitiesByProduct) {
+        const product = productsById.get(productId)!;
+        product.stock -= quantity;
+        await Product.save(product, manager);
+      }
+
+      const orderId = uuidv4();
+      const orderItems = validItems.map((item) => ({
+        id: uuidv4(),
+        orderId,
+        productId: item.productId,
+        quantity: item.quantity,
+        unitPrice: productsById.get(item.productId)!.price,
+      }));
+      const totalInCents = orderItems.reduce(
+        (total, item) => total + item.quantity * Math.round(item.unitPrice * 100),
+        0,
+      );
       const savedOrder = await Order.create(
         {
           id: orderId,

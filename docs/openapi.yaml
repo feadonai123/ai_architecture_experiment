@@ -15,7 +15,7 @@ tags:
   - name: Carrinho
     description: Criação de carrinho e gerenciamento de itens.
   - name: Pedidos
-    description: Criação de pedidos e seus itens.
+    description: Criação de pedidos, pagamento e consulta de status.
 paths:
   /products:
     get:
@@ -420,7 +420,8 @@ paths:
   /orders:
     post:
       tags: [Pedidos]
-      summary: Cria um pedido e publica o evento OrderCreated
+      summary: Cria um pedido com baixa de estoque e publica OrderCreated
+      description: Baixa de estoque, pedido e itens são persistidos atomicamente. Produtos são bloqueados em ordem de ID e as quantidades são agregadas por produto. Estoque insuficiente não persiste alterações.
       operationId: createOrder
       requestBody:
         required: true
@@ -430,7 +431,7 @@ paths:
               $ref: '#/components/schemas/CreateOrderRequest'
       responses:
         '201':
-          description: Pedido criado com preços atuais e total calculado pelo servidor
+          description: Pedido criado com baixa de estoque, preços atuais e total calculado pelo servidor
           content:
             application/json:
               schema:
@@ -451,6 +452,104 @@ paths:
                 $ref: '#/components/schemas/Error'
         '409':
           description: Estoque insuficiente para a quantidade agregada solicitada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /orders/{orderId}/status:
+    get:
+      tags: [Pedidos]
+      summary: Consulta o status persistido de um pedido
+      operationId: getOrderStatus
+      description: Consulta somente orders, inclusive antes da criação do pagamento. As atualizações dos consumers são assíncronas; a resposta pode permanecer PENDING ou PAYMENT_PENDING até seu processamento. Não altera dados nem publica eventos.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Status atual do pedido, inclusive quando cancelado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderStatusResponse'
+        '400':
+          description: 'InvalidOrderIdError — Invalid order id: {orderId}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: 'OrderNotFoundError — Order not found: {orderId}'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /orders/{orderId}/payment:
+    post:
+      tags:
+        - Pedidos
+      summary: Processa pagamento simulado e publica o resultado
+      operationId: processOrderPayment
+      description: Persiste PAID ou DECLINED e publica PaymentApproved ou
+        PaymentDeclinedError no stream payments após commit. O OrderConsumer
+        atualiza o pedido de forma assíncrona. Na recusa, devolve o estoque e cancela o pedido na mesma transação; na aprovação, mantém a baixa realizada na criação. Repetições retornam o resultado
+        existente sem nova publicação.
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessOrderPaymentRequest'
+            examples:
+              approved:
+                value:
+                  paymentToken: sim-approved
+              declined:
+                value:
+                  paymentToken: sim-declined
+      responses:
+        '200':
+          description: Pagamento aprovado; pedido atualizado de forma assíncrona
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrderPayment'
+        '400':
+          description: InvalidOrderIdError ou InvalidPaymentTokenError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: OrderNotFoundError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: PaymentNotReadyError ou InvalidOrderPaymentStateError
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: 'PaymentDeclinedError: recusa persistida e evento publicado para
+            cancelamento'
           content:
             application/json:
               schema:
@@ -491,6 +590,20 @@ components:
         type: string
         format: uuid
   schemas:
+    OrderStatusResponse:
+      type: object
+      additionalProperties: false
+      required: [orderId, status]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+          example: 0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f
+        status:
+          type: integer
+          enum: [0, 1, 2, 3]
+          description: '0 = PENDING, 1 = PAYMENT_PENDING, 2 = PAID, 3 = CANCELED. Status do pedido, não do pagamento.'
+          example: 2
     Order:
       type: object
       required: [id, userId, status, total, createdAt, items]
@@ -503,8 +616,12 @@ components:
           format: uuid
         status:
           type: integer
-          enum: [0, 1]
-          description: 0 = PENDING; 1 = PAYMENT_PENDING
+          enum:
+            - 0
+            - 1
+            - 2
+            - 3
+          description: 0 = PENDING; 1 = PAYMENT_PENDING; 2 = PAID; 3 = CANCELED
         total:
           type: number
           format: double
@@ -594,6 +711,7 @@ components:
           type: number
           format: double
         stock:
+          description: Quantidade disponível para novas compras; reduzida na criação do pedido e devolvida no cancelamento por recusa. A aprovação mantém a quantidade.
           type: integer
           minimum: 0
     CreateProductRequest:
@@ -660,3 +778,138 @@ components:
           type: string
         statusCode:
           type: integer
+    ProcessOrderPaymentRequest:
+      type: object
+      required:
+        - paymentToken
+      properties:
+        paymentToken:
+          type: string
+          enum:
+            - sim-approved
+            - sim-declined
+          description: Token do simulador; valor obtido do total persistido no pedido.
+    OrderPayment:
+      type: object
+      required:
+        - orderId
+        - status
+        - paymentDetails
+        - paidAt
+        - createdAt
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        status:
+          type: integer
+          enum:
+            - 0
+            - 1
+            - 2
+          description: 0 = PENDING; 1 = PAID; 2 = DECLINED
+        paymentDetails:
+          $ref: '#/components/schemas/PaymentDetails'
+        paidAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    PaymentDetails:
+      type: object
+      nullable: true
+      required:
+        - provider
+        - transactionId
+        - amount
+      properties:
+        provider:
+          type: string
+          enum:
+            - simulated
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0
+    PaymentApprovedPayload:
+      type: object
+      required:
+        - orderId
+        - transactionId
+        - amount
+        - paidAt
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0
+        paidAt:
+          type: string
+          format: date-time
+    PaymentApprovedEvent:
+      type: object
+      description: Evento no stream payments; altera pedido para PAID.
+      required:
+        - event
+        - eventId
+        - timestamp
+        - payload
+      properties:
+        event:
+          type: string
+          enum:
+            - PaymentApproved
+        eventId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          $ref: '#/components/schemas/PaymentApprovedPayload'
+    PaymentDeclinedErrorPayload:
+      type: object
+      required:
+        - orderId
+        - transactionId
+        - amount
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        transactionId:
+          type: string
+          format: uuid
+        amount:
+          type: number
+          minimum: 0
+    PaymentDeclinedErrorEvent:
+      type: object
+      description: Evento no stream payments; altera pedido para CANCELED.
+      required:
+        - event
+        - eventId
+        - timestamp
+        - payload
+      properties:
+        event:
+          type: string
+          enum:
+            - PaymentDeclinedError
+        eventId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        payload:
+          $ref: '#/components/schemas/PaymentDeclinedErrorPayload'

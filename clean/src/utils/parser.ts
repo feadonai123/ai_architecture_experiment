@@ -7,9 +7,7 @@ export function parseRecord(value: unknown): Record<string, unknown> | null {
 }
 
 export function parseNonEmptyArray(value: unknown): [unknown, ...unknown[]] | null {
-  return Array.isArray(value) && value.length > 0
-    ? (value as [unknown, ...unknown[]])
-    : null;
+  return Array.isArray(value) && value.length > 0 ? (value as [unknown, ...unknown[]]) : null;
 }
 
 function parseSafeInteger(value: unknown): number | null {
@@ -91,4 +89,16 @@ export function parseString(value: unknown): string | null {
   }
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+export function parseUtcIsoDate(value: unknown): string | null {
+  if (
+    typeof value !== 'string' ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(value)
+  )
+    return null;
+  const date = parseDate(value);
+  return date && date.toISOString().replace('.000Z', 'Z') === value.replace('.000Z', 'Z')
+    ? value
+    : null;
 }

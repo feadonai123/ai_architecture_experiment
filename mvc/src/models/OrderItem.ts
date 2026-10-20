@@ -3,6 +3,10 @@ import { getDataSource } from '../database';
 import { OrderItem as OrderItemEntity } from '../entities/OrderItem';
 
 export class OrderItem {
+  static findByOrderId(orderId: string, manager: EntityManager): Promise<OrderItemEntity[]> {
+    return manager.getRepository(OrderItemEntity).find({ where: { orderId } });
+  }
+
   static create(
     items: DeepPartial<OrderItemEntity>[],
     manager: EntityManager = getDataSource().manager,

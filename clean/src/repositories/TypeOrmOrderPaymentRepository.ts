@@ -26,4 +26,9 @@ export class TypeOrmOrderPaymentRepository implements OrderPaymentRepository {
       .getRepository(OrderPaymentRecord)
       .save({ ...payment });
   }
+  async update(payment: OrderPayment): Promise<void> {
+    await DbManager.getManager(this.dataSource)
+      .getRepository(OrderPaymentRecord)
+      .save({ ...payment });
+  }
 }

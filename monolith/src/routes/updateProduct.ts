@@ -24,25 +24,29 @@ export async function updateProduct(
     throw new InvalidPriceError(input.price);
   }
 
-  const repository = dataSource.getRepository(Product);
-  const product = await repository.findOne({
-    where: { id: input.productId, deletedAt: IsNull() },
+  const { name, slug: inputSlug, price } = input;
+  return dataSource.transaction(async (manager) => {
+    const repository = manager.getRepository(Product);
+    const product = await repository.findOne({
+      where: { id: input.productId, deletedAt: IsNull() },
+      lock: { mode: 'pessimistic_write' },
+    });
+    if (!product) {
+      throw new ProductNotFoundError(input.productId);
+    }
+
+    const slug = inputSlug.trim();
+    const existing = await repository.findOne({ where: { slug } });
+    if (existing && existing.id !== product.id) {
+      throw new DuplicateSlugError(slug);
+    }
+
+    product.name = name.trim();
+    product.slug = slug;
+    product.description = typeof input.description === 'string' ? input.description : '';
+    product.price = price;
+    return repository.save(product);
   });
-  if (!product) {
-    throw new ProductNotFoundError(input.productId);
-  }
-
-  const slug = input.slug.trim();
-  const existing = await repository.findOne({ where: { slug } });
-  if (existing && existing.id !== product.id) {
-    throw new DuplicateSlugError(slug);
-  }
-
-  product.name = input.name.trim();
-  product.slug = slug;
-  product.description = typeof input.description === 'string' ? input.description : '';
-  product.price = input.price;
-  return repository.save(product);
 }
 
 export function updateProductRoute(dataSource: DataSource) {
