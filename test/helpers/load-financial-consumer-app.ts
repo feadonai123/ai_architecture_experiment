@@ -16,18 +16,6 @@ export async function createTestFinancialConsumer(
       const { createFinancialConsumer } = await import('../../monolith/src/financialConsumerApp');
       return createFinancialConsumer(dataSource, redis);
     }
-    case 'mvc': {
-      const { createFinancialConsumer } = await import('../../mvc/src/financialConsumerApp');
-      return createFinancialConsumer(redis);
-    }
-    case 'clean': {
-      const { createFinancialConsumer } = await import('../../clean/src/financialConsumerApp');
-      return createFinancialConsumer(dataSource, redis);
-    }
-    case 'domain': {
-      const { createFinancialConsumer } = await import('../../domain/src/financialConsumerApp');
-      return createFinancialConsumer(dataSource, redis);
-    }
     default:
       throw new Error(`Financial consumer is not implemented for ${requireEnv('APP_TARGET')}`);
   }
