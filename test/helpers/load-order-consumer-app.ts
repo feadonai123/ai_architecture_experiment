@@ -12,18 +12,6 @@ export async function createTestOrderConsumer(
   redis: Redis,
 ): Promise<TestOrderConsumer> {
   switch (requireEnv('APP_TARGET')) {
-    case 'monolith': {
-      const { createOrderConsumer } = await import('../../monolith/src/orderConsumerApp');
-      return createOrderConsumer(dataSource, redis);
-    }
-    case 'mvc': {
-      const { createOrderConsumer } = await import('../../mvc/src/orderConsumerApp');
-      return createOrderConsumer(redis);
-    }
-    case 'clean': {
-      const { createOrderConsumer } = await import('../../clean/src/orderConsumerApp');
-      return createOrderConsumer(dataSource, redis);
-    }
     case 'domain': {
       const { createOrderConsumer } = await import('../../domain/src/orderConsumerApp');
       return createOrderConsumer(dataSource, redis);

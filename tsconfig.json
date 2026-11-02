@@ -16,12 +16,6 @@
   },
   "include": [
     "test/**/*",
-    "monolith/src/**/*",
-    "monolith/test/**/*",
-    "mvc/src/**/*",
-    "mvc/test/**/*",
-    "clean/src/**/*",
-    "clean/test/**/*",
     "domain/src/**/*",
     "domain/test/**/*"
   ]

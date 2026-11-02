@@ -1,15 +1,12 @@
-# Plano Detalhado de Implementação e Execução do Experimento
+# Plano Detalhado de Implementação e Execução do Experimento — Domain-Oriented Modular Monolith
+
+> Esta branch mantém apenas a implementação **Domain-Oriented Modular Monolith** do experimento de TCC. O experimento original compara quatro organizações de código equivalentes (Monólito Acoplado, MVC Técnico, Clean Architecture e Domain-Oriented Modular Monolith); as demais variantes são mantidas em branches próprias. Este documento preserva o contexto geral do experimento e os detalhes específicos da variante desta branch.
 
 ## 1. Objetivo do experimento
 
-O experimento será construído a partir de quatro implementações funcionalmente equivalentes de um sistema backend de e-commerce:
+O experimento é construído a partir de quatro implementações funcionalmente equivalentes de um sistema backend de e-commerce, cada uma organizada segundo uma estratégia arquitetural diferente. Esta branch representa a variante **Domain-Oriented Modular Monolith**.
 
-1. Monólito Acoplado;
-2. MVC Técnico;
-3. Clean Architecture;
-4. Domain-Oriented Modular Monolith.
-
-Todas as implementações deverão representar o mesmo sistema, utilizando:
+Todas as implementações do experimento utilizam:
 
 * Node.js;
 * TypeScript;
@@ -24,7 +21,7 @@ A hipótese experimental é:
 
 > **Quanto maior a co-localização semântica das informações relacionadas a uma funcionalidade, menor tende a ser o esforço de navegação necessário para que um agente de IA compreenda e modifique essa funcionalidade.**
 
-A pesquisa não deverá tratar as arquiteturas como uma hierarquia de "melhor" e "pior". O objetivo é avaliar empiricamente diferentes formas de organização da informação presentes na codebase.
+A pesquisa não trata as arquiteturas como uma hierarquia de "melhor" e "pior". O objetivo é avaliar empiricamente diferentes formas de organização da informação presentes na codebase.
 
 ---
 
@@ -65,29 +62,15 @@ Co-localização semântica
 Nível de isolamento entre partes do sistema
 ```
 
-Portanto, o experimento deve comparar:
-
-```text
-MESMO SISTEMA
-+
-MESMO COMPORTAMENTO
-+
-MESMA INFRAESTRUTURA
-+
-MESMAS TECNOLOGIAS
-+
-DIFERENTE ORGANIZAÇÃO DA CODEBASE
-```
-
 Essa separação é necessária para que eventuais diferenças observadas no desempenho dos agentes possam ser relacionadas à organização arquitetural, e não a diferenças funcionais ou tecnológicas.
 
 ---
 
 # 3. Domínio da aplicação
 
-O sistema experimental será um backend de e-commerce.
+O sistema experimental é um backend de e-commerce.
 
-O domínio inicial deve contemplar:
+O domínio inicial contempla:
 
 ```text
 Catálogo
@@ -98,15 +81,15 @@ Pedidos
 Pagamentos
 ```
 
-O TCC já define como escopo inicial funcionalidades de catálogo, carrinho, pedidos e pagamentos, com posterior introdução de funcionalidades de usuários e autenticação.
+O TCC define como escopo inicial funcionalidades de catálogo, carrinho, pedidos e pagamentos, com posterior introdução de funcionalidades de usuários e autenticação.
 
-A primeira versão do sistema deverá ser deliberadamente simples o suficiente para permitir que agentes possam posteriormente realizar tarefas de evolução e manutenção.
+A primeira versão do sistema é deliberadamente simples o suficiente para permitir que agentes possam posteriormente realizar tarefas de evolução e manutenção.
 
 ---
 
 # 4. Modelagem de dados
 
-A modelagem de dados deve ser idêntica nas quatro implementações.
+A modelagem de dados é idêntica entre as implementações do experimento.
 
 Exemplo conceitual:
 
@@ -139,35 +122,24 @@ total
 createdAt
 ```
 
-A implementação concreta utilizando TypeORM deve ser equivalente nas quatro versões.
+A implementação concreta utilizando TypeORM é equivalente entre as variantes do experimento.
 
-Diferenças arquiteturais podem alterar a localização ou a forma de organização das classes no código, mas não devem alterar o modelo persistido.
-
-Por exemplo, a mesma tabela `products` deve existir independentemente da arquitetura utilizada.
+Diferenças arquiteturais podem alterar a localização ou a forma de organização das classes no código, mas não alteram o modelo persistido.
 
 ---
 
 # 5. Infraestrutura compartilhada
 
-A infraestrutura do experimento deverá ser centralizada e compartilhada.
+A infraestrutura do experimento é centralizada e compartilhada.
 
-Ela deverá fornecer:
+Fornece:
 
 ```text
 PostgreSQL
 Redis
 ```
 
-Um único `docker-compose.yml` deverá ser utilizado como infraestrutura de desenvolvimento e testes.
-
-Estrutura conceitual:
-
-```text
-experiment/
-└── docker-compose.yml
-```
-
-Exemplo:
+Um único `docker-compose.yml` é utilizado como infraestrutura de desenvolvimento e testes.
 
 ```yaml
 services:
@@ -181,34 +153,32 @@ services:
     ...
 ```
 
-As quatro aplicações deverão conectar-se a essa mesma infraestrutura.
-
-Não devem existir versões arquiteturalmente diferentes do banco ou do Redis.
+Esta aplicação se conecta a essa infraestrutura.
 
 ---
 
 # 6. PostgreSQL
 
-O PostgreSQL será utilizado como banco de dados principal das quatro aplicações.
+O PostgreSQL é utilizado como banco de dados principal.
 
-Todas as implementações deverão utilizar:
+A implementação utiliza:
 
 ```text
 PostgreSQL
 TypeORM
 ```
 
-A infraestrutura deverá disponibilizar um banco para execução da aplicação.
+A infraestrutura disponibiliza um banco para execução da aplicação.
 
-Os testes, entretanto, não deverão utilizar diretamente o banco principal da aplicação.
+Os testes não utilizam diretamente o banco principal da aplicação.
 
 ---
 
 # 7. Banco temporário para testes
 
-Os testes deverão utilizar uma base de dados isolada da base utilizada pela aplicação.
+Os testes utilizam uma base de dados isolada da base utilizada pela aplicação.
 
-Sempre que possível, deve ser utilizado PostgreSQL real em ambiente temporário, em vez de um banco "fake" ou puramente em memória.
+Sempre que possível, é utilizado PostgreSQL real em ambiente temporário, em vez de um banco "fake" ou puramente em memória.
 
 A motivação é preservar o comportamento real do banco para situações relacionadas a:
 
@@ -221,29 +191,13 @@ A motivação é preservar o comportamento real do banco para situações relaci
 * concorrência;
 * consistência.
 
-Assim, o ambiente experimental poderá utilizar:
-
-```text
-PostgreSQL da aplicação
-```
-
-e:
-
-```text
-PostgreSQL temporário/isolado para testes
-```
-
-O banco de testes deve ser criado, limpo ou isolado automaticamente durante a execução da suíte.
-
-O mecanismo concreto de isolamento poderá utilizar banco separado, schema separado ou estratégia equivalente, desde que uma execução de teste não contamine os dados de outra.
+O banco de testes é criado, limpo ou isolado automaticamente durante a execução da suíte.
 
 ---
 
 # 8. Redis
 
-Redis será utilizado para representar a infraestrutura de mensageria do sistema.
-
-A intenção é manter uma infraestrutura de mensageria comum entre as quatro implementações.
+Redis é utilizado para representar a infraestrutura de mensageria do sistema.
 
 Exemplos de eventos:
 
@@ -254,7 +208,7 @@ StockUpdated
 PaymentProcessed
 ```
 
-O comportamento funcional associado à mensageria deve permanecer equivalente entre as versões.
+O comportamento funcional associado à mensageria permanece equivalente entre as variantes do experimento.
 
 A arquitetura pode alterar:
 
@@ -272,11 +226,7 @@ mas não deve alterar deliberadamente o comportamento funcional apenas para favo
 
 # 9. Prefabs para testes
 
-Os testes utilizarão uma infraestrutura externa de criação de dados, denominada `prefabs`.
-
-Os prefabs serão responsáveis por criar estados conhecidos no banco para facilitar a preparação dos testes.
-
-Exemplo:
+Os testes utilizam uma infraestrutura externa de criação de dados, denominada `prefabs`.
 
 ```ts
 const product = await ProductPrefab.create({
@@ -285,38 +235,11 @@ const product = await ProductPrefab.create({
 });
 ```
 
-ou:
-
-```ts
-const cart = await CartPrefab.create();
-
-const product = await ProductPrefab.create({
-    stock: 10
-});
-
-await CartItemPrefab.create({
-    cartId: cart.id,
-    productId: product.id,
-    quantity: 2
-});
-```
-
-A principal regra será:
+A principal regra é:
 
 > **Os prefabs não podem depender da arquitetura da aplicação.**
 
-Eles não devem importar:
-
-```text
-MVC controllers
-Clean use cases
-Domain repositories
-Application services
-```
-
 Devem conhecer apenas a modelagem de persistência e a infraestrutura de teste.
-
-Estrutura aproximada:
 
 ```text
 test/
@@ -328,17 +251,13 @@ test/
     └── payment.prefab.ts
 ```
 
-Isso garante que os quatro sistemas recebam exatamente as mesmas condições iniciais.
+Isso garante que as implementações do experimento recebam exatamente as mesmas condições iniciais.
 
 ---
 
 # 10. Contrato da API
 
-Antes da implementação, deverá ser definido o contrato completo da API.
-
-Todos os sistemas deverão utilizar exatamente os mesmos endpoints.
-
-Exemplo:
+Todas as implementações do experimento utilizam exatamente os mesmos endpoints.
 
 ```text
 GET    /products
@@ -352,7 +271,7 @@ POST   /orders
 GET    /orders/:id
 ```
 
-O contrato deverá definir:
+O contrato define:
 
 ```text
 Método HTTP
@@ -366,13 +285,11 @@ Casos de sucesso
 Casos de erro
 ```
 
-Nenhuma implementação deve adicionar ou remover endpoints por decisão arquitetural.
+Nenhuma implementação adiciona ou remove endpoints por decisão arquitetural.
 
 ---
 
 # 11. Casos de erro
-
-Durante a definição do contrato da API, todos os cenários relevantes de erro deverão ser identificados.
 
 Exemplo para `POST /cart/items`:
 
@@ -383,11 +300,7 @@ Exemplo para `POST /cart/items`:
 | carrinho inexistente | `CartNotFoundError`      |  404 |
 | estoque insuficiente | `InsufficientStockError` |  409 |
 
-A lista completa de erros deverá ser definida antes do início da implementação.
-
-A aplicação deverá possuir erros semanticamente identificáveis.
-
-Exemplo:
+A aplicação possui erros semanticamente identificáveis:
 
 ```ts
 throw new ProductNotFoundError(productId);
@@ -399,73 +312,31 @@ em vez de:
 throw new Error("Product not found");
 ```
 
-Isso permitirá testar explicitamente os diferentes cenários.
-
 ---
 
 # 12. Mapeamento entre erros internos e HTTP
 
-Os erros de domínio/aplicação deverão possuir representação própria e posteriormente ser convertidos para respostas HTTP.
-
-Conceitualmente:
+Os erros de domínio/aplicação possuem representação própria e são convertidos para respostas HTTP.
 
 ```text
-ProductNotFoundError
-        ↓
-HTTP 404
+ProductNotFoundError → HTTP 404
+InvalidQuantityError → HTTP 400
+InsufficientStockError → HTTP 409
 ```
 
-```text
-InvalidQuantityError
-        ↓
-HTTP 400
-```
-
-```text
-InsufficientStockError
-        ↓
-HTTP 409
-```
-
-Cada arquitetura deverá realizar esse mapeamento dentro de sua própria organização estrutural.
-
-Por exemplo:
-
-```text
-MVC:
-errors/
-controllers/
-```
-
-```text
-Clean:
-errors/
-usecases/
-controllers/
-```
-
-```text
-Domain:
-ordering/errors/
-ordering/usecases/
-ordering/controllers/
-```
-
-A localização muda, mas o comportamento externo permanece igual.
+No Domain, o mapeamento ocorre em `ordering/errors/` + `ordering/usecases/` + `ordering/controllers/` (um exemplo por contexto). A localização muda entre as variantes do experimento, mas o comportamento externo permanece igual.
 
 ---
 
 # 13. TDD
 
-O desenvolvimento seguirá Test-Driven Development.
-
-A ordem geral será:
+O desenvolvimento segue Test-Driven Development.
 
 ```text
 1. Definir contrato da API
 2. Definir casos de sucesso e erro
 3. Criar testes de integração
-4. Estruturar cada arquitetura
+4. Estruturar a arquitetura
 5. Definir regras arquiteturais
 6. Criar testes unitários
 7. Implementar utilizando TDD
@@ -474,40 +345,17 @@ A ordem geral será:
 10. Validar comportamento completo
 ```
 
-Os testes deverão existir antes da implementação da funcionalidade correspondente.
+Os testes existem antes da implementação da funcionalidade correspondente.
 
 ---
 
 # 14. Testes de integração
 
-Os testes de integração serão a principal forma de garantir que as quatro implementações possuem o mesmo comportamento observável.
+Os testes de integração são a principal forma de garantir que as implementações do experimento possuem o mesmo comportamento observável.
 
-A mesma suíte de integração deverá ser executada contra:
+A mesma suíte de integração é executada contra cada variante (nesta branch, `APP_TARGET=domain`).
 
-```text
-Monólito Acoplado
-MVC
-Clean
-Domain-Oriented
-```
-
-Os testes não deverão conhecer os detalhes internos das arquiteturas.
-
-Não devem existir assertions como:
-
-```text
-expect(OrderController).toBeDefined()
-```
-
-ou:
-
-```text
-expect(AddOrderUseCase).toBeCalled()
-```
-
-nos testes de integração.
-
-Os testes deverão trabalhar exclusivamente com:
+Os testes não conhecem os detalhes internos da arquitetura. Trabalham exclusivamente com:
 
 ```text
 HTTP
@@ -520,8 +368,6 @@ Comportamento observável
 
 # 15. Organização dos testes de integração
 
-Estrutura:
-
 ```text
 test/
 └── integration/
@@ -531,20 +377,7 @@ test/
     └── payments/
 ```
 
-Exemplo:
-
-```text
-test/integration/cart/add-item.test.ts
-test/integration/cart/remove-item.test.ts
-test/integration/cart/get-cart.test.ts
-```
-
-Cada operação deverá possuir testes de:
-
-```text
-caminho feliz
-caminhos de erro
-```
+Cada operação possui testes de caminho feliz e caminhos de erro.
 
 ---
 
@@ -573,8 +406,6 @@ and:
 and:
     quantity is correct
 ```
-
-O mesmo teste deverá passar em todas as quatro implementações.
 
 ---
 
@@ -610,9 +441,6 @@ when:
 
 then:
     HTTP 400
-
-and:
-    error corresponds to InvalidQuantity
 ```
 
 Para estoque insuficiente:
@@ -632,33 +460,20 @@ then:
 
 # 18. Testes unitários
 
-Os testes unitários serão específicos de cada implementação.
-
-A finalidade é testar as principais unidades responsáveis pela lógica de negócio de cada arquitetura.
-
-Os testes poderão utilizar mocks das dependências externas.
-
-A ferramenta principal será:
+A finalidade é testar as principais unidades responsáveis pela lógica de negócio desta arquitetura.
 
 ```text
 Jest
 ```
 
-No caso de Clean Architecture e Domain-Oriented, os principais alvos serão os Use Cases.
-
-No MVC, o teste deverá ser direcionado à unidade que concentra a regra de negócio, normalmente o Controller.
-
-No Monólito Acoplado, o teste deverá respeitar a estrutura efetivamente construída, sem criar artificialmente abstrações apenas para possibilitar testes.
+No Domain-Oriented, os principais alvos são os Use Cases.
 
 ---
 
 # 19. Padrão dos testes unitários
 
-Os testes unitários deverão seguir uma organização consistente:
-
 ```text
 describe("success")
-
 describe("errors")
 ```
 
@@ -677,13 +492,9 @@ AddCartItem
     └── InsufficientStock
 ```
 
-Isso permite que diferentes implementações sejam avaliadas através de uma matriz de cenários comparável, ainda que as unidades internas testadas sejam diferentes.
-
 ---
 
 # 20. Exemplo de teste unitário
-
-Conceitualmente:
 
 ```ts
 describe("AddCartItem", () => {
@@ -692,17 +503,13 @@ describe("AddCartItem", () => {
 
         it("creates a new cart item", async () => {
             // Arrange
-
             // Act
-
             // Assert
         });
 
         it("increments existing item quantity", async () => {
             // Arrange
-
             // Act
-
             // Assert
         });
     });
@@ -711,347 +518,43 @@ describe("AddCartItem", () => {
 
         it("throws ProductNotFoundError", async () => {
             // Arrange
-
             // Act
-
             // Assert
         });
 
         it("throws CartNotFoundError", async () => {
             // Arrange
-
             // Act
-
             // Assert
         });
 
         it("throws InvalidQuantityError", async () => {
             // Arrange
-
             // Act
-
             // Assert
         });
     });
 });
 ```
 
-O teste de erro deverá verificar o tipo semântico do erro:
+O teste de erro verifica o tipo semântico do erro:
 
 ```ts
 expect(error)
     .toBeInstanceOf(ProductNotFoundError);
 ```
 
-e não depender exclusivamente da mensagem textual.
+e não depende exclusivamente da mensagem textual.
 
 ---
 
-# 21. Arquitetura 1: Monólito Acoplado
-
-## Objetivo
-
-Representar uma codebase com baixo grau de organização arquitetural interna.
-
-O sistema deve continuar funcional, mas não deverá possuir fronteiras fortes entre responsabilidades.
-
-Exemplo:
-
-```text
-src/
-├── app.ts
-├── database.ts
-└── entities/
-    ├── Product.ts
-    ├── Cart.ts
-    └── CartItem.ts
-```
-
-Parte significativa da lógica poderá ficar diretamente nas rotas:
-
-```text
-POST /cart/items
-    ↓
-validação
-    ↓
-regra de negócio
-    ↓
-TypeORM
-    ↓
-resposta
-```
-
----
-
-## Adicionar produto
-
-Pseudocódigo:
-
-```text
-POST /cart/items
-
-    receber cartId
-    receber productId
-    receber quantity
-
-    validar quantity
-
-    consultar Product via TypeORM
-
-    se produto não existir:
-        lançar ProductNotFoundError
-
-    consultar Cart via TypeORM
-
-    se carrinho não existir:
-        lançar CartNotFoundError
-
-    consultar CartItem
-
-    se item existir:
-        incrementar quantity
-        salvar
-    senão:
-        criar item
-        salvar
-
-    carregar carrinho atualizado
-
-    retornar resposta
-```
-
-Não deverão ser criados artificialmente:
-
-```text
-UseCase
-Repository
-Service
-Interface
-Factory
-```
-
-quando esses componentes não forem necessários à representação da arquitetura.
-
----
-
-# 22. Arquitetura 2: MVC Técnico
-
-## Objetivo
-
-Organizar a aplicação principalmente por responsabilidades técnicas.
-
-Estrutura:
-
-```text
-src/
-├── controllers/
-├── models/
-├── services/
-├── routes/
-└── errors/
-```
-
-O agrupamento principal é técnico.
-
-Exemplo:
-
-```text
-controllers/
-    ProductController
-    CartController
-    OrderController
-
-models/
-    Product
-    Cart
-    CartItem
-    Order
-```
-
-Portanto, os domínios permanecem distribuídos entre as mesmas camadas.
-
----
-
-## AddCartItem
-
-Fluxo:
-
-```text
-HTTP
- ↓
-CartController
- ↓
-Model
- ↓
-Database
-```
-
-Pseudocódigo:
-
-```text
-CartController.addItem(request):
-
-    obter cartId
-    obter productId
-    obter quantity
-
-    validar quantity
-
-    product = Product.findById(productId)
-
-    se não existir:
-        throw ProductNotFoundError
-
-    cart = Cart.findById(cartId)
-
-    se não existir:
-        throw CartNotFoundError
-
-    item = CartItem.findByCartAndProduct(
-        cartId,
-        productId
-    )
-
-    se item existir:
-        item.quantity += quantity
-        item.save()
-    senão:
-        criar CartItem
-        salvar
-
-    buscar carrinho atualizado
-
-    retornar resposta
-```
-
-A regra de negócio permanece no Controller ou em serviços estreitamente associados à organização MVC.
-
----
-
-# 23. Arquitetura 3: Clean Architecture
-
-## Objetivo
-
-Manter a organização por responsabilidades técnicas, adicionando:
-
-```text
-Use Cases
-Entities
-Repository abstractions
-Dependency Rule
-Inversão de dependência
-```
-
-Estrutura:
-
-```text
-src/
-├── controllers/
-├── usecases/
-├── entities/
-├── repositories/
-├── services/
-├── errors/
-├── infrastructure/
-└── routes/
-```
-
-A separação é transversal ao domínio.
-
-Exemplo:
-
-```text
-controllers/
-usecases/
-repositories/
-entities/
-```
-
-contêm componentes de vários domínios.
-
----
-
-## AddCartItem
-
-```text
-HTTP
- ↓
-Controller
- ↓
-Use Case
- ↓
-Repository Interface
- ↓
-Repository Implementation
- ↓
-TypeORM
- ↓
-PostgreSQL
-```
-
-Controller:
-
-```text
-AddCartItemController.handle(request):
-
-    extrair input
-
-    result = AddCartItem.execute(input)
-
-    retornar result
-```
-
-Use Case:
-
-```text
-AddCartItem.execute(input):
-
-    validar quantity
-
-    product =
-        productRepository.findById(productId)
-
-    se produto não existir:
-        throw ProductNotFoundError
-
-    cart =
-        cartRepository.findById(cartId)
-
-    se carrinho não existir:
-        throw CartNotFoundError
-
-    item =
-        cartItemRepository.findByCartAndProduct(
-            cartId,
-            productId
-        )
-
-    se item existir:
-
-        item.quantity += quantity
-
-        cartItemRepository.save(item)
-
-    senão:
-
-        item = CartItem.create(...)
-
-        cartItemRepository.save(item)
-
-    retornar carrinho atualizado
-```
-
-O Use Case não deverá conhecer Express nem TypeORM diretamente.
-
----
-
-# 24. Arquitetura 4: Domain-Oriented Modular Monolith
+# 21. Arquitetura desta branch: Domain-Oriented Modular Monolith
 
 ## Objetivo
 
 Manter as propriedades da Clean Architecture, mas adicionar uma primeira dimensão organizacional baseada em domínio.
 
-A organização será:
+A organização é:
 
 ```text
 DOMÍNIO
@@ -1094,11 +597,9 @@ src/
 └── shared/
 ```
 
-A principal diferença em relação à Clean Architecture será a co-localização das informações semanticamente relacionadas.
+A principal diferença em relação à Clean Architecture está na co-localização das informações semanticamente relacionadas.
 
----
-
-# 25. AddCartItem no Domain-Oriented
+## AddCartItem no Domain-Oriented
 
 O carrinho pertence ao contexto de `ordering`.
 
@@ -1142,59 +643,23 @@ PostgreSQL
 
 A diferença está principalmente na topologia da codebase.
 
----
+## Isolamento entre contextos
 
-# 26. Isolamento entre contextos
+Os contextos possuem fronteiras explícitas.
 
-Os contextos devem possuir fronteiras explícitas.
+Por exemplo, `ordering` não deve importar diretamente estruturas internas de `payments` ou `inventory`, como `payments/repositories/InternalPaymentRepository`.
 
-Por exemplo:
+A comunicação usa uma interface ou mecanismo explícito de integração.
 
-```text
-ordering
-```
+## Duplicação de código
 
-não deve importar diretamente estruturas internas de:
+A arquitetura Domain-Oriented permite duplicação quando essa duplicação contribui para o isolamento semântico.
 
-```text
-payments
-inventory
-```
+Por exemplo, `ordering/repositories/ProductRepository` e `catalog/repositories/ProductRepository` podem coexistir mesmo que ambos consultem a tabela `products`.
 
-como:
+Não é criada uma abstração global apenas para eliminar toda repetição.
 
-```text
-payments/repositories/InternalPaymentRepository
-```
-
-A comunicação deve utilizar uma interface ou mecanismo explícito de integração.
-
-O objetivo é evitar que a simples organização por pastas seja apenas cosmética.
-
-A fronteira semântica precisa ser refletida na estrutura de dependências.
-
----
-
-# 27. Duplicação de código
-
-A arquitetura Domain-Oriented deverá permitir duplicação quando essa duplicação contribuir para o isolamento semântico.
-
-Por exemplo:
-
-```text
-ordering/repositories/ProductRepository
-catalog/repositories/ProductRepository
-```
-
-podem coexistir mesmo que ambos consultem a tabela:
-
-```text
-products
-```
-
-Não deverá ser criada uma abstração global apenas para eliminar toda repetição.
-
-O princípio experimental será:
+O princípio experimental é:
 
 ```text
 co-localização e isolamento semântico
@@ -1204,42 +669,15 @@ reutilização técnica
 
 quando houver conflito entre as duas características.
 
----
+## Componentes compartilhados
 
-# 28. Componentes compartilhados
-
-Componentes estritamente técnicos podem permanecer compartilhados.
-
-Exemplo:
-
-```text
-shared/
-├── database/
-├── messaging/
-├── integrations/
-└── infrastructure/
-```
-
-Exemplos:
-
-```text
-Redis connection
-PostgreSQL connection
-Payment Gateway client
-Email provider
-```
-
-Entretanto, regras específicas de domínio não deverão ser movidas para `shared` apenas para evitar duplicação.
+Componentes estritamente técnicos permanecem compartilhados em `shared/`. Regras específicas de domínio não são movidas para `shared` apenas para evitar duplicação.
 
 ---
 
-# 29. Regras arquiteturais
+# 22. Regras arquiteturais
 
-Cada implementação deverá possuir regras explícitas que definem quais dependências são permitidas.
-
-Essas regras deverão ser verificadas automaticamente.
-
-A análise arquitetural deverá distinguir:
+A implementação possui regras explícitas que definem quais dependências são permitidas, verificadas automaticamente. A análise arquitetural distingue:
 
 ```text
 qualidade geral do código
@@ -1253,100 +691,33 @@ conformidade arquitetural
 
 ---
 
-# 30. Ferramentas de análise estática
-
-A infraestrutura estática deverá utilizar ferramentas diferentes para responsabilidades diferentes.
+# 23. Ferramentas de análise estática
 
 ## Prettier
 
-Responsabilidade:
-
-```text
-formatação
-```
-
-Não será utilizado como mecanismo de validação arquitetural.
-
----
+Responsabilidade: formatação. Não é utilizado como mecanismo de validação arquitetural.
 
 ## ESLint
 
-Responsabilidades:
-
-```text
-qualidade estática
-padrões de código
-imports proibidos
-restrições simples
-```
-
-Por exemplo:
-
-```text
-entities
-    não podem importar Express
-
-entities
-    não podem importar infrastructure
-```
-
-ou:
+Responsabilidades: qualidade estática, padrões de código, imports proibidos, restrições simples. Por exemplo:
 
 ```text
 domain
-    não pode importar módulo interno de outro domínio
+    não pode importar módulo interno de outro domain
 ```
-
----
 
 ## Dependency Cruiser
 
-Será utilizado como principal mecanismo de análise das dependências arquiteturais.
-
-Ele permitirá representar regras como:
+Principal mecanismo de análise das dependências arquiteturais, com regras específicas para esta arquitetura (`.dependency-cruiser.cjs`), como:
 
 ```text
-entities
-    não pode depender de infrastructure
-
-usecases
-    não pode depender de controllers
-
 ordering
     não pode depender diretamente de payments/internals
 ```
 
-As regras devem ser específicas para cada arquitetura.
-
 ---
 
-# 31. Exemplo de regra da Clean Architecture
-
-Conceitualmente:
-
-```text
-entities
-    ✓ podem ser importadas por usecases
-
-entities
-    ✗ não podem importar infrastructure
-
-usecases
-    ✓ podem utilizar repository interfaces
-
-usecases
-    ✗ não podem importar TypeORM
-
-controllers
-    ✓ podem utilizar usecases
-
-infrastructure
-    ✓ pode implementar repositories
-```
-
----
-
-# 32. Exemplo de regra do Domain-Oriented
+# 24. Exemplo de regra do Domain-Oriented
 
 ```text
 ordering
@@ -1365,13 +736,9 @@ ordering/entities
     ✗ não pode importar TypeORM diretamente
 ```
 
-As regras concretas deverão refletir a arquitetura escolhida e ser validadas antes dos experimentos.
-
 ---
 
-# 33. Scripts de validação
-
-Cada implementação deverá disponibilizar scripts equivalentes, por exemplo:
+# 25. Scripts de validação
 
 ```text
 npm test
@@ -1382,13 +749,9 @@ npm run architecture
 npm run typecheck
 ```
 
-O objetivo é padronizar a forma de validação entre os projetos.
-
 ---
 
-# 34. Estrutura geral do repositório experimental
-
-Uma estrutura possível:
+# 26. Estrutura geral do repositório desta branch
 
 ```text
 experiment/
@@ -1402,24 +765,6 @@ experiment/
 │   ├── contracts/
 │   └── helpers/
 │
-├── monolith/
-│   ├── src/
-│   ├── test/
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── mvc/
-│   ├── src/
-│   ├── test/
-│   ├── package.json
-│   └── tsconfig.json
-│
-├── clean/
-│   ├── src/
-│   ├── test/
-│   ├── package.json
-│   └── tsconfig.json
-│
 └── domain/
     ├── src/
     ├── test/
@@ -1427,117 +772,43 @@ experiment/
     └── tsconfig.json
 ```
 
-Os testes de integração compartilhados podem ser mantidos fora das aplicações, enquanto os testes unitários permanecerão junto da implementação correspondente.
+Os testes de integração compartilhados são mantidos fora da aplicação; os testes unitários permanecem junto da implementação.
 
 ---
 
-# 35. Processo completo de desenvolvimento
+# 27. Processo completo de desenvolvimento
 
 ## Fase 1: definição do domínio
 
-Definir:
-
-```text
-entidades
-relacionamentos
-regras de negócio
-eventos
-operações
-```
-
----
+Entidades, relacionamentos, regras de negócio, eventos, operações.
 
 ## Fase 2: definição do contrato
 
-Para cada endpoint:
-
-```text
-request
-response
-status code
-happy path
-error paths
-```
-
----
+Para cada endpoint: request, response, status code, happy path, error paths.
 
 ## Fase 3: definição dos erros
 
-Criar a matriz:
-
-```text
-Operação
-Condição
-Erro
-HTTP status
-```
-
-Essa matriz será comum às quatro implementações.
-
----
+Matriz: Operação, Condição, Erro, HTTP status — comum a todas as variantes do experimento.
 
 ## Fase 4: testes de integração
 
-Criar todos os testes comuns.
-
-Eles devem abranger:
-
-```text
-happy paths
-error paths
-estado do banco
-respostas HTTP
-efeitos sobre o sistema
-mensageria quando aplicável
-```
-
-Nesse momento ainda não deve existir a implementação das funcionalidades.
-
----
+Testes comuns cobrindo happy paths, error paths, estado do banco, respostas HTTP, efeitos sobre o sistema, mensageria quando aplicável.
 
 ## Fase 5: estrutura arquitetural
 
-Definir a estrutura de cada codebase:
-
-```text
-Monólito
-MVC
-Clean
-Domain-Oriented
-```
-
----
+Estrutura desta codebase: Domain-Oriented Modular Monolith.
 
 ## Fase 6: regras arquiteturais
 
-Definir:
-
-```text
-imports permitidos
-imports proibidos
-dependências entre camadas
-dependências entre contextos
-componentes compartilhados
-```
-
-Essas regras deverão ser representadas automaticamente sempre que possível.
-
----
+Imports permitidos, imports proibidos, dependências entre camadas, dependências entre contextos, componentes compartilhados.
 
 ## Fase 7: testes unitários
 
-Para cada implementação:
-
-```text
-success
-errors
-```
-
-Os testes deverão ser escritos de acordo com as unidades reais daquela arquitetura.
+`success` / `errors`, de acordo com as unidades reais desta arquitetura (Use Cases por operação).
 
 ---
 
-# 36. Implementação usando TDD
+# 28. Implementação usando TDD
 
 Para cada funcionalidade:
 
@@ -1558,36 +829,22 @@ REFACTOR
     verificar regras arquiteturais
 ```
 
-O agente deverá trabalhar dentro desse ciclo.
-
-Os testes comuns não devem ser modificados pelo agente para simplesmente fazer o sistema passar.
-
-Alterações no contrato funcional devem ser tratadas como mudanças de especificação e não como parte da implementação normal.
+Os testes comuns não devem ser modificados pelo agente para simplesmente fazer o sistema passar. Alterações no contrato funcional são tratadas como mudanças de especificação e não como parte da implementação normal.
 
 ---
 
-# 37. Primeira funcionalidade: carrinho
-
-A primeira funcionalidade utilizada como modelo de implementação deverá ser:
+# 29. Primeira funcionalidade: carrinho
 
 ```text
 Adicionar produto ao carrinho
 Remover produto do carrinho
 ```
 
-Essas funcionalidades são adequadas para estabelecer o padrão experimental porque envolvem:
-
-```text
-HTTP
-persistência
-regras de negócio
-erros
-relacionamento entre entidades
-```
+Essas funcionalidades envolvem HTTP, persistência, regras de negócio, erros e relacionamento entre entidades.
 
 ---
 
-# 38. Fluxo de adicionar produto
+# 30. Fluxo de adicionar produto
 
 Contrato:
 
@@ -1636,7 +893,7 @@ InsufficientStock
 
 ---
 
-# 39. Fluxo de remover produto
+# 31. Fluxo de remover produto
 
 Contrato:
 
@@ -1669,207 +926,9 @@ CartItemNotFound
 
 ---
 
-# 40. Estratégia de equivalência
+# 32. Garantia de qualidade da implementação
 
-A seguinte matriz deverá ser utilizada para verificar se as quatro versões permanecem equivalentes:
-
-| Característica        |    Monólito |         MVC |       Clean |      Domain |
-| --------------------- | ----------: | ----------: | ----------: | ----------: |
-| Node.js               |           ✓ |           ✓ |           ✓ |           ✓ |
-| TypeScript            |           ✓ |           ✓ |           ✓ |           ✓ |
-| Express               |           ✓ |           ✓ |           ✓ |           ✓ |
-| TypeORM               |           ✓ |           ✓ |           ✓ |           ✓ |
-| PostgreSQL            |           ✓ |           ✓ |           ✓ |           ✓ |
-| Redis                 |           ✓ |           ✓ |           ✓ |           ✓ |
-| Schema de banco       |       igual |       igual |       igual |       igual |
-| API                   |       igual |       igual |       igual |       igual |
-| Erros                 |      iguais |      iguais |      iguais |      iguais |
-| Integration tests     |      iguais |      iguais |      iguais |      iguais |
-| Unit tests            | específicos | específicos | específicos | específicos |
-| Arquitetura           |   diferente |   diferente |   diferente |   diferente |
-| Organização semântica |       baixa |       baixa |       baixa |        alta |
-
----
-
-# 41. O que não deve variar
-
-Não será permitido introduzir diferenças como:
-
-```text
-MVC usa Redis Streams
-Clean usa Pub/Sub
-Domain não usa Redis
-```
-
-ou:
-
-```text
-MVC possui 8 entidades
-Clean possui 10
-```
-
-ou:
-
-```text
-Domain utiliza banco diferente
-```
-
-sem justificativa experimental explícita.
-
-Também não devem ser utilizadas bibliotecas diferentes para representar funcionalidades equivalentes.
-
-A arquitetura deve ser a variável predominante.
-
----
-
-# 42. O que deve variar
-
-As diferenças deverão estar principalmente em:
-
-```text
-quantidade de componentes
-localização dos componentes
-organização dos diretórios
-fronteiras semânticas
-direção das dependências
-nível de compartilhamento
-nível de duplicação
-co-localização das informações
-```
-
-Essas características constituem o objeto estrutural da investigação.
-
----
-
-# 43. Caracterização das quatro arquiteturas
-
-## Monólito Acoplado
-
-```text
-Organização mínima
-
-Baixa separação
-Alto acoplamento
-Dependências diretas
-Poucas abstrações
-Alta centralização
-Baixa co-localização semântica
-```
-
----
-
-## MVC Técnico
-
-```text
-Separação por responsabilidade técnica
-
-controllers/
-models/
-services/
-
-Domínios distribuídos entre camadas
-Co-localização semântica baixa
-```
-
----
-
-## Clean Architecture
-
-```text
-Separação técnica mais refinada
-
-controllers/
-usecases/
-entities/
-repositories/
-services/
-
-Dependency Rule
-Inversão de dependência
-Isolamento do domínio
-
-Domínios ainda distribuídos pelas camadas
-```
-
----
-
-## Domain-Oriented Modular Monolith
-
-```text
-Primeira divisão por domínio
-
-catalog/
-ordering/
-payments/
-inventory/
-
-Segunda divisão por responsabilidade técnica
-
-controllers/
-usecases/
-repositories/
-entities/
-errors/
-
-Alta co-localização semântica
-Maior isolamento
-Maior possibilidade de duplicação
-```
-
----
-
-# 44. Princípio da co-localização
-
-O principal conceito estrutural a ser observado será a distância entre informações semanticamente relacionadas.
-
-Exemplo:
-
-```text
-Clean:
-
-controllers/
-    OrderController
-
-usecases/
-    CreateOrder
-
-repositories/
-    OrderRepository
-
-entities/
-    Order
-```
-
-versus:
-
-```text
-Domain:
-
-ordering/
-    controllers/
-        OrderController
-
-    usecases/
-        CreateOrder
-
-    repositories/
-        OrderRepository
-
-    entities/
-        Order
-```
-
-As implementações podem conter componentes equivalentes.
-
-A diferença está na sua localização dentro da estrutura da codebase.
-
-Esse fenômeno deve ser considerado uma das principais características observadas durante os experimentos.
-
----
-
-# 45. Garantia de qualidade das implementações
-
-Antes que qualquer codebase seja utilizada nos experimentos com agentes, ela deverá cumprir:
+Antes que esta codebase seja utilizada nos experimentos com agentes, ela deve cumprir:
 
 ```text
 todos os testes de integração
@@ -1883,25 +942,23 @@ lint
 regras arquiteturais
 ```
 
-A execução deverá produzir um estado inicial conhecido e funcional.
-
-Nenhuma implementação deve entrar no experimento contendo bugs conhecidos não relacionados à tarefa experimental.
+A execução deve produzir um estado inicial conhecido e funcional. Nenhuma implementação deve entrar no experimento contendo bugs conhecidos não relacionados à tarefa experimental.
 
 ---
 
-# 46. Estado inicial do experimento
+# 33. Estado inicial do experimento
 
-As quatro aplicações devem começar com:
+Esta aplicação começa com:
 
 ```text
-mesmas funcionalidades
+funcionalidades definidas
 mesmos dados de referência
 mesmas regras
 mesmos testes
 mesma infraestrutura
 ```
 
-Não deverão possuir inicialmente:
+que as demais variantes do experimento. Não possui inicialmente:
 
 ```text
 autenticação
@@ -1913,9 +970,9 @@ Isso está alinhado ao desenho do TCC, no qual o sistema inicial possui um escop
 
 ---
 
-# 47. Evolução posterior
+# 34. Evolução posterior
 
-Após a construção das quatro versões iniciais, elas serão submetidas às tarefas experimentais previstas no trabalho:
+Após a construção das versões iniciais do experimento, elas são submetidas às tarefas experimentais previstas no trabalho:
 
 ```text
 Experimento 1
@@ -1931,15 +988,9 @@ Experimento 4
 Refatoração arquitetural
 ```
 
-Essas categorias já fazem parte da metodologia proposta no TCC.
-
-A primeira etapa de implementação deverá, portanto, produzir uma base suficientemente estável para que essas tarefas posteriores sejam executadas de forma comparável.
-
 ---
 
-# 48. Métricas a serem coletadas
-
-Para cada execução dos agentes, deverão ser registrados:
+# 35. Métricas a serem coletadas
 
 ```text
 taxa de sucesso
@@ -1952,15 +1003,9 @@ quantidade de buscas
 quantidade de comandos/ferramentas utilizados
 ```
 
-As métricas já previstas no TCC incluem tokens, tempo e taxa de sucesso.
-
-Para a hipótese específica de navegação, deverão ser especialmente observadas métricas relacionadas ao esforço de exploração da codebase.
-
 ---
 
-# 49. Esforço de navegação
-
-Devem ser observados indicadores como:
+# 36. Esforço de navegação
 
 ```text
 número de arquivos lidos
@@ -1971,29 +1016,11 @@ arquivos relevantes encontrados
 arquivos irrelevantes explorados
 ```
 
-Quando possível, deverá ser analisada também a diferença entre:
-
-```text
-arquivos semanticamente relacionados à tarefa
-```
-
-e:
-
-```text
-arquivos que efetivamente precisaram ser explorados pelo agente.
-```
-
-Esse conjunto de métricas permitirá relacionar o resultado do agente à hipótese de co-localização semântica.
-
 ---
 
-# 50. Qualidade funcional e qualidade arquitetural
-
-A avaliação deverá separar dois conceitos.
+# 37. Qualidade funcional e qualidade arquitetural
 
 ## Correção funcional
-
-Verificar:
 
 ```text
 compila
@@ -2004,8 +1031,6 @@ regra de negócio está correta
 
 ## Conformidade arquitetural
 
-Verificar:
-
 ```text
 dependências respeitadas
 boundaries preservadas
@@ -2014,15 +1039,11 @@ contextos isolados
 ausência de dependências proibidas
 ```
 
-Uma implementação poderá ser funcionalmente correta e arquiteturalmente inadequada.
-
-Esse caso deve ser registrado separadamente.
+Uma implementação pode ser funcionalmente correta e arquiteturalmente inadequada. Esse caso deve ser registrado separadamente.
 
 ---
 
-# 51. Pipeline geral de validação
-
-Cada alteração significativa deverá passar por:
+# 38. Pipeline geral de validação
 
 ```text
 1. Jest Unit Tests
@@ -2038,13 +1059,11 @@ Cada alteração significativa deverá passar por:
 6. Full Test Suite
 ```
 
-A codebase somente será considerada válida quando todos os níveis estiverem aprovados.
-
 ---
 
-# 52. Regra principal para geração assistida por IA
+# 39. Regra principal para geração assistida por IA
 
-Os agentes utilizados posteriormente no experimento deverão receber:
+Os agentes utilizados posteriormente no experimento recebem:
 
 ```text
 o mesmo requisito
@@ -2054,74 +1073,55 @@ o mesmo conjunto de testes
 o mesmo conjunto de ferramentas disponíveis
 ```
 
-As diferenças entre as execuções deverão decorrer principalmente da arquitetura da codebase.
-
-O agente não deverá receber instruções que revelem qual arquitetura é supostamente "melhor".
-
-A tarefa deve descrever o resultado esperado e não induzir a estratégia de navegação.
+As diferenças entre as execuções decorrem principalmente da arquitetura da codebase. O agente não deve receber instruções que revelem qual arquitetura é supostamente "melhor".
 
 ---
 
-# 53. Resultado esperado da etapa de implementação
+# 40. Princípio da co-localização
 
-Ao final dessa etapa deverão existir quatro aplicações:
+O principal conceito estrutural observado é a distância entre informações semanticamente relacionadas.
 
-```text
-monolith/
-mvc/
-clean/
-domain/
-```
-
-Todas deverão:
+Exemplo (Clean, mantida em outra branch):
 
 ```text
-compilar
-iniciar
-conectar ao PostgreSQL
-conectar ao Redis
-responder aos mesmos endpoints
-seguir o mesmo contrato
-passar nos mesmos testes de integração
-passar nos testes unitários específicos
-obedecer às suas regras arquiteturais
+controllers/
+    OrderController
+
+usecases/
+    CreateOrder
+
+repositories/
+    OrderRepository
+
+entities/
+    Order
 ```
 
-A diferença relevante deverá estar na estrutura interna da codebase.
+versus (Domain-Oriented, esta branch):
+
+```text
+ordering/
+    controllers/
+        OrderController
+
+    usecases/
+        CreateOrder
+
+    repositories/
+        OrderRepository
+
+    entities/
+        Order
+```
+
+As implementações contêm componentes equivalentes; a diferença está na sua localização dentro da estrutura da codebase.
+
+Esse fenômeno é uma das principais características observadas durante os experimentos.
 
 ---
 
-# 54. Princípio final
-
-A construção das aplicações deverá seguir a seguinte regra:
+# 41. Princípio final
 
 > **A funcionalidade é constante; a organização é a variável.**
 
-Ou, de maneira mais precisa:
-
-```text
-                 MESMO SISTEMA
-                       │
-          ┌────────────┴────────────┐
-          │                         │
-      comportamento             infraestrutura
-          │                         │
-          └────────────┬────────────┘
-                       │
-                 VARIAÇÃO
-                       │
-              ORGANIZAÇÃO DA
-                 CODEBASE
-                       │
-       ┌───────────────┼────────────────┐
-       │               │                │
-    Monólito          MVC             Clean
-       │                                │
-       └────────────────────────────────┘
-                       │
-                Domain-Oriented
-```
-
-A investigação deverá então observar se a alteração dessa organização modifica a maneira como agentes de IA exploram, compreendem e evoluem a aplicação.
-
-O objetivo não é provar que uma arquitetura é universalmente superior, mas identificar **quais características estruturais da organização de uma codebase favorecem ou dificultam o trabalho realizado por agentes de IA**.
+A investigação observa se a organização da codebase modifica a maneira como agentes de IA exploram, compreendem e evoluem a aplicação. O objetivo não é provar que uma arquitetura é universalmente superior, mas identificar quais características estruturais da organização de uma codebase favorecem ou dificultam o trabalho realizado por agentes de IA.
