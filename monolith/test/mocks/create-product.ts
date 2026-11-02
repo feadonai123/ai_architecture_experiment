@@ -1,8 +1,0 @@
-export const productMock = {
-  id: 'product-1',
-  name: 'Tea',
-  slug: 'tea',
-  description: '',
-  price: 10,
-  stock: 10,
-};
