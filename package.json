@@ -2,10 +2,7 @@
   "name": "ai-architecture-experiment",
   "private": true,
   "workspaces": [
-    "monolith",
-    "mvc",
-    "clean",
-    "domain"
+    "clean"
   ],
   "scripts": {
     "infra:up": "docker compose up -d",
@@ -14,11 +11,8 @@
     "test": "npm run test:unit && npm run test:integration:all",
     "test:unit": "npm run test:unit --workspaces --if-present",
     "test:integration": "jest --config jest.integration.config.cjs --runInBand",
-    "test:integration:monolith": "cross-env APP_TARGET=monolith npm run test:integration",
-    "test:integration:mvc": "cross-env APP_TARGET=mvc npm run test:integration",
     "test:integration:clean": "cross-env APP_TARGET=clean npm run test:integration",
-    "test:integration:domain": "cross-env APP_TARGET=domain npm run test:integration",
-    "test:integration:all": "npm run test:integration:monolith && npm run test:integration:mvc && npm run test:integration:clean && npm run test:integration:domain",
+    "test:integration:all": "npm run test:integration:clean",
     "lint": "npm run lint --workspaces --if-present",
     "architecture": "npm run architecture --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",

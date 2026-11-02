@@ -12,20 +12,8 @@ export async function createTestFinancialConsumer(
   redis: Redis,
 ): Promise<TestFinancialConsumer> {
   switch (requireEnv('APP_TARGET')) {
-    case 'monolith': {
-      const { createFinancialConsumer } = await import('../../monolith/src/financialConsumerApp');
-      return createFinancialConsumer(dataSource, redis);
-    }
-    case 'mvc': {
-      const { createFinancialConsumer } = await import('../../mvc/src/financialConsumerApp');
-      return createFinancialConsumer(redis);
-    }
     case 'clean': {
       const { createFinancialConsumer } = await import('../../clean/src/financialConsumerApp');
-      return createFinancialConsumer(dataSource, redis);
-    }
-    case 'domain': {
-      const { createFinancialConsumer } = await import('../../domain/src/financialConsumerApp');
       return createFinancialConsumer(dataSource, redis);
     }
     default:
