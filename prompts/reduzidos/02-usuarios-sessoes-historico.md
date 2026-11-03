@@ -1,0 +1,3 @@
+# Experimento 2 · Cadastro, sessões e histórico de compras
+
+Implemente cadastro com e-mail único e senha armazenada como hash em `POST /users`, login com JWT de uma hora em `POST /sessions` e revogação da sessão atual em `DELETE /sessions/current`. Preserve a chave de API e valide-a antes do JWT. Use a conta autenticada para associar novos pedidos e listar seu histórico em `GET /orders`. Restrinja a consulta de status e o pagamento ao dono do pedido. Retorne `401` para sessão inválida e o mesmo `404` para pedido inexistente ou de outra conta. Preserve as associações existentes e as regras de estoque, pagamento e eventos. Informe como verificou o isolamento com duas contas.
