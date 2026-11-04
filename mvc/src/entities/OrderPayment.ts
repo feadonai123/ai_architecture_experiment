@@ -19,6 +19,9 @@ export class OrderPayment {
   @Column({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
 
+  @Column({ type: 'smallint', default: 0 })
+  attempts!: number;
+
   @OneToOne(() => Order, (order) => order.payment, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'order_id' })
   order!: Order;

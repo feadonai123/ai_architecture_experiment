@@ -6,6 +6,7 @@ import { CartItem } from './entities/CartItem';
 import { Order } from './entities/Order';
 import { OrderItem } from './entities/OrderItem';
 import { OrderPayment } from './entities/OrderPayment';
+import { OrderPaymentAttempt } from './entities/OrderPaymentAttempt';
 import { Product } from './entities/Product';
 import { User } from './entities/User';
 import { requireEnv } from './utils/env';
@@ -31,7 +32,7 @@ export function createDataSource(): DataSource {
     username: requireEnv('POSTGRES_USER'),
     password: requireEnv('POSTGRES_PASSWORD'),
     database: requireEnv('POSTGRES_DB'),
-    entities: [Product, User, Cart, CartItem, Order, OrderItem, OrderPayment],
+    entities: [Product, User, Cart, CartItem, Order, OrderItem, OrderPayment, OrderPaymentAttempt],
     synchronize: false,
     logging: false,
   });

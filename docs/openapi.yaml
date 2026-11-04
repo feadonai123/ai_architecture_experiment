@@ -494,12 +494,16 @@ paths:
     post:
       tags:
         - Pedidos
-      summary: Processa pagamento simulado e publica o resultado
+      summary: Processa uma tentativa de pagamento simulado, com até duas tentativas por pedido
       operationId: processOrderPayment
-      description: Persiste PAID ou DECLINED e publica PaymentApproved ou
-        PaymentDeclinedError no stream payments após commit. O OrderConsumer
-        atualiza o pedido de forma assíncrona. Na recusa, devolve o estoque e cancela o pedido na mesma transação; na aprovação, mantém a baixa realizada na criação. Repetições retornam o resultado
-        existente sem nova publicação.
+      description: Exige o cabeçalho Idempotency-Key (UUID) identificando a tentativa. A
+        primeira recusa retorna 422 e mantém o pedido e o estoque reservado,
+        habilitando uma segunda tentativa com outra chave; só a segunda
+        recusa é definitiva, cancela o pedido e devolve o estoque. Uma
+        aprovação em qualquer tentativa é definitiva. Reenviar a mesma chave
+        com o mesmo token repete o resultado original sem reprocessar; a
+        mesma chave com outro token retorna 409. Uma chave nova após o
+        resultado definitivo (aprovação ou segunda recusa) retorna 409.
       parameters:
         - name: orderId
           in: path
@@ -507,6 +511,13 @@ paths:
           schema:
             type: string
             format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Identifica esta tentativa de pagamento dentro do pedido.
       requestBody:
         required: true
         content:
@@ -528,7 +539,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OrderPayment'
         '400':
-          description: InvalidOrderIdError ou InvalidPaymentTokenError
+          description: InvalidOrderIdError, InvalidIdempotencyKeyError ou InvalidPaymentTokenError
           content:
             application/json:
               schema:
@@ -542,14 +553,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: PaymentNotReadyError ou InvalidOrderPaymentStateError
+          description: PaymentNotReadyError, PaymentAttemptConflictError (mesma chave com
+            outro token) ou InvalidOrderPaymentStateError (nova chave fora das
+            duas tentativas permitidas)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: 'PaymentDeclinedError: recusa persistida e evento publicado para
-            cancelamento'
+          description: 'PaymentDeclinedError: recusa persistida. Na primeira tentativa, o
+            pedido permanece aberto para uma segunda tentativa, sem publicar
+            evento; na segunda, é definitiva e publica o evento de
+            cancelamento.'
           content:
             application/json:
               schema:
