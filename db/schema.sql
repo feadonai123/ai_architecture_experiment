@@ -83,3 +83,18 @@ CREATE TABLE IF NOT EXISTS order_items (
   quantity INTEGER NOT NULL,
   unit_price NUMERIC(10, 2) NOT NULL
 );
+
+-- One row per payment attempt (Idempotency-Key) for a given order, up to two
+-- per order. order_payments keeps only the definitive (final) result.
+CREATE TABLE IF NOT EXISTS order_payment_attempts (
+  order_id UUID NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
+  idempotency_key UUID NOT NULL,
+  attempt_number SMALLINT NOT NULL,
+  payment_token VARCHAR(20) NOT NULL,
+  status SMALLINT NOT NULL,
+  payment_details JSONB,
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (order_id, idempotency_key),
+  CONSTRAINT order_payment_attempts_number_range CHECK (attempt_number IN (1, 2))
+);

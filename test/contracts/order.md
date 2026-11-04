@@ -14,17 +14,25 @@ Sem outbox, uma falha entre o commit e a publicação pode deixar um pedido pers
 
 ## POST `/orders/:orderId/payment` — RF06
 
-Requer `x-api-key`. `orderId` deve ser UUID válido. Body: `paymentToken` igual a `sim-approved` ou `sim-declined`. Valores ausentes, nulos ou diferentes são inválidos. O valor vem do total persistido no pedido; ignorar valor enviado pelo cliente.
+Requer `x-api-key` e o cabeçalho `Idempotency-Key` com um UUID válido, identificando uma tentativa de pagamento dentro do pedido. `orderId` deve ser UUID válido. Body: `paymentToken` igual a `sim-approved` ou `sim-declined`. Valores ausentes, nulos ou diferentes são inválidos. O valor vem do total persistido no pedido; ignorar valor enviado pelo cliente.
 
-A rota bloqueia o pedido e exige pagamento existente. Um novo processamento requer pedido `PAYMENT_PENDING = 1` e pagamento `PENDING = 0`. Persiste pagamento como `PAID = 1` ou `DECLINED = 2`, registra `paymentDetails` com `provider: simulated`, `transactionId` UUID e `amount`. Preenche `paidAt` somente na aprovação e conserva `createdAt`. O pedido permanece pendente até o consumo do evento.
+Cada pedido admite até duas tentativas de pagamento. A rota bloqueia o pedido e exige pagamento existente (`PENDING = 0` em `order_payments`), além do pedido em `PAYMENT_PENDING = 1`.
 
-Após commit, publica `PaymentApproved` ou `PaymentDeclinedError` no stream `payments`, com envelope `event`, `eventId`, `timestamp` e `payload`. Payload contém `orderId`, `transactionId`, `amount` e, na aprovação, `paidAt`. Token não é publicado. A recusa é definitiva para o pedido e persistida antes da resposta 422.
+- `Idempotency-Key` ausente ou inválido: `InvalidIdempotencyKeyError` (400), antes de qualquer consulta.
+- Chave já registrada para esse pedido: reenviar o mesmo token válido devolve o resultado original daquela tentativa, mesmo que o pedido já tenha avançado de estado; não simula de novo, não grava outro resultado e não publica outro evento. A mesma chave com outro token válido retorna `PaymentAttemptConflictError` (409).
+- Chave nova: exige que ainda não existam duas tentativas registradas, pagamento `PENDING` e pedido `PAYMENT_PENDING`; qualquer outra combinação retorna `InvalidOrderPaymentStateError` (409), inclusive quando o pagamento já tem resultado definitivo mas o pedido ainda não foi atualizado pelo consumidor.
 
-Aprovação retorna 200 com `orderId`, `status`, `paymentDetails`, `paidAt` e `createdAt`; datas ISO-8601 UTC. Recusa retorna 422 com `error: PaymentDeclinedError`, `message: Payment declined for order: {orderId}` e `statusCode: 422`.
+Primeira tentativa aprovada: persiste o pagamento como `PAID = 1` em `order_payments`, com `paymentDetails` (`provider: simulated`, `transactionId` UUID, `amount`) e `paidAt`; publica `PaymentApproved` após commit. Primeira tentativa recusada: grava a tentativa (status `DECLINED`, `paidAt` nulo) **sem** alterar `order_payments` (que continua `PENDING`) e **sem** publicar evento; o pedido permanece `PAYMENT_PENDING` com o estoque reservado, apto a uma segunda tentativa. Segunda tentativa aprovada: mesmo efeito da aprovação acima. Segunda tentativa recusada: persiste `order_payments` como `DECLINED = 2` e publica `PaymentDeclinedError`, recusa definitiva.
 
-Repetições com qualquer token válido retornam o resultado existente, sem nova simulação, alteração de dados ou publicação. Aprovação aceita pedido ainda pendente ou pago; recusa aceita pedido ainda pendente ou cancelado. Outras combinações são incompatíveis. Solicitações simultâneas são serializadas pelo bloqueio do pedido.
+Cada tentativa (chave, pedido, número da tentativa, token, resultado, `paymentDetails`, `paidAt`) é persistida de forma durável antes da resposta correspondente.
 
-Erros: `InvalidOrderIdError` (400, `Invalid order id: {orderId}`), `InvalidPaymentTokenError` (400, `Invalid payment token`), `OrderNotFoundError` (404, `Order not found: {orderId}`), `PaymentNotReadyError` (409, `Payment not ready for order: {orderId}`), `InvalidOrderPaymentStateError` (409, `Invalid payment state for order: {orderId}`), `PaymentDeclinedError` (422) e `ForbiddenError` (403). Corpo de erro: `error`, `message` e `statusCode`.
+Após commit, publica `PaymentApproved` ou `PaymentDeclinedError` no stream `payments`, com envelope `event`, `eventId`, `timestamp` e `payload`. Payload contém `orderId`, `transactionId`, `amount` e, na aprovação, `paidAt`. Token e chave de idempotência não são publicados.
+
+Aprovação retorna 200 com `orderId`, `status`, `paymentDetails`, `paidAt` e `createdAt`; datas ISO-8601 UTC. Recusa (primeira ou segunda tentativa) retorna 422 com `error: PaymentDeclinedError`, `message: Payment declined for order: {orderId}` e `statusCode: 422`.
+
+Uma nova chave após aprovação ou segunda recusa retorna `InvalidOrderPaymentStateError` (409), inclusive enquanto o consumidor ainda processa o resultado definitivo de forma assíncrona. Solicitações concorrentes são serializadas pelo bloqueio do pedido e respeitam o limite de duas tentativas; a mesma chave enviada simultaneamente produz um único resultado persistido.
+
+Erros: `InvalidOrderIdError` (400, `Invalid order id: {orderId}`), `InvalidPaymentTokenError` (400, `Invalid payment token`), `InvalidIdempotencyKeyError` (400, `Invalid idempotency key`), `OrderNotFoundError` (404, `Order not found: {orderId}`), `PaymentNotReadyError` (409, `Payment not ready for order: {orderId}`), `InvalidOrderPaymentStateError` (409, `Invalid payment state for order: {orderId}`), `PaymentAttemptConflictError` (409, `Payment attempt conflict for order: {orderId}`), `PaymentDeclinedError` (422) e `ForbiddenError` (403). Corpo de erro: `error`, `message` e `statusCode`.
 
 ## Consumo dos pagamentos — RF06
 

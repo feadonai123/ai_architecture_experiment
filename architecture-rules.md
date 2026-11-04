@@ -377,6 +377,12 @@ Essa diferença constitui uma das principais propriedades experimentais utilizad
 
 Dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` pertencem a `test/mocks/`, um arquivo por operação; não criar `test/data/` para esses mocks.
 
+## Segunda chance após recusa de pagamento (até duas tentativas)
+
+A operação `payments/processOrderPayment` declara explicitamente sua dependência de tentativas de pagamento (`order_payment_attempts`) no construtor do use case `ProcessOrderPayment`, ao lado das dependências já existentes de pedido e pagamento. O repository de tentativas vive em `payments/processOrderPayment/repositories/`, sobre o record compartilhado `shared/database/OrderPaymentAttemptRecord.ts`, seguindo o mesmo padrão dos demais records de `order_payments`/`orders`. Os erros `InvalidIdempotencyKeyError` e `PaymentAttemptConflictError` pertencem a `payments/processOrderPayment/errors/`, como os demais erros dessa operação.
+
+O controller lê o cabeçalho `Idempotency-Key` e o passa ao use case; a validação de formato, a política de duas tentativas, a idempotência por chave e a decisão de publicar o evento (somente na tentativa definitiva) ficam inteiramente no use case, não no controller nem no `RouterBase`.
+
 ## Estoque na criação e no cancelamento por recusa
 
 As operações `ordering/createOrder` e `ordering/cancelOrderPayment` declaram explicitamente sua dependência de estoque nos construtores dos use cases. Repositories locais implementam essa dependência usando os records compartilhados, sem importar implementações de outro contexto. Preservar a transação de `RouterBase`/handler via `DbManager`.

@@ -3,6 +3,7 @@ import { ProcessOrderPaymentController } from './payments/processOrderPayment/co
 import { ProcessOrderPayment } from './payments/processOrderPayment/usecases/ProcessOrderPayment';
 import { OrderRepository as PaymentOrderRepository } from './payments/processOrderPayment/repositories/OrderRepository';
 import { OrderPaymentRepository as PaymentRepository } from './payments/processOrderPayment/repositories/OrderPaymentRepository';
+import { OrderPaymentAttemptRepository } from './payments/processOrderPayment/repositories/OrderPaymentAttemptRepository';
 import fs from 'node:fs';
 import path from 'node:path';
 import express, { Express } from 'express';
@@ -179,6 +180,7 @@ export function createApp(dataSource: DataSource, redis: Redis): Express {
         new ProcessOrderPayment(
           new PaymentOrderRepository(dataSource),
           new PaymentRepository(dataSource),
+          new OrderPaymentAttemptRepository(dataSource),
           new EventRedisService(redis),
           uuidv4,
           () => new Date(),

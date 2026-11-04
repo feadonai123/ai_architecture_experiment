@@ -6,6 +6,7 @@ import { ProductRecord } from './ProductRecord';
 import { OrderItemRecord } from './OrderItemRecord';
 import { OrderRecord } from './OrderRecord';
 import { OrderPaymentRecord } from './OrderPaymentRecord';
+import { OrderPaymentAttemptRecord } from './OrderPaymentAttemptRecord';
 import { UserRecord } from './UserRecord';
 
 export function createDataSource(): DataSource {
@@ -19,6 +20,7 @@ export function createDataSource(): DataSource {
       OrderRecord,
       OrderItemRecord,
       OrderPaymentRecord,
+      OrderPaymentAttemptRecord,
     ],
   });
 }

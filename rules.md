@@ -69,10 +69,11 @@ Ficam em `test/integration/` na raiz e **devem passar** (`APP_TARGET=domain`).
 - Não copiar estrutura de outra arquitetura (ex.: camada global transversal como `src/controllers`, `src/usecases`).
 - Não enfraquecer `requireEnv` com fallback.
 
-## RF06 — Pagamento simulado
+## RF06 — Pagamento simulado (até duas tentativas)
 
-- Implementar o comportamento de `flows/RF06.md`. A rota persiste o pagamento e publica `PaymentApproved` ou `PaymentDeclinedError` no stream `payments` após commit. A recusa é persistida antes da resposta 422, sem rollback do resultado de negócio.
-- O consumidor de pedidos altera o pedido para `PAID` na aprovação e `CANCELED` na recusa, com transação, bloqueio de escrita e `XACK` após commit. Rota e consumo são idempotentes; repetições da rota não publicam outro evento.
+- Implementar o comportamento de `flows/RF06.md`, incluindo a política do Experimento 3: até duas tentativas de pagamento por pedido, identificadas pelo cabeçalho obrigatório `Idempotency-Key` (UUID). A rota persiste cada tentativa e, somente quando ela é definitiva (aprovação em qualquer tentativa, ou a segunda recusa), persiste o resultado em `order_payments` e publica `PaymentApproved` ou `PaymentDeclinedError` no stream `payments` após commit.
+- A primeira recusa persiste a tentativa, mantém `order_payments` em `PENDING` e o pedido em `PAYMENT_PENDING`, preservando o estoque reservado, e não publica evento. A segunda recusa é persistida antes da resposta 422, sem rollback do resultado de negócio.
+- O consumidor de pedidos altera o pedido para `PAID` na aprovação e `CANCELED` na recusa definitiva, com transação, bloqueio de escrita e `XACK` após commit. Rota e consumo são idempotentes; a repetição de uma chave já registrada com o mesmo token não publica outro evento; a mesma chave com outro token é um conflito.
 - Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` pertencem a `test/mocks/`, um arquivo por operação. Helpers HTTP, execução de handlers e asserts continuam fora de `mocks/`.
 
 ## Estoque de pedidos
