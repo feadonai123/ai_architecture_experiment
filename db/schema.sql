@@ -41,7 +41,31 @@ CREATE TABLE IF NOT EXISTS order_payments (
   status SMALLINT NOT NULL DEFAULT 0,
   payment_details JSONB,
   paid_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  attempts SMALLINT NOT NULL DEFAULT 0
+);
+
+-- Adds the attempts counter to installations created before the
+-- second-chance payment policy, then backfills it so already-persisted
+-- definitive payments stay definitive: a DECLINED payment was final under
+-- the single-attempt model, so it is marked as having used both chances; a
+-- PAID payment keeps its single attempt. A still-pending payment has none.
+ALTER TABLE order_payments ADD COLUMN IF NOT EXISTS attempts SMALLINT NOT NULL DEFAULT 0;
+UPDATE order_payments SET attempts = 2 WHERE status = 2 AND attempts = 0;
+UPDATE order_payments SET attempts = 1 WHERE status = 1 AND attempts = 0;
+
+CREATE TABLE IF NOT EXISTS order_payment_attempts (
+  id UUID PRIMARY KEY,
+  order_id UUID NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
+  attempt_number SMALLINT NOT NULL,
+  idempotency_key UUID NOT NULL,
+  payment_token VARCHAR(32) NOT NULL,
+  status SMALLINT NOT NULL,
+  payment_details JSONB NOT NULL,
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT order_payment_attempts_order_key_unique UNIQUE (order_id, idempotency_key),
+  CONSTRAINT order_payment_attempts_order_number_unique UNIQUE (order_id, attempt_number)
 );
 
 -- Migrates installations created before numeric statuses. The checks prevent

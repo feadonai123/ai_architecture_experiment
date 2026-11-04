@@ -1,11 +1,14 @@
 import { Order } from '../../src/entities/Order';
 import { OrderPayment } from '../../src/entities/OrderPayment';
+import { OrderPaymentAttempt } from '../../src/entities/OrderPaymentAttempt';
 import { OrderStatus } from '../../src/enums/OrderStatus';
 import { OrderPaymentStatus } from '../../src/enums/OrderPaymentStatus';
 import { PaymentProvider } from '../../src/enums/PaymentProvider';
+import { PaymentToken } from '../../src/enums/PaymentToken';
 export const orderId = '0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f';
 export const transactionId = 'da16e5ce-82c4-441b-bd19-3ec6e6e2d4a1';
 export const eventId = 'c049cce2-29f6-4c89-b3a1-3fe67501a928';
+export const idempotencyKey = '3f7b9c0a-7e3e-4a9b-8e4a-1c2d3e4f5a6b';
 export const createdAt = new Date('2026-01-01T00:00:00.000Z');
 export const paidAt = new Date('2026-01-01T00:01:00.000Z');
 export function orderMock(status = OrderStatus.PAYMENT_PENDING): Order {
@@ -18,7 +21,7 @@ export function orderMock(status = OrderStatus.PAYMENT_PENDING): Order {
     items: [],
   } as unknown as Order;
 }
-export function paymentMock(status = OrderPaymentStatus.PENDING): OrderPayment {
+export function paymentMock(status = OrderPaymentStatus.PENDING, attempts = 0): OrderPayment {
   return {
     orderId,
     status,
@@ -28,5 +31,22 @@ export function paymentMock(status = OrderPaymentStatus.PENDING): OrderPayment {
         : { provider: PaymentProvider.SIMULATED, transactionId, amount: 250 },
     paidAt: status === OrderPaymentStatus.PAID ? paidAt : null,
     createdAt,
+    attempts,
   } as OrderPayment;
+}
+export function attemptMock(
+  overrides: Partial<OrderPaymentAttempt> = {},
+): OrderPaymentAttempt {
+  return {
+    id: 'attempt-1',
+    orderId,
+    attemptNumber: 1,
+    idempotencyKey,
+    paymentToken: PaymentToken.DECLINED,
+    status: OrderPaymentStatus.DECLINED,
+    paymentDetails: { provider: PaymentProvider.SIMULATED, transactionId, amount: 250 },
+    paidAt: null,
+    createdAt,
+    ...overrides,
+  } as OrderPaymentAttempt;
 }

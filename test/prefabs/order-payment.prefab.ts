@@ -12,6 +12,7 @@ export class OrderPaymentPrefab {
         paymentDetails: null,
         paidAt: null,
         createdAt: new Date(),
+        attempts: 0,
         ...overrides,
       }),
     );
