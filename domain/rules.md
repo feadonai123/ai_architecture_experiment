@@ -123,6 +123,10 @@ Um contexto não acessa a implementação interna de outro. Integração explíc
 - `ordering/order.consumer.ts` registra os handlers das operações `ordering/approveOrderPayment` e `ordering/cancelOrderPayment`. A rota pertence a `payments/processOrderPayment` e seu registro a `payments/payment.controller.ts`. Contextos integram-se pelos eventos compartilhados.
 - Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` ficam em `test/mocks/`, em um arquivo próprio por operação. Helpers HTTP e asserts ficam fora dessa pasta.
 
+## Segunda chance após recusa de pagamento
+
+Cada pedido admite até duas tentativas de pagamento, identificadas pelo cabeçalho `Idempotency-Key` (UUID). `payments/processOrderPayment/usecases/ProcessOrderPayment.ts` recebe explicitamente, além dos repositories de pedido e de pagamento, um repository de tentativas (`payments/processOrderPayment/repositories/OrderPaymentAttemptRepository.ts`), sobre o record `shared/database/OrderPaymentAttemptRecord.ts`. Os erros `InvalidIdempotencyKeyError` e `PaymentAttemptConflictError` ficam em `payments/processOrderPayment/errors/`. Uma primeira recusa persiste a tentativa sem alterar `order_payments` nem publicar evento; a aprovação (em qualquer tentativa) ou a segunda recusa persistem o resultado definitivo em `order_payments` e publicam o evento correspondente, como já ocorre no fluxo existente.
+
 ## Baixa e devolução de estoque de pedidos
 
 A criação reduz estoque e grava pedido e itens na mesma transação, com produtos bloqueados em ordem de ID. A recusa devolve os itens persistidos e cancela o pedido atomicamente; bloquear o pedido antes dos produtos. Pedido já cancelado não devolve novamente. A devolução inclui produtos excluídos logicamente sem reativação. Aprovação e preparação financeira mantêm a quantidade. Escritas de estoque e catálogo que salvam produtos também protegem sua leitura e gravação com transação e bloqueio.

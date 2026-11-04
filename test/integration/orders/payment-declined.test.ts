@@ -90,8 +90,16 @@ describe('PaymentDeclinedError order consumer', () => {
       total: created.body.total,
     });
     await OrderPaymentPrefab.create(ds, { orderId: order.id });
+    // Payments allow a second attempt after a first decline; only the second
+    // decline is definitive and publishes PaymentDeclinedError.
+    const first = await api()
+      .post('/orders/' + order.id + '/payment')
+      .set('Idempotency-Key', uuidv4())
+      .send({ paymentToken: 'sim-declined' });
+    expect(first.status).toBe(422);
     const response = await api()
       .post('/orders/' + order.id + '/payment')
+      .set('Idempotency-Key', uuidv4())
       .send({ paymentToken: 'sim-declined' });
     expect(response.status).toBe(422);
     await waitUntil(

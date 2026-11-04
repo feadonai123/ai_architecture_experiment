@@ -17,6 +17,7 @@ export class ProcessOrderPaymentController extends RouterBase {
     const payment = await this.processPayment.run(
       request.params.orderId,
       request.body?.paymentToken,
+      request.header('Idempotency-Key'),
     );
     if (payment.status === OrderPaymentStatus.DECLINED) {
       const error = new PaymentDeclinedError(payment.orderId);
