@@ -83,3 +83,16 @@ CREATE TABLE IF NOT EXISTS order_items (
   quantity INTEGER NOT NULL,
   unit_price NUMERIC(10, 2) NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS order_payment_attempts (
+  order_id UUID NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
+  idempotency_key UUID NOT NULL,
+  attempt_number SMALLINT NOT NULL,
+  token VARCHAR(32) NOT NULL,
+  status SMALLINT NOT NULL,
+  payment_details JSONB,
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (order_id, idempotency_key),
+  CONSTRAINT order_payment_attempts_order_attempt_unique UNIQUE (order_id, attempt_number)
+);

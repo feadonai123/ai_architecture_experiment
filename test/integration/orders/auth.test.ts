@@ -45,7 +45,9 @@ describe('Order API key authentication', () => {
 
 describe('Payment API key authentication', () => {
   it.each([undefined, 'wrong-key'])('rejects missing or incorrect header %s', async (key) => {
-    const req = request(getApp()).post('/orders/0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f/payment');
+    const req = request(getApp())
+      .post('/orders/0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f/payment')
+      .set('Idempotency-Key', '11111111-1111-4111-8111-111111111111');
     if (key) req.set('x-api-key', key);
     const response = await req.send({ paymentToken: 'sim-approved' });
     expect(response.status).toBe(403);

@@ -70,10 +70,12 @@ Ficam em `test/integration/` na raiz e **devem passar** (`APP_TARGET=monolith`).
 - Não copiar estrutura de outra arquitetura (ex.: `usecases/`, `controllers/`).
 - Não enfraquecer `requireEnv` com fallback.
 
-## RF06 — Pagamento simulado
+## RF06 — Pagamento simulado, com segunda tentativa após recusa
 
-- Implementar o comportamento de `flows/RF06.md`. A rota persiste o pagamento e publica `PaymentApproved` ou `PaymentDeclinedError` no stream `payments` após commit. A recusa é persistida antes da resposta 422, sem rollback do resultado de negócio.
-- O consumidor de pedidos altera o pedido para `PAID` na aprovação e `CANCELED` na recusa, com transação, bloqueio de escrita e `XACK` após commit. Rota e consumo são idempotentes; repetições da rota não publicam outro evento.
+- Implementar o comportamento de `flows/RF06.md`. Cada pedido admite até duas tentativas de pagamento, identificadas por um header `Idempotency-Key` (UUID) diferente por tentativa. A rota persiste o resultado de cada tentativa (tabela `order_payment_attempts`) e o estado agregado do pagamento (`order_payments`); publica `PaymentApproved` ou `PaymentDeclinedError` no stream `payments` após commit **somente quando o resultado é definitivo**: aprovação (em qualquer tentativa) ou segunda recusa.
+- A primeira recusa não é definitiva: persiste `OrderPaymentStatus.DECLINED_RETRY`, não publica evento, mantém o pedido `PAYMENT_PENDING` e preserva o estoque; a resposta HTTP é `422` com `PaymentDeclinedRetryableError`. A segunda recusa é definitiva: persiste `OrderPaymentStatus.DECLINED`, publica `PaymentDeclinedError` e responde `422` com `PaymentDeclinedError`.
+- Repetir a mesma `Idempotency-Key` com o mesmo `paymentToken` retorna o resultado já registrado daquela tentativa, sem nova simulação, alteração de dados ou publicação. Repetir a mesma chave com um `paymentToken` diferente gera `PaymentAttemptConflictError` (409). Uma `Idempotency-Key` nova depois do resultado definitivo gera `InvalidOrderPaymentStateError` (409): não há mais tentativa disponível.
+- O consumidor de pedidos altera o pedido para `PAID` na aprovação e `CANCELED` na recusa definitiva, com transação, bloqueio de escrita e `XACK` após commit. Rota e consumo são idempotentes; repetições da rota com a mesma `Idempotency-Key` e o mesmo token não publicam outro evento. A primeira recusa nunca aciona o consumidor (nenhum evento é publicado).
 - Os dados mockados de `payment-approved`, `payment-declined` e `process-order-payment` pertencem a `test/mocks/`, um arquivo por operação. Helpers HTTP, execução de handlers e asserts continuam fora de `mocks/`.
 
 ## Estoque de pedidos

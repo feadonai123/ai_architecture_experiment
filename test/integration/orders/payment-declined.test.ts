@@ -89,9 +89,10 @@ describe('PaymentDeclinedError order consumer', () => {
       status: 1,
       total: created.body.total,
     });
-    await OrderPaymentPrefab.create(ds, { orderId: order.id });
+    await OrderPaymentPrefab.create(ds, { orderId: order.id, status: 3 });
     const response = await api()
       .post('/orders/' + order.id + '/payment')
+      .set('Idempotency-Key', uuidv4())
       .send({ paymentToken: 'sim-declined' });
     expect(response.status).toBe(422);
     await waitUntil(
