@@ -144,6 +144,24 @@ export class PaymentDeclinedError extends AppError {
   }
 }
 
+export class PaymentDeclinedRetryableError extends AppError {
+  constructor(orderId: string) {
+    super(`Payment declined for order: ${orderId}; a new attempt is allowed`, 422);
+  }
+}
+
+export class InvalidIdempotencyKeyError extends AppError {
+  constructor() {
+    super('Invalid Idempotency-Key header', 400);
+  }
+}
+
+export class PaymentAttemptConflictError extends AppError {
+  constructor(orderId: string) {
+    super(`Payment attempt conflict for order: ${orderId}`, 409);
+  }
+}
+
 export class InvalidPaymentApprovedPayloadError extends InvalidPayloadError {
   constructor() {
     super('Invalid PaymentApproved payload');

@@ -494,16 +494,36 @@ paths:
     post:
       tags:
         - Pedidos
-      summary: Processa pagamento simulado e publica o resultado
+      summary: Processa pagamento simulado, com segunda tentativa após recusa, e publica o resultado definitivo
       operationId: processOrderPayment
-      description: Persiste PAID ou DECLINED e publica PaymentApproved ou
-        PaymentDeclinedError no stream payments após commit. O OrderConsumer
-        atualiza o pedido de forma assíncrona. Na recusa, devolve o estoque e cancela o pedido na mesma transação; na aprovação, mantém a baixa realizada na criação. Repetições retornam o resultado
-        existente sem nova publicação.
+      description: Permite até duas tentativas de pagamento por pedido, identificadas
+        pelo header Idempotency-Key. A primeira recusa não é definitiva nem publica
+        evento; preserva o estoque e permite uma segunda tentativa com uma nova
+        Idempotency-Key. O resultado só é definitivo na aprovação (em qualquer
+        tentativa) ou na segunda recusa; somente então persiste PAID ou DECLINED
+        e publica PaymentApproved ou PaymentDeclinedError no stream payments após
+        commit. O OrderConsumer atualiza o pedido de forma assíncrona. Na recusa
+        definitiva, devolve o estoque e cancela o pedido na mesma transação; na
+        aprovação, mantém a baixa realizada na criação. Uma repetição com a mesma
+        Idempotency-Key e o mesmo paymentToken retorna o resultado já registrado
+        para essa tentativa, sem nova simulação ou publicação; a mesma chave com
+        um paymentToken diferente é um conflito (409). Uma chave nova é aceita
+        somente enquanto houver tentativa disponível (pedido ainda aguardando
+        pagamento); excedido o limite de tentativas, uma chave nova é rejeitada.
       parameters:
         - name: orderId
           in: path
           required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          required: true
+          description: UUID que identifica esta tentativa de pagamento para o pedido.
+            Repetir a mesma chave com o mesmo paymentToken retorna o resultado já
+            registrado para essa tentativa; usá-la novamente com um paymentToken
+            diferente é um conflito.
           schema:
             type: string
             format: uuid
@@ -522,13 +542,14 @@ paths:
                   paymentToken: sim-declined
       responses:
         '200':
-          description: Pagamento aprovado; pedido atualizado de forma assíncrona
+          description: Pagamento aprovado (primeira ou segunda tentativa); pedido
+            atualizado de forma assíncrona
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OrderPayment'
         '400':
-          description: InvalidOrderIdError ou InvalidPaymentTokenError
+          description: InvalidOrderIdError, InvalidPaymentTokenError ou InvalidIdempotencyKeyError
           content:
             application/json:
               schema:
@@ -542,14 +563,18 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
         '409':
-          description: PaymentNotReadyError ou InvalidOrderPaymentStateError
+          description: PaymentNotReadyError, InvalidOrderPaymentStateError (sem
+            tentativa disponível) ou PaymentAttemptConflictError (mesma
+            Idempotency-Key com paymentToken diferente)
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
         '422':
-          description: 'PaymentDeclinedError: recusa persistida e evento publicado para
-            cancelamento'
+          description: 'PaymentDeclinedError (recusa definitiva na segunda tentativa,
+            cancelamento publicado) ou PaymentDeclinedRetryableError (primeira
+            recusa; pedido continua aguardando pagamento e aceita uma segunda
+            tentativa com uma nova Idempotency-Key)'
           content:
             application/json:
               schema:
@@ -807,7 +832,9 @@ components:
             - 0
             - 1
             - 2
-          description: 0 = PENDING; 1 = PAID; 2 = DECLINED
+            - 3
+          description: 0 = PENDING; 1 = PAID; 2 = DECLINED (definitivo); 3 = DECLINED_RETRY
+            (primeira recusa, aguarda segunda tentativa)
         paymentDetails:
           $ref: '#/components/schemas/PaymentDetails'
         paidAt:
