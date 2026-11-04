@@ -1,11 +1,15 @@
 import { Order } from '../../src/entities/Order';
 import { OrderPayment } from '../../src/entities/OrderPayment';
+import { OrderPaymentAttempt } from '../../src/entities/OrderPaymentAttempt';
 import { OrderStatus } from '../../src/entities/OrderStatus';
 import { OrderPaymentStatus } from '../../src/entities/OrderPaymentStatus';
 import { PaymentProvider } from '../../src/entities/PaymentProvider';
+import { PaymentToken } from '../../src/entities/PaymentToken';
 export const orderId = '0f5ead3a-8c1e-4b2a-9d4c-1a2b3c4d5e6f';
 export const transactionId = 'da16e5ce-82c4-441b-bd19-3ec6e6e2d4a1';
 export const eventId = 'c049cce2-29f6-4c89-b3a1-3fe67501a928';
+export const idempotencyKey = '11111111-1111-4111-8111-111111111111';
+export const otherIdempotencyKey = '22222222-2222-4222-8222-222222222222';
 export const createdAt = new Date('2026-01-01T00:00:00.000Z');
 export const paidAt = new Date('2026-01-01T00:01:00.000Z');
 export function orderMock(status = OrderStatus.PAYMENT_PENDING): Order {
@@ -29,4 +33,19 @@ export function paymentMock(status = OrderPaymentStatus.PENDING): OrderPayment {
     paidAt: status === OrderPaymentStatus.PAID ? paidAt : null,
     createdAt,
   } as OrderPayment;
+}
+export function attemptMock(
+  overrides: Partial<OrderPaymentAttempt> = {},
+): OrderPaymentAttempt {
+  return {
+    orderId,
+    attemptNumber: 1,
+    idempotencyKey,
+    paymentToken: PaymentToken.DECLINED,
+    status: OrderPaymentStatus.DECLINED,
+    paymentDetails: { provider: PaymentProvider.SIMULATED, transactionId, amount: 250 },
+    paidAt: null,
+    createdAt,
+    ...overrides,
+  } as OrderPaymentAttempt;
 }

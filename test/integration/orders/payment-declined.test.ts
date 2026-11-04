@@ -90,8 +90,14 @@ describe('PaymentDeclinedError order consumer', () => {
       total: created.body.total,
     });
     await OrderPaymentPrefab.create(ds, { orderId: order.id });
+    const first = await api()
+      .post('/orders/' + order.id + '/payment')
+      .set('Idempotency-Key', uuidv4())
+      .send({ paymentToken: 'sim-declined' });
+    expect(first.status).toBe(422);
     const response = await api()
       .post('/orders/' + order.id + '/payment')
+      .set('Idempotency-Key', uuidv4())
       .send({ paymentToken: 'sim-declined' });
     expect(response.status).toBe(422);
     await waitUntil(

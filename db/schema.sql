@@ -83,3 +83,19 @@ CREATE TABLE IF NOT EXISTS order_items (
   quantity INTEGER NOT NULL,
   unit_price NUMERIC(10, 2) NOT NULL
 );
+
+-- Each attempt of RF06's second-chance policy: up to two rows per order,
+-- one per attempt number, each tied to the idempotency key that created it.
+CREATE TABLE IF NOT EXISTS order_payment_attempts (
+  order_id UUID NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
+  attempt_number SMALLINT NOT NULL,
+  idempotency_key UUID NOT NULL,
+  payment_token VARCHAR(20) NOT NULL,
+  status SMALLINT NOT NULL,
+  payment_details JSONB,
+  paid_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (order_id, attempt_number),
+  CONSTRAINT order_payment_attempts_order_idempotency_key_unique
+    UNIQUE (order_id, idempotency_key)
+);
