@@ -9,6 +9,7 @@ import { UserRecord } from './typeorm/UserRecord';
 import { OrderRecord } from './typeorm/OrderRecord';
 import { OrderItemRecord } from './typeorm/OrderItemRecord';
 import { OrderPaymentRecord } from './typeorm/OrderPaymentRecord';
+import { OrderPaymentAttemptRecord } from './typeorm/OrderPaymentAttemptRecord';
 
 export function createDataSource(): DataSource {
   return new DataSource({
@@ -26,6 +27,7 @@ export function createDataSource(): DataSource {
       OrderRecord,
       OrderItemRecord,
       OrderPaymentRecord,
+      OrderPaymentAttemptRecord,
     ],
     synchronize: false,
     logging: false,

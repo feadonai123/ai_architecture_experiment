@@ -4,6 +4,7 @@ import { requireEnv } from '../helpers/env';
 import { CartItemRecord } from './cart-item.record';
 import { CartRecord } from './cart.record';
 import { OrderItemRecord } from './order-item.record';
+import { OrderPaymentAttemptRecord } from './order-payment-attempt.record';
 import { OrderPaymentRecord } from './order-payment.record';
 import { OrderRecord } from './order.record';
 import { ProductRecord } from './product.record';
@@ -25,6 +26,7 @@ export function createTestDataSource(): DataSource {
       OrderRecord,
       OrderItemRecord,
       OrderPaymentRecord,
+      OrderPaymentAttemptRecord,
     ],
     synchronize: false,
     logging: false,
